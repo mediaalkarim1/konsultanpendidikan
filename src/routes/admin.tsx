@@ -263,6 +263,25 @@ function AdminPage() {
                             onChange={(e) => updateLevel(i, { buttonLabel: e.target.value })}
                           />
                         </Field>
+                        <Field label="Link Tombol Lihat Rekomendasi">
+                          <input
+                            type="url"
+                            placeholder="https://..."
+                            className={inputCls}
+                            value={lvl.link}
+                            onChange={(e) => updateLevel(i, { link: e.target.value })}
+                          />
+                        </Field>
+                        {lvl.link && (
+                          <a
+                            href={lvl.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-block text-xs text-brand hover:underline"
+                          >
+                            Buka link →
+                          </a>
+                        )}
                       </div>
                     ))}
                   </div>
