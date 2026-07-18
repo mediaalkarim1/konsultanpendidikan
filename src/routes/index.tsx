@@ -1,24 +1,80 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useSiteContent } from "@/lib/site-content";
+import { LogIn } from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  component: Home,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Home() {
+  const c = useSiteContent();
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-gradient-to-b from-brand-soft via-background to-background font-sans">
+      <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <Link to="/" className="flex items-center gap-2">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">
+              {c.logo.charAt(0)}
+            </div>
+            <span className="truncate text-base font-semibold text-foreground sm:text-lg">
+              {c.logo}
+            </span>
+          </Link>
+          <Link
+            to="/login"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+          >
+            <LogIn className="h-4 w-4" />
+            <span className="hidden sm:inline">Login Admin</span>
+            <span className="sm:hidden">Login</span>
+          </Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-16">
+        <section className="mx-auto max-w-3xl text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-accent-green/30 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green-foreground">
+            <span className="h-2 w-2 rounded-full bg-accent-green" />
+            Konsultasi Pendidikan Anak
+          </span>
+          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
+            {c.title}
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+            {c.description}
+          </p>
+        </section>
+
+        <section className="mt-10 grid grid-cols-1 gap-5 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3">
+          {c.levels.map((lvl) => (
+            <article
+              key={lvl.id}
+              className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-xl"
+            >
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-3xl transition group-hover:scale-105">
+                {lvl.emoji}
+              </div>
+              <h2 className="mt-4 text-lg font-bold text-foreground">{lvl.name}</h2>
+              <p className="mt-2 flex-1 text-sm text-muted-foreground">{lvl.description}</p>
+              <a
+                href={lvl.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:bg-brand/90 hover:shadow-lg active:scale-[0.98]"
+              >
+                {lvl.buttonLabel}
+              </a>
+            </article>
+          ))}
+        </section>
+      </main>
+
+      <footer className="border-t border-border/60 bg-card/50">
+        <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground sm:px-6">
+          <p>{c.footer}</p>
+          <p className="mt-1">{c.contact}</p>
+        </div>
+      </footer>
     </div>
   );
 }
