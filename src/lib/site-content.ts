@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type Level = {
-  id: "tksd" | "smp" | "sma";
+  id: string;
   emoji: string;
   name: string;
   description: string;
@@ -11,8 +11,11 @@ export type Level = {
 
 export type SiteContent = {
   logo: string;
+  heroBadge: string;
   title: string;
   description: string;
+  metaTitle: string;
+  metaDescription: string;
   levels: Level[];
   footer: string;
   contact: string;
@@ -20,15 +23,20 @@ export type SiteContent = {
 
 const CONTENT_KEY = "site_content_v1";
 const AUTH_KEY = "site_admin_auth_v1";
+const CRED_KEY = "site_admin_cred_v1";
 
-export const ADMIN_USER = "mediaalkarim";
-export const ADMIN_PASS = "mediaalkarim";
+export const DEFAULT_ADMIN_USER = "mediaalkarim";
+export const DEFAULT_ADMIN_PASS = "mediaalkarim";
 
 export const defaultContent: SiteContent = {
   logo: "EduKonsul",
+  heroBadge: "Konsultasi Pendidikan Anak",
   title: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
   description:
     "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak. Pilih jenjang di bawah ini untuk melihat rekomendasi sekolah dan informasi yang sesuai.",
+  metaTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
+  metaDescription:
+    "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak — TK & SD, SMP, dan SMA.",
   levels: [
     {
       id: "tksd",
@@ -70,7 +78,11 @@ function read(): SiteContent {
     const raw = localStorage.getItem(CONTENT_KEY);
     if (!raw) return defaultContent;
     const parsed = JSON.parse(raw);
-    return { ...defaultContent, ...parsed, levels: parsed.levels ?? defaultContent.levels };
+    return {
+      ...defaultContent,
+      ...parsed,
+      levels: Array.isArray(parsed.levels) ? parsed.levels : defaultContent.levels,
+    };
   } catch {
     return defaultContent;
   }
@@ -112,13 +124,33 @@ export function useSiteContent(): SiteContent {
   return JSON.parse(content) as SiteContent;
 }
 
+// Credentials
+type Cred = { user: string; pass: string };
+function readCred(): Cred {
+  if (typeof window === "undefined") return { user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS };
+  try {
+    const raw = localStorage.getItem(CRED_KEY);
+    if (!raw) return { user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS };
+    return JSON.parse(raw);
+  } catch {
+    return { user: DEFAULT_ADMIN_USER, pass: DEFAULT_ADMIN_PASS };
+  }
+}
+export function getAdminUser(): string {
+  return readCred().user;
+}
+export function updateCredentials(user: string, pass: string) {
+  localStorage.setItem(CRED_KEY, JSON.stringify({ user, pass }));
+}
+
 // Auth
 export function isLoggedIn(): boolean {
   if (typeof window === "undefined") return false;
   return localStorage.getItem(AUTH_KEY) === "1";
 }
 export function login(user: string, pass: string): boolean {
-  if (user === ADMIN_USER && pass === ADMIN_PASS) {
+  const c = readCred();
+  if (user === c.user && pass === c.pass) {
     localStorage.setItem(AUTH_KEY, "1");
     return true;
   }
@@ -126,4 +158,13 @@ export function login(user: string, pass: string): boolean {
 }
 export function logout() {
   localStorage.removeItem(AUTH_KEY);
+}
+
+export function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || `item-${Date.now()}`;
 }

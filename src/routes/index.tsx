@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { useSiteContent } from "@/lib/site-content";
 import { LogIn } from "lucide-react";
 
@@ -8,6 +9,29 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const c = useSiteContent();
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (c.metaTitle) document.title = c.metaTitle;
+    const setMeta = (selector: string, attr: string, value: string) => {
+      let el = document.head.querySelector<HTMLMetaElement>(selector);
+      if (!el) {
+        el = document.createElement("meta");
+        const [a, v] = selector.replace(/[[\]"]/g, "").split("=");
+        el.setAttribute(a, v);
+        document.head.appendChild(el);
+      }
+      el.setAttribute(attr, value);
+    };
+    if (c.metaDescription) {
+      setMeta('meta[name="description"]', "content", c.metaDescription);
+      setMeta('meta[property="og:description"]', "content", c.metaDescription);
+    }
+    if (c.metaTitle) {
+      setMeta('meta[property="og:title"]', "content", c.metaTitle);
+    }
+  }, [c.metaTitle, c.metaDescription]);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-brand-soft via-background to-background font-sans">
       <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur">
@@ -33,10 +57,12 @@ function Home() {
 
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-16">
         <section className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-accent-green/30 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green-foreground">
-            <span className="h-2 w-2 rounded-full bg-accent-green" />
-            Konsultasi Pendidikan Anak
-          </span>
+          {c.heroBadge && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-accent-green/30 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green-foreground">
+              <span className="h-2 w-2 rounded-full bg-accent-green" />
+              {c.heroBadge}
+            </span>
+          )}
           <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
             {c.title}
           </h1>
@@ -57,7 +83,7 @@ function Home() {
               <h2 className="mt-4 text-lg font-bold text-foreground">{lvl.name}</h2>
               <p className="mt-2 flex-1 text-sm text-muted-foreground">{lvl.description}</p>
               <a
-                href={lvl.link}
+                href={lvl.link || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-5 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:bg-brand/90 hover:shadow-lg active:scale-[0.98]"
