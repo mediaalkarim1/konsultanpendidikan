@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, Info, Building2, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, GitFork, CheckCircle2, Star, FileText, ToggleLeft, ToggleRight, Play, AlertCircle, ShieldCheck } from "lucide-react";
+import { Save, Loader2, Info, Building2, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, GitFork, CheckCircle2, Star, FileText, ToggleLeft, ToggleRight, Play, AlertCircle, ShieldCheck, Cpu } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
