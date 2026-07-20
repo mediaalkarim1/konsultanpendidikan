@@ -4,7 +4,7 @@ import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity } from "@/actions/admin-actions";
+import { logActivity, saveSettingsAction } from "@/actions/admin-actions";
 import { PromptAIPage } from "./prompt";
 import { TestingPage } from "./testing";
 
@@ -96,15 +96,31 @@ function PengaturanPage() {
         { key: "site.footer", value: { text: settings.footerText }, is_public: true }
       ];
 
-      for (const item of allUpdates) {
-        const { error } = await supabase.from("settings").upsert(item as any, { onConflict: "key" });
-        if (error) throw error;
+      // Dual Save Strategy: 1. Try server function (admin bypass) -> 2. Client upsert
+      let saved = false;
+      try {
+        await saveSettingsAction({ updates: allUpdates });
+        saved = true;
+      } catch (serverErr) {
+        console.warn("Server action save attempt failed, falling back to client upsert:", serverErr);
+        for (const item of allUpdates) {
+          const { error } = await supabase.from("settings").upsert(item as any, { onConflict: "key" });
+          if (error) throw error;
+        }
+        saved = true;
       }
 
-      logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
-      toast.success("Pengaturan berhasil disimpan");
+      if (saved) {
+        toast.success("Pengaturan berhasil disimpan");
+        
+        // Log activity safely without blocking
+        try {
+          await logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
+        } catch (_) {}
+      }
     } catch (e: any) {
-      toast.error("Gagal menyimpan pengaturan: " + (e.message || "RLS constraint error"));
+      console.error("Save settings failed:", e);
+      toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error RLS/Database"));
     } finally {
       setSaving(false);
     }

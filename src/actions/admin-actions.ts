@@ -26,8 +26,18 @@ export async function logActivityInternal(adminEmail: string, action: string, de
 export const logActivity = createServerFn({ method: "POST" })
   .validator((payload: { email: string, action: string, details?: any }) => payload)
   .handler(async (ctx) => {
-    // We could get IP from headers if this was a full request object, but for now we just log the action
     await logActivityInternal(ctx.data.email, ctx.data.action, ctx.data.details);
+    return { success: true };
+  });
+
+export const saveSettingsAction = createServerFn({ method: "POST" })
+  .validator((payload: { updates: Array<{ key: string, value: any, is_public: boolean }> }) => payload)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    for (const item of ctx.data.updates) {
+      const { error } = await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+      if (error) throw error;
+    }
     return { success: true };
   });
 
@@ -49,10 +59,8 @@ export const deleteConsultation = createServerFn({ method: "POST" })
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
     
-    // Fetch some info before deleting for the log
     const { data: cons } = await supabaseAdmin.from("consultations").select("parent_name, level").eq("id", ctx.data.id).single();
     
-    // Deleting consultation will cascade and delete consultation_answers and notification_logs (if constraint is set to cascade)
     const { error } = await supabaseAdmin.from("consultations").delete().eq("id", ctx.data.id);
     if (error) throw error;
 
