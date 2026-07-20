@@ -98,9 +98,20 @@ function PengaturanPage() {
         await saveSettingsAction({ updates: allUpdates });
         saved = true;
       } catch (serverErr) {
+        console.warn("Server action save attempt failed, falling back to client update/upsert:", serverErr);
         for (const item of allUpdates) {
-          const { error } = await supabase.from("settings").upsert(item as any, { onConflict: "key" });
-          if (error) throw error;
+          const { data: existing } = await supabase.from("settings").select("key").eq("key", item.key).single();
+          if (existing) {
+            const { error: updateErr } = await supabase.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
+            if (updateErr) {
+              await supabase.from("settings").upsert(item as any, { onConflict: "key" });
+            }
+          } else {
+            const { error: insertErr } = await supabase.from("settings").insert(item as any);
+            if (insertErr) {
+              await supabase.from("settings").upsert(item as any, { onConflict: "key" });
+            }
+          }
         }
         saved = true;
       }
@@ -112,6 +123,7 @@ function PengaturanPage() {
         } catch (_) {}
       }
     } catch (e: any) {
+      console.error("Save settings failed:", e);
       toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error database"));
     } finally {
       setSaving(false);

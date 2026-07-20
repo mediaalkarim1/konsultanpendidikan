@@ -36,8 +36,18 @@ export const saveSettingsAction = createServerFn({ method: "POST" })
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
     for (const item of ctx.data.updates) {
-      const { error } = await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
-      if (error) throw error;
+      const { data: existing } = await supabaseAdmin.from("settings").select("key").eq("key", item.key).single();
+      if (existing) {
+        const { error: updateErr } = await supabaseAdmin.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
+        if (updateErr) {
+          await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+        }
+      } else {
+        const { error: insertErr } = await supabaseAdmin.from("settings").insert(item as any);
+        if (insertErr) {
+          await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+        }
+      }
     }
     return { success: true };
   });
