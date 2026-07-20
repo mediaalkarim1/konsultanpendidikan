@@ -156,29 +156,14 @@ function PengaturanPage() {
         { key: "site.footer", value: { text: settings.footerText }, is_public: true }
       ];
 
-      let saved = false;
-      try {
-        await saveSettingsAction({ updates: allUpdates });
-        saved = true;
-      } catch (serverErr) {
-        for (const item of allUpdates) {
-          const { data: existing } = await supabase.from("settings").select("key").eq("key", item.key).single();
-          if (existing) {
-            await supabase.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
-          } else {
-            await supabase.from("settings").upsert(item as any, { onConflict: "key" });
-          }
-        }
-        saved = true;
-      }
+      await saveSettingsAction({ data: { updates: allUpdates } });
+      toast.success("Pengaturan berhasil disimpan");
 
-      if (saved) {
-        toast.success("Pengaturan berhasil disimpan");
-        try {
-          await logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
-        } catch (_) {}
-      }
+      try {
+        await logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
+      } catch (_) {}
     } catch (e: any) {
+      console.error("Gagal menyimpan pengaturan:", e);
       toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error database"));
     } finally {
       setSaving(false);

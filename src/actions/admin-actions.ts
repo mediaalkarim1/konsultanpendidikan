@@ -6,7 +6,7 @@ function getAdminSupabase() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   if (!supabaseUrl || !supabaseServiceKey) throw new Error("Missing Supabase credentials for server function");
-  return createClient(supabaseUrl, supabaseServiceKey);
+  return createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
 }
 
 // Internal helper for logging
@@ -35,17 +35,25 @@ export const saveSettingsAction = createServerFn({ method: "POST" })
   .validator((payload: { updates: Array<{ key: string; value: any; is_public: boolean }> }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
+    if (!ctx.data || !ctx.data.updates) {
+      throw new Error("Payload 'updates' tidak ditemukan");
+    }
+
     for (const item of ctx.data.updates) {
-      const { data: existing } = await supabaseAdmin.from("settings").select("key").eq("key", item.key).single();
+      const { data: existing } = await supabaseAdmin.from("settings").select("key").eq("key", item.key).maybeSingle();
       if (existing) {
         const { error: updateErr } = await supabaseAdmin.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
         if (updateErr) {
-          await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+          console.warn(`[saveSettingsAction] Update failed for ${item.key}, attempting upsert:`, updateErr);
+          const { error: upsertErr } = await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+          if (upsertErr) throw upsertErr;
         }
       } else {
         const { error: insertErr } = await supabaseAdmin.from("settings").insert(item as any);
         if (insertErr) {
-          await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+          console.warn(`[saveSettingsAction] Insert failed for ${item.key}, attempting upsert:`, insertErr);
+          const { error: upsertErr } = await supabaseAdmin.from("settings").upsert(item as any, { onConflict: "key" });
+          if (upsertErr) throw upsertErr;
         }
       }
     }
