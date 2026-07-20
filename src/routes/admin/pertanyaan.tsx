@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GripVertical, Plus, Trash2, Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity } from "@/server/admin-actions";
+import { logActivity } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/pertanyaan")({
   component: KelolaPertanyaanPage,

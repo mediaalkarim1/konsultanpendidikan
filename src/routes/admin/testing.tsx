@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { testWaConnection, simulateFullConsultation } from "@/server/testing";
+import { testWaConnection, simulateFullConsultation } from "@/actions/testing";
 import { Send, Settings, Play, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 

@@ -4,7 +4,7 @@ import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity } from "@/server/admin-actions";
+import { logActivity } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/pengaturan")({
   component: PengaturanPage,

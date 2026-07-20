@@ -4,7 +4,7 @@ import { Save, Loader2, Info, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity } from "@/server/admin-actions";
+import { logActivity } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/prompt")({
   component: PromptAIPage,

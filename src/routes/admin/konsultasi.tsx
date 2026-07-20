@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import html2pdf from "html2pdf.js";
 import { useAuth } from "@/lib/auth-context";
-import { updateConsultationStatus, deleteConsultation } from "@/server/admin-actions";
+import { updateConsultationStatus, deleteConsultation } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,

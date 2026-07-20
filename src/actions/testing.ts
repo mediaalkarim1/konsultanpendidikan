@@ -7,7 +7,7 @@ export const testWaConnection = createServerFn({ method: "POST" })
   .handler(async (ctx) => {
     const { target, message } = ctx.data;
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     if (!supabaseUrl || !supabaseServiceKey) throw new Error("Missing Supabase credentials");
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -34,7 +34,7 @@ export const simulateFullConsultation = createServerFn({ method: "POST" })
     const { processConsultation } = await import("./process-consultation");
     
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     if (!supabaseUrl || !supabaseServiceKey) throw new Error("Missing Supabase credentials");
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
