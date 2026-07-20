@@ -212,3 +212,34 @@ export const deleteConsultation = createServerFn({ method: "POST" })
     
     return { success: true };
   });
+
+// --- WhatsApp Templates Management ---
+export const getWaTemplatesAction = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const supabaseAdmin = getAdminSupabase();
+    const { data, error } = await supabaseAdmin.from("wa_templates").select("*").order("template_key", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  });
+
+export const saveWaTemplatesAction = createServerFn({ method: "POST" })
+  .validator((payload: { templates: Array<{ template_key: string; template_name: string; content: string }>; email: string }) => payload)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    const { templates, email } = ctx.data;
+
+    for (const tpl of templates) {
+      const { error } = await supabaseAdmin.from("wa_templates").upsert({
+        template_key: tpl.template_key,
+        template_name: tpl.template_name,
+        content: tpl.content,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "template_key" });
+
+      if (error) throw error;
+    }
+
+    await logActivityInternal(email, "SAVE_WA_TEMPLATES", { count: templates.length });
+    return { success: true };
+  });
+

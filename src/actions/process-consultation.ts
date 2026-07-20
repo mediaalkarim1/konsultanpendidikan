@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
 import { runAiEngineAnalysis } from "./ai-engine";
+import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
 
 export const processConsultation = createServerFn({ method: "POST" })
   .validator((consultationId: string) => consultationId)
@@ -54,16 +55,34 @@ export const processConsultation = createServerFn({ method: "POST" })
         return `P: ${qText}\nJ: ${aText}`;
       }).join("\n\n");
 
-      // 3. Send WhatsApp Notifications (Admin & Participant)
-      const { data: settingsData } = await supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact"]);
+      // 3. Fetch WA Provider Config & WA Templates from DB
+      const [{ data: settingsData }, { data: waTemplates }] = await Promise.all([
+        supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact"]),
+        supabaseAdmin.from("wa_templates").select("*")
+      ]);
+
       const waConfig: WaProviderConfig = settingsData?.find(s => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
       const adminContact = settingsData?.find(s => s.key === "site.contact")?.value?.whatsapp;
 
       const dateStr = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
       
-      const adminMsg = `Ada konsultasi baru yang masuk.\n\nNama: ${consultation.parent_name}\nNomor HP: ${consultation.whatsapp_number}\nJenjang: ${consultation.level.toUpperCase()}\nTanggal: ${dateStr}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.`;
-      
-      const parentMsg = `Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.`;
+      const templateData: WaTemplateData = {
+        nama: consultation.parent_name,
+        nomor: consultation.whatsapp_number,
+        jenjang: consultation.level.toUpperCase(),
+        tanggal: dateStr,
+        status: "Menunggu Analisis",
+        id_konsultasi: consultationId
+      };
+
+      const defaultAdminTpl = "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
+      const defaultParticipantTpl = "Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.";
+
+      const adminTplContent = waTemplates?.find((t: any) => t.template_key === "admin_notification")?.content || defaultAdminTpl;
+      const participantTplContent = waTemplates?.find((t: any) => t.template_key === "participant_notification")?.content || defaultParticipantTpl;
+
+      const adminMsg = renderWaTemplate(adminTplContent, templateData);
+      const parentMsg = renderWaTemplate(participantTplContent, templateData);
 
       const logNotification = async (type: string, target: string, message: string, result: any) => {
         await supabaseAdmin.from("notification_logs").insert({
@@ -106,7 +125,6 @@ export const processConsultation = createServerFn({ method: "POST" })
       );
 
       if (!aiResult.success || !aiResult.data) {
-        // Mark status as Gagal Analisis
         const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
         await supabaseAdmin.from("consultations").update({
           status: "Gagal Analisis",
@@ -140,7 +158,6 @@ export const processConsultation = createServerFn({ method: "POST" })
 
     } catch (err: any) {
       console.error("[processConsultation Error]:", err);
-      // Mark Gagal Analisis on unexpected error
       try {
         await supabaseAdmin.from("consultations").update({
           status: "Gagal Analisis",

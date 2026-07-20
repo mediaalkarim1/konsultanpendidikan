@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, Cpu, CheckCircle2, Star } from "lucide-react";
+import { Save, Loader2, Info, Building2, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, Cpu, CheckCircle2, Star, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity, saveSettingsAction, getAiProvidersAction, saveAiProviderAction } from "@/actions/admin-actions";
+import { logActivity, saveSettingsAction, getAiProvidersAction, saveAiProviderAction, getWaTemplatesAction, saveWaTemplatesAction } from "@/actions/admin-actions";
 import { PromptAIPage } from "./prompt";
 import { TestingPage } from "./testing";
 
@@ -23,6 +23,11 @@ function PengaturanPage() {
   const [providers, setProviders] = useState<any[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
   const [savingProvider, setSavingProvider] = useState(false);
+
+  // WA Templates state
+  const [waAdminTemplate, setWaAdminTemplate] = useState("");
+  const [waParticipantTemplate, setWaParticipantTemplate] = useState("");
+  const [savingWaTemplates, setSavingWaTemplates] = useState(false);
 
   const defaultSettings = {
     appName: "EduKonsul",
@@ -45,9 +50,10 @@ function PengaturanPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [{ data: allSettings }, providersData] = await Promise.all([
+      const [{ data: allSettings }, providersData, waTemplatesData] = await Promise.all([
         supabase.from("settings").select("*"),
-        getAiProvidersAction()
+        getAiProvidersAction(),
+        getWaTemplatesAction()
       ]);
       
       const findVal = (key: string) => allSettings?.find((s: any) => s.key === key)?.value || {};
@@ -72,6 +78,13 @@ function PengaturanPage() {
       setProviders(providersData || []);
       if (providersData && providersData.length > 0) {
         setSelectedProvider(providersData.find((p: any) => p.is_default) || providersData[0]);
+      }
+
+      if (waTemplatesData) {
+        const adminTpl = waTemplatesData.find((t: any) => t.template_key === "admin_notification")?.content || "";
+        const partTpl = waTemplatesData.find((t: any) => t.template_key === "participant_notification")?.content || "";
+        setWaAdminTemplate(adminTpl);
+        setWaParticipantTemplate(partTpl);
       }
     } catch (e) {
       console.error(e);
@@ -98,19 +111,12 @@ function PengaturanPage() {
         await saveSettingsAction({ updates: allUpdates });
         saved = true;
       } catch (serverErr) {
-        console.warn("Server action save attempt failed, falling back to client update/upsert:", serverErr);
         for (const item of allUpdates) {
           const { data: existing } = await supabase.from("settings").select("key").eq("key", item.key).single();
           if (existing) {
-            const { error: updateErr } = await supabase.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
-            if (updateErr) {
-              await supabase.from("settings").upsert(item as any, { onConflict: "key" });
-            }
+            await supabase.from("settings").update({ value: item.value, is_public: item.is_public }).eq("key", item.key);
           } else {
-            const { error: insertErr } = await supabase.from("settings").insert(item as any);
-            if (insertErr) {
-              await supabase.from("settings").upsert(item as any, { onConflict: "key" });
-            }
+            await supabase.from("settings").upsert(item as any, { onConflict: "key" });
           }
         }
         saved = true;
@@ -123,7 +129,6 @@ function PengaturanPage() {
         } catch (_) {}
       }
     } catch (e: any) {
-      console.error("Save settings failed:", e);
       toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error database"));
     } finally {
       setSaving(false);
@@ -154,6 +159,27 @@ function PengaturanPage() {
     }
   };
 
+  const handleSaveWaTemplates = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingWaTemplates(true);
+    try {
+      await saveWaTemplatesAction({
+        data: {
+          templates: [
+            { template_key: "admin_notification", template_name: "Pesan Notifikasi Admin", content: waAdminTemplate },
+            { template_key: "participant_notification", template_name: "Pesan Notifikasi Peserta", content: waParticipantTemplate }
+          ],
+          email: userEmail || "admin"
+        }
+      });
+      toast.success("Template WhatsApp Notifikasi berhasil disimpan");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan template WA: " + (e.message || "Error database"));
+    } finally {
+      setSavingWaTemplates(false);
+    }
+  };
+
   const testWhatsApp = async () => {
     if (!settings.adminWa) {
       toast.error("Nomor WA Admin belum diisi di tab Umum.");
@@ -169,7 +195,8 @@ function PengaturanPage() {
   const tabs = [
     { id: "umum", label: "Umum", icon: Building2 },
     { id: "provider", label: "AI Provider Engine", icon: Cpu },
-    { id: "wa", label: "WhatsApp", icon: MessageSquare },
+    { id: "wa", label: "WhatsApp Provider", icon: MessageSquare },
+    { id: "watemplate", label: "WhatsApp Template", icon: FileText },
     { id: "prompt", label: "Prompt AI", icon: Sparkles },
     { id: "testing", label: "Testing & Simulasi", icon: Beaker },
   ];
@@ -187,7 +214,7 @@ function PengaturanPage() {
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-brand">Pengaturan Sistem</h1>
-          <p className="text-sm text-muted-foreground mt-1">Konfigurasi umum, AI Provider Engine, Prompt Multiguna, dan Notifikasi.</p>
+          <p className="text-sm text-muted-foreground mt-1">Konfigurasi umum, AI Provider Engine, WA Template, Prompt Multiguna, dan Testing.</p>
         </div>
       </div>
 
@@ -221,6 +248,67 @@ function PengaturanPage() {
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <TestingPage />
             </div>
+          ) : activeTab === "watemplate" ? (
+            /* Tab WhatsApp Template */
+            <form onSubmit={handleSaveWaTemplates} className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
+              <div className="border-b pb-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
+                  <FileText className="h-5 w-5" /> Kelola Template Pesan WhatsApp
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Atur format pesan notifikasi otomatis untuk Admin dan Peserta tanpa mengubah source code.
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-4 flex gap-3 text-sm text-emerald-800 dark:text-emerald-300">
+                <Info className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Placeholder Dinamis yang Tersedia:</p>
+                  <p className="text-xs mt-1 leading-relaxed">
+                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mr-1">{"{{nama}}"}</code>: Nama Orang Tua | 
+                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{nomor}}"}</code>: Nomor WhatsApp | 
+                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{jenjang}}"}</code>: TK & SD / SMP / SMA | 
+                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{tanggal}}"}</code>: Tanggal Pengiriman | 
+                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono ml-1">{"{{status}}"}</code>: Status Konsultasi
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">1. Template Pesan Notifikasi Admin</label>
+                  <textarea
+                    value={waAdminTemplate}
+                    onChange={(e) => setWaAdminTemplate(e.target.value)}
+                    className="min-h-[120px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Pesan ini dikirimkan ke nomor WhatsApp Admin setiap kali ada formulir baru.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">2. Template Pesan Notifikasi Peserta</label>
+                  <textarea
+                    value={waParticipantTemplate}
+                    onChange={(e) => setWaParticipantTemplate(e.target.value)}
+                    className="min-h-[120px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Pesan ini dikirimkan kepada Orang Tua setelah berhasil menekan tombol Kirim.</p>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end border-t">
+                <button
+                  type="submit"
+                  disabled={savingWaTemplates}
+                  className="flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingWaTemplates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Simpan Template WhatsApp
+                </button>
+              </div>
+            </form>
           ) : activeTab === "provider" ? (
             /* Tab AI Provider Engine */
             <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
