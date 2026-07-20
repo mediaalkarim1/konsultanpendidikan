@@ -15,18 +15,22 @@ function getAdminSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
-export const getAdminSettings = createServerFn("POST", async (token: string) => {
-  verifyToken(token);
-  const supabaseAdmin = getAdminSupabase();
-  const { data, error } = await supabaseAdmin.from("settings").select("*").in("key", ["ai.prompt", "ai.gemini_key", "ai.gemini_model", "wa.provider"]);
-  if (error) throw error;
-  return data;
-});
+export const getAdminSettings = createServerFn({ method: "POST" })
+  .validator((token: string) => token)
+  .handler(async (ctx) => {
+    verifyToken(ctx.data);
+    const supabaseAdmin = getAdminSupabase();
+    const { data, error } = await supabaseAdmin.from("settings").select("*").in("key", ["ai.prompt", "ai.gemini_key", "ai.gemini_model", "wa.provider"]);
+    if (error) throw error;
+    return data;
+  });
 
-export const saveAdminSetting = createServerFn("POST", async (payload: { token: string, key: string, value: any }) => {
-  verifyToken(payload.token);
-  const supabaseAdmin = getAdminSupabase();
-  const { error } = await supabaseAdmin.from("settings").upsert({ key: payload.key, value: payload.value, is_public: false });
-  if (error) throw error;
-  return { success: true };
-});
+export const saveAdminSetting = createServerFn({ method: "POST" })
+  .validator((payload: { token: string, key: string, value: any }) => payload)
+  .handler(async (ctx) => {
+    verifyToken(ctx.data.token);
+    const supabaseAdmin = getAdminSupabase();
+    const { error } = await supabaseAdmin.from("settings").upsert({ key: ctx.data.key, value: ctx.data.value, is_public: false });
+    if (error) throw error;
+    return { success: true };
+  });

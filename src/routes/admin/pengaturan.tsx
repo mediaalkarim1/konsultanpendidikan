@@ -33,10 +33,10 @@ function PengaturanPage() {
       // 1. Fetch public settings directly via client
       const { data: publicData } = await supabase.from("settings").select("*");
       if (publicData) {
-        const brandObj = publicData.find(s => s.key === "site.brand")?.value || {};
-        const heroObj = publicData.find(s => s.key === "site.hero")?.value || {};
-        const contactObj = publicData.find(s => s.key === "site.contact")?.value || {};
-        const footerObj = publicData.find(s => s.key === "site.footer")?.value || {};
+        const brandObj = (publicData.find(s => s.key === "site.brand")?.value as any) || {};
+        const heroObj = (publicData.find(s => s.key === "site.hero")?.value as any) || {};
+        const contactObj = (publicData.find(s => s.key === "site.contact")?.value as any) || {};
+        const footerObj = (publicData.find(s => s.key === "site.footer")?.value as any) || {};
         
         setSettings(prev => ({
           appName: brandObj.name || prev.appName,
@@ -83,7 +83,7 @@ function PengaturanPage() {
 
     let success = true;
     for (const item of publicUpdates) {
-      const { error } = await supabase.from("settings").upsert(item);
+      const { error } = await supabase.from("settings").upsert(item as any);
       if (error) success = false;
     }
 

@@ -17,7 +17,7 @@ type QuestionOption = {
 type Question = {
   id: string;
   question_text: string;
-  question_type: string;
+  question_type: "textarea" | "text" | "single_choice" | "multi_choice";
   order_index: number;
   is_required: boolean;
   is_active: boolean;
@@ -25,7 +25,7 @@ type Question = {
 };
 
 function KelolaPertanyaanPage() {
-  const [level, setLevel] = useState("tksd");
+  const [level, setLevel] = useState<"tksd" | "smp" | "sma">("tksd");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,9 +106,9 @@ function KelolaPertanyaanPage() {
 
   const addQuestion = async () => {
     const newQ = {
-      level,
+      level: level as any,
       question_text: "Pertanyaan Baru",
-      question_type: "text",
+      question_type: "text" as any,
       order_index: questions.length + 1,
       is_required: true,
       is_active: true
@@ -131,7 +131,7 @@ function KelolaPertanyaanPage() {
         <label className="font-medium text-sm">Pilih Jenjang:</label>
         <select
           value={level}
-          onChange={(e) => setLevel(e.target.value)}
+          onChange={(e) => setLevel(e.target.value as any)}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
         >
           <option value="tksd">TK & SD</option>
@@ -179,7 +179,7 @@ function KelolaPertanyaanPage() {
 function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question, onUpdate: () => void, onDelete: () => void, onToggleActive: () => void }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(q.question_text);
-  const [type, setType] = useState(q.question_type);
+  const [type, setType] = useState<"text" | "textarea" | "single_choice" | "multi_choice">(q.question_type as any);
   const [req, setReq] = useState(q.is_required);
   
   const hasOptions = type === "single_choice" || type === "multi_choice";
@@ -249,7 +249,7 @@ function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question
       <div className="flex gap-4">
         <div className="flex-1">
           <label className="mb-1 block text-xs font-medium">Tipe Jawaban</label>
-          <select value={type} onChange={e => setType(e.target.value)} className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand">
+          <select value={type} onChange={e => setType(e.target.value as any)} className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand">
             <option value="text">Teks Pendek</option>
             <option value="textarea">Teks Panjang</option>
             <option value="single_choice">Pilihan Ganda (Satu)</option>

@@ -7,7 +7,10 @@ async function sendWhatsApp(phone: string, message: string, provider: any) {
   // If provider.name === 'fonnte', etc. implement fetch to Fonnte API here.
 }
 
-export const processConsultation = createServerFn("POST", async (consultationId: string) => {
+export const processConsultation = createServerFn({ method: "POST" })
+  .validator((consultationId: string) => consultationId)
+  .handler(async (ctx) => {
+  const consultationId = ctx.data;
   // Initialize Supabase admin client to bypass RLS for reading private settings
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
