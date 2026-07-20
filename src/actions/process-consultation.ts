@@ -55,14 +55,23 @@ export const processConsultation = createServerFn({ method: "POST" })
         return `P: ${qText}\nJ: ${aText}`;
       }).join("\n\n");
 
-      // 3. Fetch WA Provider Config & WA Templates from DB
+      // 3. Fetch WA Provider Config, WA Templates, and Workflow Config
       const [{ data: settingsData }, { data: waTemplates }] = await Promise.all([
-        supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact"]),
+        supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact", "ai.workflow_config"]),
         supabaseAdmin.from("wa_templates").select("*")
       ]);
 
       const waConfig: WaProviderConfig = settingsData?.find(s => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
       const adminContact = settingsData?.find(s => s.key === "site.contact")?.value?.whatsapp;
+      const wfConfig = settingsData?.find(s => s.key === "ai.workflow_config")?.value || {
+        enable_wa_admin_notif: true,
+        enable_wa_parent_notif: true,
+        enable_ai_analysis: true,
+        enable_ai_summary: true,
+        enable_ai_recommendation: true,
+        enable_auto_save: true,
+        auto_fallback: true
+      };
 
       const dateStr = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
       
@@ -97,32 +106,62 @@ export const processConsultation = createServerFn({ method: "POST" })
         return result.success;
       };
 
-      let adminWaStatus = "pending";
-      let parentWaStatus = "pending";
+      let adminWaStatus = "skipped";
+      let parentWaStatus = "skipped";
 
-      if (adminContact) {
+      // 4. Send WA Notifications based on Workflow Config toggles
+      if (wfConfig.enable_wa_admin_notif !== false && adminContact) {
         const resAdmin = await sendWhatsAppMessage(adminContact, adminMsg, waConfig);
         adminWaStatus = (await logNotification("admin_wa", adminContact, adminMsg, resAdmin)) ? "success" : "failed";
       }
 
-      const resParent = await sendWhatsAppMessage(consultation.whatsapp_number, parentMsg, waConfig);
-      parentWaStatus = (await logNotification("participant_wa", consultation.whatsapp_number, parentMsg, resParent)) ? "success" : "failed";
+      if (wfConfig.enable_wa_parent_notif !== false) {
+        const resParent = await sendWhatsAppMessage(consultation.whatsapp_number, parentMsg, waConfig);
+        parentWaStatus = (await logNotification("participant_wa", consultation.whatsapp_number, parentMsg, resParent)) ? "success" : "failed";
+      }
 
       await supabaseAdmin.from("consultations").update({
         notification_admin_status: adminWaStatus,
         notification_parent_status: parentWaStatus
       }).eq("id", consultationId);
 
-      // 4. Update status to Sedang Dianalisis
+      // Check if AI Analysis toggle is disabled
+      if (wfConfig.enable_ai_analysis === false) {
+        await supabaseAdmin.from("consultations").update({
+          status: "Sudah Dihubungi",
+          error_message: null
+        }).eq("id", consultationId);
+        return { success: true, message: "AI Analysis disabled via workflow config." };
+      }
+
+      // 5. Update status to Sedang Dianalisis
       await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultationId);
 
-      // 5. Execute AI Engine Analysis
-      const aiResult = await runAiEngineAnalysis(
+      // 6. Execute AI Engine Analysis
+      let aiResult = await runAiEngineAnalysis(
         consultation.parent_name,
         consultation.level,
         consultation.whatsapp_number,
         formattedAnswers
       );
+
+      // Auto Fallback to Gemini if main provider failed and auto_fallback is enabled
+      if ((!aiResult.success || !aiResult.data) && wfConfig.auto_fallback !== false) {
+        console.warn("[AI Engine Fallback Triggered] Primary provider failed, attempting fallback to Gemini...");
+        const { data: geminiProv } = await supabaseAdmin.from("ai_providers").select("*").eq("provider_key", "gemini").single();
+        if (geminiProv && geminiProv.api_key) {
+          // Temporarily set gemini as default for fallback
+          await supabaseAdmin.from("ai_providers").update({ is_default: false }).neq("id", geminiProv.id);
+          await supabaseAdmin.from("ai_providers").update({ is_default: true, is_active: true }).eq("id", geminiProv.id);
+          
+          aiResult = await runAiEngineAnalysis(
+            consultation.parent_name,
+            consultation.level,
+            consultation.whatsapp_number,
+            formattedAnswers
+          );
+        }
+      }
 
       if (!aiResult.success || !aiResult.data) {
         const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
@@ -134,20 +173,22 @@ export const processConsultation = createServerFn({ method: "POST" })
         return { success: false, error: errMsg };
       }
 
-      // 6. Save Analysis Result into consultation_analysis
+      // 7. Save Analysis Result into consultation_analysis (if auto save enabled)
       const analysisData = aiResult.data;
-      await supabaseAdmin.from("consultation_analysis").upsert({
-        consultation_id: consultationId,
-        summary: analysisData.summary,
-        analysis: analysisData.analysis,
-        strengths: analysisData.strengths,
-        weaknesses: analysisData.weaknesses,
-        potential: analysisData.potential,
-        risk: analysisData.risk,
-        education_recommendation: analysisData.education_recommendation
-      }, { onConflict: "consultation_id" });
+      if (wfConfig.enable_auto_save !== false) {
+        await supabaseAdmin.from("consultation_analysis").upsert({
+          consultation_id: consultationId,
+          summary: wfConfig.enable_ai_summary !== false ? analysisData.summary : "-",
+          analysis: analysisData.analysis,
+          strengths: analysisData.strengths,
+          weaknesses: analysisData.weaknesses,
+          potential: analysisData.potential,
+          risk: analysisData.risk,
+          education_recommendation: wfConfig.enable_ai_recommendation !== false ? analysisData.education_recommendation : "-"
+        }, { onConflict: "consultation_id" });
+      }
 
-      // 7. Update Consultation Status to Selesai Dianalisis
+      // 8. Update Consultation Status to Selesai Dianalisis
       await supabaseAdmin.from("consultations").update({
         status: "Selesai Dianalisis",
         ai_result: analysisData.analysis,

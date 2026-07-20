@@ -243,3 +243,31 @@ export const saveWaTemplatesAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// --- AI Workflow Config Management ---
+export const getAiWorkflowConfigAction = createServerFn({ method: "POST" })
+  .handler(async () => {
+    const supabaseAdmin = getAdminSupabase();
+    const { data, error } = await supabaseAdmin.from("settings").select("value").eq("key", "ai.workflow_config").single();
+    if (error && error.code !== "PGRST116") throw error;
+    return data?.value || null;
+  });
+
+export const saveAiWorkflowConfigAction = createServerFn({ method: "POST" })
+  .validator((payload: { config: any; email: string }) => payload)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    const { config, email } = ctx.data;
+
+    const { error } = await supabaseAdmin.from("settings").upsert({
+      key: "ai.workflow_config",
+      value: config,
+      is_public: false
+    }, { onConflict: "key" });
+
+    if (error) throw error;
+
+    await logActivityInternal(email, "SAVE_AI_WORKFLOW_CONFIG", {});
+    return { success: true };
+  });
+
+
