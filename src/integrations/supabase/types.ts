@@ -14,7 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consultation_answers: {
+        Row: {
+          answer_text: string | null
+          consultation_id: string
+          created_at: string
+          id: string
+          question_id: string
+          selected_option_ids: string[] | null
+        }
+        Insert: {
+          answer_text?: string | null
+          consultation_id: string
+          created_at?: string
+          id?: string
+          question_id: string
+          selected_option_ids?: string[] | null
+        }
+        Update: {
+          answer_text?: string | null
+          consultation_id?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+          selected_option_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_answers_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultation_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          created_at: string
+          id: string
+          level: Database["public"]["Enums"]["education_level"]
+          parent_name: string
+          status: string
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          level: Database["public"]["Enums"]["education_level"]
+          parent_name: string
+          status?: string
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          level?: Database["public"]["Enums"]["education_level"]
+          parent_name?: string
+          status?: string
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
+      question_options: {
+        Row: {
+          created_at: string
+          id: string
+          option_text: string
+          order_index: number
+          question_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_text: string
+          order_index?: number
+          question_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_text?: string
+          order_index?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          level: Database["public"]["Enums"]["education_level"]
+          order_index: number
+          question_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          level: Database["public"]["Enums"]["education_level"]
+          order_index?: number
+          question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          level?: Database["public"]["Enums"]["education_level"]
+          order_index?: number
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          is_public: boolean
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          is_public?: boolean
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          is_public?: boolean
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +180,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      education_level: "tksd" | "smp" | "sma"
+      question_type: "text" | "textarea" | "single_choice" | "multi_choice"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +308,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      education_level: ["tksd", "smp", "sma"],
+      question_type: ["text", "textarea", "single_choice", "multi_choice"],
+    },
   },
 } as const
