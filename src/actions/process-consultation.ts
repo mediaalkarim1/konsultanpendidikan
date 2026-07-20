@@ -38,22 +38,32 @@ export const processConsultation = createServerFn({ method: "POST" })
       // 2. Fetch answers
       const { data: answers } = await supabaseAdmin
         .from("consultation_answers")
-        .select("*, questions(question_text)")
+        .select("*")
         .eq("consultation_id", consultationId);
 
-      const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
-      let optionsMap: Record<string, string> = {};
-      if (allOptionIds.length > 0) {
-        const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
-        if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
-      }
+      let formattedAnswers = "";
+      if (answers && answers.length > 0) {
+        const questionIds = answers.map(a => a.question_id).filter(Boolean);
+        const { data: questionsList } = await supabaseAdmin.from("questions").select("id, question_text").in("id", questionIds);
+        const questionsMap: Record<string, string> = {};
+        if (questionsList) {
+          questionsList.forEach(q => { questionsMap[q.id] = q.question_text; });
+        }
 
-      // Format answers string
-      const formattedAnswers = (answers || []).map(a => {
-        const qText = a.questions?.question_text || "Pertanyaan";
-        const aText = a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid]).join(", ");
-        return `P: ${qText}\nJ: ${aText}`;
-      }).join("\n\n");
+        const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
+        let optionsMap: Record<string, string> = {};
+        if (allOptionIds.length > 0) {
+          const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
+          if (opts) opts.forEach(o => { optionsMap[o.id] = o.option_text; });
+        }
+
+        formattedAnswers = answers.map(a => {
+          const qText = questionsMap[a.question_id] || "Pertanyaan";
+          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid]).filter(Boolean);
+          const aText = a.answer_text || (optTexts.length > 0 ? optTexts.join(", ") : "-");
+          return `P: ${qText}\nJ: ${aText}`;
+        }).join("\n\n");
+      }
 
       // 3. Fetch WA Provider Config, WA Templates, and Workflow Config
       const [{ data: settingsData }, { data: waTemplates }] = await Promise.all([
