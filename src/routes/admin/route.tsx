@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
-import { LayoutDashboard, Users, FileQuestion, Settings, LogOut, Menu, Sparkles } from "lucide-react";
+import { LayoutDashboard, Users, FileQuestion, Settings, LogOut, Menu, Sparkles, Beaker } from "lucide-react";
 import { useState } from "react";
 
 export const Route = createFileRoute("/admin")({
@@ -32,7 +32,8 @@ function AdminLayout() {
     { name: "Dashboard", to: "/admin", icon: LayoutDashboard },
     { name: "Data Konsultasi", to: "/admin/konsultasi", icon: Users },
     { name: "Kelola Pertanyaan", to: "/admin/pertanyaan", icon: FileQuestion },
-    { name: "Integrasi AI", to: "/admin/prompt", icon: Sparkles },
+    { name: "Prompt AI", to: "/admin/prompt", icon: Sparkles },
+    { name: "Testing & Simulasi", to: "/admin/testing", icon: Beaker },
     { name: "Pengaturan", to: "/admin/pengaturan", icon: Settings },
   ];
 

@@ -17,6 +17,7 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
 import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
 import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
+import { Route as AdminTestingRouteImport } from './routes/admin/testing'
 import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
 import { Route as FormulirJenjangRouteImport } from './routes/formulir.$jenjang'
 
@@ -65,6 +66,11 @@ const AdminPengaturanRoute = AdminPengaturanRouteImport.update({
   path: '/pengaturan',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminTestingRoute = AdminTestingRouteImport.update({
+  id: '/testing',
+  path: '/testing',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPromptRoute = AdminPromptRouteImport.update({
   id: '/prompt',
   path: '/prompt',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/admin/konsultasi': typeof AdminKonsultasiRoute
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/pengaturan': typeof AdminPengaturanRoute
+  '/admin/testing': typeof AdminTestingRoute
   '/admin/prompt': typeof AdminPromptRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/admin/konsultasi': typeof AdminKonsultasiRoute
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/pengaturan': typeof AdminPengaturanRoute
+  '/admin/testing': typeof AdminTestingRoute
   '/admin/prompt': typeof AdminPromptRoute
 }
 export interface FileRoutesById {
@@ -105,14 +113,15 @@ export interface FileRoutesById {
   '/admin/konsultasi': typeof AdminKonsultasiRoute
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/pengaturan': typeof AdminPengaturanRoute
+  '/admin/testing': typeof AdminTestingRoute
   '/admin/prompt': typeof AdminPromptRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/prompt'
+  fullPaths: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/prompt'
-  id: '__root__' | '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/prompt'
+  to: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
+  id: '__root__' | '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -128,6 +137,7 @@ const AdminRouteChildren = {
   AdminKonsultasiRoute: AdminKonsultasiRoute,
   AdminPertanyaanRoute: AdminPertanyaanRoute,
   AdminPengaturanRoute: AdminPengaturanRoute,
+  AdminTestingRoute: AdminTestingRoute,
   AdminPromptRoute: AdminPromptRoute,
 }
 
@@ -194,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/pengaturan'
       fullPath: '/admin/pengaturan'
       preLoaderRoute: typeof AdminPengaturanRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/testing': {
+      id: '/admin/testing'
+      path: '/testing'
+      fullPath: '/admin/testing'
+      preLoaderRoute: typeof AdminTestingRouteImport
       parentRoute: typeof AdminRouteImport
     }
     '/admin/prompt': {

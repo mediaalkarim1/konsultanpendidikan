@@ -266,11 +266,14 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
          }
       }
 
+      // Fetch notification logs
+      const { data: notifLogs } = await supabase.from("notification_logs" as any).select("*").eq("consultation_id", consultId).order("created_at", { ascending: false });
+
       if (consultation && answers) {
         setData({ ...consultation, answers: answers.map(a => ({
           q: a.questions?.question_text,
           a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid]).join(", ")
-        })) });
+        })), logs: notifLogs || [] });
       }
       setLoading(false);
     }
@@ -335,9 +338,58 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
             </div>
 
             <div className="mt-8 rounded-xl border border-dashed border-brand/30 bg-brand/5 p-4 print:border-gray-300 print:bg-transparent">
-              <h4 className="font-semibold text-brand print:text-black">Hasil Analisis AI</h4>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-semibold text-brand print:text-black">Hasil Analisis AI</h4>
+                <div className="text-xs space-x-2">
+                  <span className={`px-2 py-1 rounded-full ${data.ai_status === 'success' ? 'bg-green-100 text-green-700' : data.ai_status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    Status: {data.ai_status}
+                  </span>
+                  {data.ai_created_at && <span className="text-muted-foreground">{format(new Date(data.ai_created_at), "HH:mm")}</span>}
+                </div>
+              </div>
               <div className="mt-3 text-sm text-foreground print:text-gray-800 whitespace-pre-wrap">
                 {data.ai_result ? data.ai_result : <span className="text-muted-foreground italic">(Belum dianalisis / AI dimatikan)</span>}
+              </div>
+              {data.ai_prompt_used && (
+                <div className="mt-4 pt-4 border-t border-brand/20 print:hidden">
+                  <p className="text-xs font-semibold text-muted-foreground">Prompt yang digunakan:</p>
+                  <pre className="mt-2 text-xs bg-black/5 p-2 rounded whitespace-pre-wrap text-muted-foreground">
+                    {data.ai_prompt_used.system}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 print:hidden">
+              <h3 className="mb-4 text-lg font-bold border-b pb-2">Riwayat Notifikasi WhatsApp</h3>
+              <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                <div className="rounded border p-3">
+                  <span className="text-muted-foreground block text-xs">Notifikasi Admin:</span>
+                  <span className={`font-semibold ${data.notification_admin_status === 'success' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {data.notification_admin_status?.toUpperCase() || 'UNKNOWN'}
+                  </span>
+                </div>
+                <div className="rounded border p-3">
+                  <span className="text-muted-foreground block text-xs">Notifikasi Peserta:</span>
+                  <span className={`font-semibold ${data.notification_parent_status === 'success' ? 'text-green-600' : 'text-amber-600'}`}>
+                    {data.notification_parent_status?.toUpperCase() || 'UNKNOWN'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                {data.logs?.length > 0 ? data.logs.map((log: any) => (
+                  <div key={log.id} className="text-xs border rounded p-3 bg-muted/20">
+                    <div className="flex justify-between items-center mb-1">
+                      <strong className="uppercase">{log.type}</strong>
+                      <span className={log.status === 'success' ? 'text-green-600' : 'text-red-600'}>{log.status}</span>
+                    </div>
+                    <p className="text-muted-foreground">To: {log.target_number} | {format(new Date(log.created_at), "dd MMM HH:mm:ss")}</p>
+                    {log.error_message && <p className="text-red-500 mt-1">Error: {log.error_message}</p>}
+                  </div>
+                )) : (
+                  <p className="text-sm text-muted-foreground italic">Belum ada riwayat notifikasi.</p>
+                )}
               </div>
             </div>
 

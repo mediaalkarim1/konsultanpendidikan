@@ -1,54 +1,55 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getAdminSettings, saveAdminSetting } from "@/server/admin-settings";
-import { Save, Loader2, Info } from "lucide-react";
+import { getPrompts, savePrompt, deletePrompt } from "@/server/admin-settings";
+import { Save, Loader2, Info, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/prompt")({
   component: PromptAIPage,
 });
 
+type Prompt = {
+  id?: string;
+  name: string;
+  system_prompt: string;
+  user_prompt_template: string;
+  is_active: boolean;
+  created_at?: string;
+};
+
 function PromptAIPage() {
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [promptData, setPromptData] = useState({
-    system_prompt: "",
-    user_prompt_template: "",
-  });
+  const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await getPrompts({ data: "mediaalkarim" });
+      setPrompts(data || []);
+    } catch (e) {
+      console.error(e);
+      toast.error("Gagal memuat prompt AI");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function load() {
-      try {
-        const data = await getAdminSettings({ data: "mediaalkarim" });
-        const aiPrompt = data.find((s: any) => s.key === "ai.prompt")?.value;
-        if (aiPrompt) {
-          setPromptData({
-            system_prompt: aiPrompt.system_prompt || "",
-            user_prompt_template: aiPrompt.user_prompt_template || "",
-          });
-        }
-      } catch (e) {
-        console.error(e);
-        toast.error("Gagal memuat prompt AI");
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingPrompt?.name) return toast.error("Nama prompt wajib diisi");
+    
     setSaving(true);
     try {
-      await saveAdminSetting({
-        data: {
-          token: "mediaalkarim",
-          key: "ai.prompt",
-          value: promptData,
-        }
-      });
-      toast.success("Prompt AI berhasil disimpan");
+      await savePrompt({ data: { token: "mediaalkarim", prompt: editingPrompt } });
+      toast.success("Prompt berhasil disimpan");
+      setEditingPrompt(null);
+      load();
     } catch (e) {
       toast.error("Gagal menyimpan prompt");
     } finally {
@@ -56,58 +57,129 @@ function PromptAIPage() {
     }
   };
 
-  if (loading) return <div className="py-10 text-center">Memuat konfigurasi prompt...</div>;
+  const handleDelete = async (id: string) => {
+    if (!confirm("Hapus prompt ini?")) return;
+    try {
+      await deletePrompt({ data: { token: "mediaalkarim", id } });
+      toast.success("Prompt dihapus");
+      load();
+    } catch (e) {
+      toast.error("Gagal menghapus");
+    }
+  };
+
+  const handleSetActive = async (prompt: Prompt) => {
+    try {
+      await savePrompt({ data: { token: "mediaalkarim", prompt: { ...prompt, is_active: true } } });
+      toast.success("Prompt diaktifkan");
+      load();
+    } catch (e) {
+      toast.error("Gagal mengaktifkan prompt");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-brand" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Prompt AI</h1>
-        <p className="text-sm text-muted-foreground">Sesuaikan instruksi yang dikirimkan ke Google Gemini.</p>
-      </div>
-
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-        <div className="flex items-start gap-2">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            <strong>Variabel Dinamis:</strong> Anda dapat menggunakan variabel <code>{`{{nama}}`}</code>, <code>{`{{jenjang}}`}</code>, dan <code>{`{{jawaban}}`}</code> pada Template User Prompt. Sistem akan otomatis menggantinya dengan data peserta saat form dikirim.
-          </p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-brand">Manajemen Prompt AI</h1>
+          <p className="text-sm text-muted-foreground mt-1">Kelola versi prompt untuk instruksi evaluasi Google Gemini.</p>
         </div>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
-        <div className="space-y-5">
-          <div>
-            <label className="mb-2 block font-medium">System Prompt</label>
-            <p className="mb-2 text-xs text-muted-foreground">Instruksi dasar untuk mengatur persona dan perilaku AI.</p>
-            <textarea
-              rows={4}
-              value={promptData.system_prompt}
-              onChange={(e) => setPromptData({ ...promptData, system_prompt: e.target.value })}
-              className="w-full resize-y rounded-lg border border-input bg-background px-4 py-3 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-            />
-          </div>
-          
-          <div>
-            <label className="mb-2 block font-medium">User Prompt Template</label>
-            <p className="mb-2 text-xs text-muted-foreground">Format pesan utama yang menggabungkan data peserta untuk dianalisis oleh AI.</p>
-            <textarea
-              rows={8}
-              value={promptData.user_prompt_template}
-              onChange={(e) => setPromptData({ ...promptData, user_prompt_template: e.target.value })}
-              className="w-full resize-y rounded-lg border border-input bg-background px-4 py-3 text-sm font-mono outline-none focus:border-brand focus:ring-1 focus:ring-brand"
-            />
-          </div>
-        </div>
-
         <button
-          type="submit"
-          disabled={saving}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-foreground shadow-sm hover:opacity-90 disabled:opacity-70 sm:w-auto"
+          onClick={() => setEditingPrompt({ name: "Prompt Baru", system_prompt: "", user_prompt_template: "", is_active: false })}
+          className="flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:bg-brand/90"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Simpan Prompt
+          <Plus className="h-4 w-4" /> Tambah Versi
         </button>
-      </form>
+      </div>
+
+      {editingPrompt ? (
+        <form onSubmit={handleSave} className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between border-b pb-4">
+            <h2 className="text-lg font-semibold">{editingPrompt.id ? "Edit Prompt" : "Buat Prompt Baru"}</h2>
+            <button type="button" onClick={() => setEditingPrompt(null)} className="text-sm text-muted-foreground hover:text-foreground">Batal</button>
+          </div>
+
+          <div className="space-y-5">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">Nama Versi</label>
+              <input
+                type="text"
+                value={editingPrompt.name}
+                onChange={(e) => setEditingPrompt({ ...editingPrompt, name: e.target.value })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                required
+              />
+            </div>
+            
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={editingPrompt.is_active} onChange={e => setEditingPrompt({...editingPrompt, is_active: e.target.checked})} />
+              Jadikan Prompt Aktif
+            </label>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">System Prompt</label>
+              <textarea
+                value={editingPrompt.system_prompt}
+                onChange={(e) => setEditingPrompt({ ...editingPrompt, system_prompt: e.target.value })}
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                placeholder="Anda adalah analis pendidikan..."
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">User Prompt Template</label>
+              <textarea
+                value={editingPrompt.user_prompt_template}
+                onChange={(e) => setEditingPrompt({ ...editingPrompt, user_prompt_template: e.target.value })}
+                className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex items-center justify-center gap-2 rounded-md bg-brand px-6 py-2.5 text-sm font-medium text-brand-foreground hover:bg-brand/90 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Simpan Prompt
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {prompts.map(p => (
+            <div key={p.id} className={`rounded-xl border bg-card p-5 shadow-sm relative ${p.is_active ? 'border-green-500 ring-1 ring-green-500' : ''}`}>
+              {p.is_active && (
+                <span className="absolute -top-3 -right-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 font-semibold">
+                  <CheckCircle2 className="h-3 w-3" /> Aktif
+                </span>
+              )}
+              <h3 className="font-semibold text-lg">{p.name}</h3>
+              <p className="text-xs text-muted-foreground mt-1 mb-4 truncate">{p.system_prompt}</p>
+              
+              <div className="flex gap-2 flex-wrap mt-4">
+                <button onClick={() => setEditingPrompt(p)} className="text-xs px-3 py-1.5 bg-brand/10 text-brand rounded-md hover:bg-brand/20">Edit</button>
+                {!p.is_active && (
+                  <button onClick={() => handleSetActive(p)} className="text-xs px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700">Set Aktif</button>
+                )}
+                <button onClick={() => p.id && handleDelete(p.id)} className="text-xs px-3 py-1.5 text-red-500 hover:bg-red-50 rounded-md ml-auto"><Trash2 className="h-3 w-3" /></button>
+              </div>
+            </div>
+          ))}
+          {prompts.length === 0 && (
+            <div className="col-span-full py-10 text-center text-muted-foreground">Belum ada prompt.</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
