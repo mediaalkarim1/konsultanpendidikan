@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useSiteContent } from "@/lib/site-content";
-import { LogIn } from "lucide-react";
+import { ArrowRight, LogIn } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -33,11 +33,12 @@ function Home() {
   }, [c.metaTitle, c.metaDescription]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-soft via-background to-background font-sans">
-      <header className="sticky top-0 z-10 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <div className="min-h-screen bg-background font-sans">
+      {/* Sticky Header */}
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 shadow-sm backdrop-blur">
+        <div className="mx-auto flex h-[60px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold shadow-sm">
               {c.logo.charAt(0)}
             </div>
             <span className="truncate text-base font-semibold text-foreground sm:text-lg">
@@ -46,59 +47,78 @@ function Home() {
           </Link>
           <Link
             to="/login"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+            className="inline-flex h-[42px] items-center gap-2 rounded-full bg-brand px-4 text-sm font-semibold text-brand-foreground shadow-sm transition-all duration-200 hover:opacity-90 hover:shadow-md active:scale-[0.98] sm:h-[46px] sm:px-5"
           >
             <LogIn className="h-4 w-4" />
-            <span className="hidden sm:inline">Login Admin</span>
-            <span className="sm:hidden">Login</span>
+            <span>Login Admin</span>
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 sm:pt-16">
-        <section className="mx-auto max-w-3xl text-center">
+      {/* Hero */}
+      <main className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] bg-gradient-to-b from-brand-soft via-brand-soft/40 to-transparent"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-24 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-brand/10 blur-3xl"
+        />
+
+        <section className="mx-auto max-w-3xl px-4 pt-10 pb-6 text-center sm:px-6 sm:pt-16">
           {c.heroBadge && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-accent-green/30 bg-accent-green/10 px-3 py-1 text-xs font-medium text-accent-green-foreground">
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-background/70 px-3 py-1 text-xs font-medium text-brand shadow-sm backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-accent-green" />
               {c.heroBadge}
             </span>
           )}
-          <h1 className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-5xl">
+          <h1 className="mt-5 text-[28px] font-bold leading-tight tracking-tight text-foreground sm:text-[36px] lg:text-[40px]">
             {c.title}
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground sm:text-[17px]">
             {c.description}
           </p>
         </section>
 
-        <section className="mt-10 grid grid-cols-1 gap-5 sm:mt-14 sm:grid-cols-2 lg:grid-cols-3">
-          {c.levels.map((lvl) => (
-            <article
-              key={lvl.id}
-              className="group flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-brand/40 hover:shadow-xl"
-            >
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-3xl transition group-hover:scale-105">
-                {lvl.emoji}
-              </div>
-              <h2 className="mt-4 text-lg font-bold text-foreground">{lvl.name}</h2>
-              <p className="mt-2 flex-1 text-sm text-muted-foreground">{lvl.description}</p>
+        {/* Cards — always 3 columns */}
+        <section className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
+          <div className="grid grid-cols-3 gap-3 sm:gap-5 lg:gap-6">
+            {c.levels.slice(0, 3).map((lvl) => (
               <a
+                key={lvl.id}
                 href={lvl.link || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-5 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:bg-brand/90 hover:shadow-lg active:scale-[0.98]"
+                className="group flex min-h-[130px] flex-col items-center justify-between rounded-[18px] border border-border/70 bg-card p-3 text-center shadow-[0_4px_16px_-4px_rgba(21,101,216,0.08)] transition-all duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_12px_28px_-8px_rgba(21,101,216,0.25)] sm:min-h-[220px] sm:p-6"
               >
-                {lvl.buttonLabel}
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-2xl transition-transform duration-300 group-hover:scale-110 sm:h-16 sm:w-16 sm:text-4xl">
+                  {lvl.emoji}
+                </div>
+                <h2 className="mt-2 line-clamp-2 text-[13px] font-bold leading-tight text-foreground sm:mt-4 sm:text-[18px]">
+                  {lvl.name}
+                </h2>
+                <p className="mt-2 hidden flex-1 text-sm text-muted-foreground sm:block">
+                  {lvl.description}
+                </p>
+                <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-brand sm:mt-5 sm:h-[46px] sm:w-full sm:justify-center sm:gap-2 sm:rounded-full sm:bg-brand sm:px-5 sm:text-[15px] sm:text-brand-foreground sm:shadow-sm sm:transition sm:group-hover:shadow-md">
+                  <span className="sm:hidden">Lihat</span>
+                  <span className="hidden sm:inline">{lvl.buttonLabel}</span>
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
+                </span>
               </a>
-            </article>
-          ))}
+            ))}
+          </div>
         </section>
       </main>
 
-      <footer className="border-t border-border/60 bg-card/50">
-        <div className="mx-auto max-w-6xl px-4 py-6 text-center text-sm text-muted-foreground sm:px-6">
-          <p>{c.footer}</p>
-          <p className="mt-1">{c.contact}</p>
+      {/* Footer */}
+      <footer className="border-t border-border/60">
+        <div className="mx-auto max-w-6xl px-4 py-8 text-center sm:px-6 sm:py-10">
+          <p className="text-sm text-muted-foreground">{c.footer}</p>
+          {c.contact && (
+            <p className="mt-2 text-xs text-muted-foreground/80">{c.contact}</p>
+          )}
         </div>
       </footer>
     </div>
