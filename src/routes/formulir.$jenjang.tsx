@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { processConsultation } from "@/server/process-consultation";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -154,6 +155,10 @@ function FormulirPage() {
         const { error: aErr } = await supabase.from("consultation_answers").insert(answerRows);
         if (aErr) throw aErr;
       }
+      
+      // Trigger AI and WA processing in the background (server-side)
+      processConsultation({ data: consultation.id }).catch(e => console.error("Background process error:", e));
+
       toast.success("Konsultasi berhasil dikirim");
       navigate({ to: "/sukses" });
     } catch (err) {

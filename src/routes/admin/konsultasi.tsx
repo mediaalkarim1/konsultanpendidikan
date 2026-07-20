@@ -283,7 +283,7 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
 
   const handleCopy = () => {
     if (!data) return;
-    const text = `Data Konsultasi\nNama: ${data.parent_name}\nWA: ${data.whatsapp_number}\nJenjang: ${LEVEL_LABELS[data.level]}\n\nJawaban:\n${data.answers.map((a: any, i: number) => `${i+1}. ${a.q}\nJawab: ${a.a}`).join("\n\n")}`;
+    const text = `Data Konsultasi\nNama: ${data.parent_name}\nWA: ${data.whatsapp_number}\nJenjang: ${LEVEL_LABELS[data.level]}\n\nJawaban:\n${data.answers.map((a: any, i: number) => `${i+1}. ${a.q}\nJawab: ${a.a}`).join("\n\n")}\n\nAnalisis AI:\n${data.ai_result || "Belum ada"}`;
     navigator.clipboard.writeText(text);
     toast.success("Berhasil disalin ke clipboard");
   };
@@ -336,9 +336,9 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
 
             <div className="mt-8 rounded-xl border border-dashed border-brand/30 bg-brand/5 p-4 print:border-gray-300 print:bg-transparent">
               <h4 className="font-semibold text-brand print:text-black">Hasil Analisis AI</h4>
-              <p className="mt-2 text-sm text-muted-foreground print:text-gray-700">
-                (Hasil analisis AI akan muncul di sini pada pembaruan mendatang).
-              </p>
+              <div className="mt-3 text-sm text-foreground print:text-gray-800 whitespace-pre-wrap">
+                {data.ai_result ? data.ai_result : <span className="text-muted-foreground italic">(Belum dianalisis / AI dimatikan)</span>}
+              </div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3 print:hidden border-t pt-4">
