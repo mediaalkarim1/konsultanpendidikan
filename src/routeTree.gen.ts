@@ -10,24 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuksesRouteImport } from './routes/sukses'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FormulirJenjangRouteImport } from './routes/formulir.$jenjang'
 
 const SuksesRoute = SuksesRouteImport.update({
   id: '/sukses',
   path: '/sukses',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,38 +31,30 @@ const FormulirJenjangRoute = FormulirJenjangRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/login': typeof LoginRoute
   '/sukses': typeof SuksesRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/login': typeof LoginRoute
   '/sukses': typeof SuksesRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
-  '/login': typeof LoginRoute
   '/sukses': typeof SuksesRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/login' | '/sukses' | '/formulir/$jenjang'
+  fullPaths: '/' | '/sukses' | '/formulir/$jenjang'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/login' | '/sukses' | '/formulir/$jenjang'
-  id: '__root__' | '/' | '/admin' | '/login' | '/sukses' | '/formulir/$jenjang'
+  to: '/' | '/sukses' | '/formulir/$jenjang'
+  id: '__root__' | '/' | '/sukses' | '/formulir/$jenjang'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
-  LoginRoute: typeof LoginRoute
   SuksesRoute: typeof SuksesRoute
   FormulirJenjangRoute: typeof FormulirJenjangRoute
 }
@@ -86,20 +66,6 @@ declare module '@tanstack/react-router' {
       path: '/sukses'
       fullPath: '/sukses'
       preLoaderRoute: typeof SuksesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,8 +87,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
-  LoginRoute: LoginRoute,
   SuksesRoute: SuksesRoute,
   FormulirJenjangRoute: FormulirJenjangRoute,
 }
