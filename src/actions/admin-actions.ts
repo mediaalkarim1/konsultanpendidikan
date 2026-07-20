@@ -63,10 +63,18 @@ export const saveSettingsAction = createServerFn({ method: "POST" })
 // --- AI Providers Management ---
 export const getAiProvidersAction = createServerFn({ method: "POST" })
   .handler(async () => {
-    const supabaseAdmin = getAdminSupabase();
-    const { data, error } = await supabaseAdmin.from("ai_providers").select("*").order("created_at", { ascending: true });
-    if (error) throw error;
-    return data || [];
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { data, error } = await supabaseAdmin.from("ai_providers").select("*").order("created_at", { ascending: true });
+      if (error) {
+        console.warn("getAiProvidersAction error:", error);
+        return [];
+      }
+      return data || [];
+    } catch (e) {
+      console.error("getAiProvidersAction exception:", e);
+      return [];
+    }
   });
 
 export const saveAiProviderAction = createServerFn({ method: "POST" })
@@ -115,10 +123,14 @@ export const saveAiProviderAction = createServerFn({ method: "POST" })
 // --- Multi-Prompts Management ---
 export const getMultiPromptsAction = createServerFn({ method: "POST" })
   .handler(async () => {
-    const supabaseAdmin = getAdminSupabase();
-    const { data, error } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).single();
-    if (error && error.code !== "PGRST116") throw error;
-    return data;
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { data } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+      return data || null;
+    } catch (e) {
+      console.error("getMultiPromptsAction exception:", e);
+      return null;
+    }
   });
 
 export const saveMultiPromptsAction = createServerFn({ method: "POST" })
@@ -179,7 +191,6 @@ export const updateAnalysisAction = createServerFn({ method: "POST" })
 
     if (error) throw error;
 
-    // Update main consultation ai_result for backward compatibility
     await supabaseAdmin.from("consultations").update({
       ai_result: analysisData.analysis
     }).eq("id", consultationId);
@@ -193,12 +204,9 @@ export const updateConsultationStatus = createServerFn({ method: "POST" })
   .validator((payload: { id: string; status: string; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
-    
     const { error } = await supabaseAdmin.from("consultations").update({ status: ctx.data.status }).eq("id", ctx.data.id);
     if (error) throw error;
-
     await logActivityInternal(ctx.data.email, "UPDATE_STATUS", { consultation_id: ctx.data.id, new_status: ctx.data.status });
-    
     return { success: true };
   });
 
@@ -206,28 +214,24 @@ export const deleteConsultation = createServerFn({ method: "POST" })
   .validator((payload: { id: string; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
-    
-    const { data: cons } = await supabaseAdmin.from("consultations").select("parent_name, level").eq("id", ctx.data.id).single();
-    
+    const { data: cons } = await supabaseAdmin.from("consultations").select("parent_name, level").eq("id", ctx.data.id).maybeSingle();
     const { error } = await supabaseAdmin.from("consultations").delete().eq("id", ctx.data.id);
     if (error) throw error;
-
-    await logActivityInternal(ctx.data.email, "DELETE_CONSULTATION", { 
-      consultation_id: ctx.data.id, 
-      parent_name: cons?.parent_name,
-      level: cons?.level
-    });
-    
+    await logActivityInternal(ctx.data.email, "DELETE_CONSULTATION", { consultation_id: ctx.data.id, parent_name: cons?.parent_name, level: cons?.level });
     return { success: true };
   });
 
 // --- WhatsApp Templates Management ---
 export const getWaTemplatesAction = createServerFn({ method: "POST" })
   .handler(async () => {
-    const supabaseAdmin = getAdminSupabase();
-    const { data, error } = await supabaseAdmin.from("wa_templates").select("*").order("template_key", { ascending: true });
-    if (error) throw error;
-    return data || [];
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { data } = await supabaseAdmin.from("wa_templates").select("*").order("template_key", { ascending: true });
+      return data || [];
+    } catch (e) {
+      console.error("getWaTemplatesAction exception:", e);
+      return [];
+    }
   });
 
 export const saveWaTemplatesAction = createServerFn({ method: "POST" })
@@ -254,10 +258,14 @@ export const saveWaTemplatesAction = createServerFn({ method: "POST" })
 // --- AI Workflow Config Management ---
 export const getAiWorkflowConfigAction = createServerFn({ method: "POST" })
   .handler(async () => {
-    const supabaseAdmin = getAdminSupabase();
-    const { data, error } = await supabaseAdmin.from("settings").select("value").eq("key", "ai.workflow_config").single();
-    if (error && error.code !== "PGRST116") throw error;
-    return data?.value || null;
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { data } = await supabaseAdmin.from("settings").select("value").eq("key", "ai.workflow_config").maybeSingle();
+      return data?.value || null;
+    } catch (e) {
+      console.error("getAiWorkflowConfigAction exception:", e);
+      return null;
+    }
   });
 
 export const saveAiWorkflowConfigAction = createServerFn({ method: "POST" })

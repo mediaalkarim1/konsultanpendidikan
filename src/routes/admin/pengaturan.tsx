@@ -97,13 +97,27 @@ function PengaturanPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [{ data: allSettings }, providersData, waTemplatesData, wfData] = await Promise.all([
-        supabase.from("settings").select("*"),
-        getAiProvidersAction(),
-        getWaTemplatesAction(),
-        getAiWorkflowConfigAction()
-      ]);
-      
+      let allSettings: any[] = [];
+      try {
+        const { data } = await supabase.from("settings").select("*");
+        allSettings = data || [];
+      } catch (_) {}
+
+      let providersData: any[] = [];
+      try {
+        providersData = await getAiProvidersAction();
+      } catch (_) {}
+
+      let waTemplatesData: any[] = [];
+      try {
+        waTemplatesData = await getWaTemplatesAction();
+      } catch (_) {}
+
+      let wfData: any = null;
+      try {
+        wfData = await getAiWorkflowConfigAction();
+      } catch (_) {}
+
       const findVal = (key: string) => allSettings?.find((s: any) => s.key === key)?.value || {};
       const waConfig = findVal("wa.provider_config");
       const contactObj = findVal("site.contact");
@@ -126,6 +140,14 @@ function PengaturanPage() {
       setProviders(providersData || []);
       if (providersData && providersData.length > 0) {
         setSelectedProvider(providersData.find((p: any) => p.is_default) || providersData[0]);
+      } else {
+        setSelectedProvider({
+          provider_name: "Lovable AI Gateway",
+          provider_key: "lovable",
+          model: "google/gemini-2.5-flash",
+          is_default: true,
+          is_active: true
+        });
       }
 
       if (waTemplatesData) {
@@ -137,8 +159,7 @@ function PengaturanPage() {
         setWfConfig({ ...defaultWorkflowConfig, ...wfData });
       }
     } catch (e) {
-      console.error(e);
-      toast.error("Gagal memuat pengaturan");
+      console.error("loadData error:", e);
     } finally {
       setLoading(false);
     }
