@@ -167,10 +167,14 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
 
     } else {
       // OpenAI / Lovable Gateway / OpenRouter / DeepSeek / Groq / Mistral (Standard OpenAI format)
-      let endpoint = `${baseUrl || "https://api.openai.com/v1"}/chat/completions`;
+      let endpoint = `${baseUrl || (provider.provider_key === "lovable" ? "https://ai-gateway.lovable.dev/v1" : "https://api.openai.com/v1")}/chat/completions`;
       
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (key) headers["Authorization"] = `Bearer ${key}`;
+      const effectiveKey = (provider.provider_key === "lovable" && (!key || key.includes("auto"))) 
+        ? (process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto") 
+        : key;
+
+      if (effectiveKey) headers["Authorization"] = `Bearer ${effectiveKey}`;
 
       const res = await fetch(endpoint, {
         method: "POST",

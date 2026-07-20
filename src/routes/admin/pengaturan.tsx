@@ -35,7 +35,7 @@ const SUGGESTED_MODELS: Record<string, string[]> = {
 };
 
 const DEFAULT_AI_PROVIDERS = [
-  { provider_name: "Lovable AI Gateway", provider_key: "lovable", model: "google/gemini-2.5-flash", base_url: "https://ai-gateway.lovable.dev/v1", temperature: 0.7, max_tokens: 2048, is_default: true, is_active: true },
+  { provider_name: "Lovable AI Gateway", provider_key: "lovable", api_key: "lovable-gateway-auto", model: "google/gemini-2.5-flash", base_url: "https://ai-gateway.lovable.dev/v1", temperature: 0.7, max_tokens: 2048, is_default: true, is_active: true },
   { provider_name: "Google Gemini", provider_key: "gemini", model: "gemini-1.5-pro", base_url: "https://generativelanguage.googleapis.com/v1beta/models", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
   { provider_name: "OpenAI GPT", provider_key: "openai", model: "gpt-4o-mini", base_url: "https://api.openai.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
   { provider_name: "Anthropic Claude", provider_key: "claude", model: "claude-3-5-sonnet-20241022", base_url: "https://api.anthropic.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
@@ -152,7 +152,13 @@ function PengaturanPage() {
         waDeviceId: waConfig.device_id || "",
       });
 
-      const activeProviders = (providersData && providersData.length > 0) ? providersData : DEFAULT_AI_PROVIDERS;
+      let activeProviders = (providersData && providersData.length > 0) ? providersData : DEFAULT_AI_PROVIDERS;
+      activeProviders = activeProviders.map((p: any) => {
+        if (p.provider_key === "lovable" && (!p.api_key || p.api_key.trim() === "")) {
+          return { ...p, api_key: "lovable-gateway-auto" };
+        }
+        return p;
+      });
       setProviders(activeProviders);
       setSelectedProvider(activeProviders.find((p: any) => p.is_default) || activeProviders[0]);
 
@@ -413,10 +419,17 @@ function PengaturanPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-medium mb-1">API Key</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-medium">API Key</label>
+                          {selectedProvider.provider_key === "lovable" && (
+                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                              ✓ Terisi Otomatis (Lovable Gateway)
+                            </span>
+                          )}
+                        </div>
                         <input
-                          type="password"
-                          value={selectedProvider.api_key || ""}
+                          type={selectedProvider.provider_key === "lovable" ? "text" : "password"}
+                          value={selectedProvider.api_key || (selectedProvider.provider_key === "lovable" ? "lovable-gateway-auto" : "")}
                           onChange={(e) => setSelectedProvider({ ...selectedProvider, api_key: e.target.value })}
                           className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-brand font-mono"
                           placeholder="Masukkan API Key..."
