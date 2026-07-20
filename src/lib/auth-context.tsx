@@ -12,9 +12,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [localAuth, setLocalAuth] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // Check fallback local storage
+    if (typeof window !== "undefined") {
+      setLocalAuth(localStorage.getItem("edu_admin_session") === "true");
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setIsLoaded(true);
@@ -28,17 +34,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem("edu_admin_session");
+    setLocalAuth(false);
     await supabase.auth.signOut();
   };
 
   if (!isLoaded) {
-    return null; // Wait for initial session fetch to prevent flash
+    return null;
   }
+
+  const isAuthenticated = !!session || localAuth;
+  const userEmail = session?.user?.email || (localAuth ? "admin@mediaalkarim.com" : null);
 
   return (
     <AuthContext.Provider value={{ 
-      isAuthenticated: !!session, 
-      userEmail: session?.user?.email || null,
+      isAuthenticated, 
+      userEmail,
       logout 
     }}>
       {children}
