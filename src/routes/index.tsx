@@ -1,53 +1,51 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useSiteContent } from "@/lib/site-content";
-import { ArrowRight, LogIn } from "lucide-react";
+import { ArrowRight, GraduationCap, LogIn, School, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
+const LEVELS = [
+  {
+    id: "tksd",
+    Icon: School,
+    name: "TK & SD",
+    tag: "Usia Dini",
+    description: "Untuk anak Taman Kanak-kanak dan Sekolah Dasar.",
+  },
+  {
+    id: "smp",
+    Icon: BookOpen,
+    name: "SMP",
+    tag: "Menengah Pertama",
+    description: "Untuk anak jenjang Sekolah Menengah Pertama.",
+  },
+  {
+    id: "sma",
+    Icon: GraduationCap,
+    name: "SMA",
+    tag: "Menengah Atas",
+    description: "Untuk anak jenjang Sekolah Menengah Atas.",
+  },
+] as const;
+
 function Home() {
-  const c = useSiteContent();
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (c.metaTitle) document.title = c.metaTitle;
-    const setMeta = (selector: string, attr: string, value: string) => {
-      let el = document.head.querySelector<HTMLMetaElement>(selector);
-      if (!el) {
-        el = document.createElement("meta");
-        const [a, v] = selector.replace(/[[\]"]/g, "").split("=");
-        el.setAttribute(a, v);
-        document.head.appendChild(el);
-      }
-      el.setAttribute(attr, value);
-    };
-    if (c.metaDescription) {
-      setMeta('meta[name="description"]', "content", c.metaDescription);
-      setMeta('meta[property="og:description"]', "content", c.metaDescription);
-    }
-    if (c.metaTitle) {
-      setMeta('meta[property="og:title"]', "content", c.metaTitle);
-    }
-  }, [c.metaTitle, c.metaDescription]);
-
   return (
     <div className="min-h-screen bg-background font-sans">
-      {/* Sticky Header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 shadow-sm backdrop-blur">
+      {/* Header */}
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-[60px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-brand-foreground font-bold shadow-sm">
-              {c.logo.charAt(0)}
+              E
             </div>
-            <span className="truncate text-base font-semibold text-foreground sm:text-lg">
-              {c.logo}
+            <span className="text-base font-semibold tracking-tight sm:text-lg">
+              EduKonsul
             </span>
           </Link>
           <Link
             to="/login"
-            className="inline-flex h-[42px] items-center gap-2 rounded-full bg-brand px-4 text-sm font-semibold text-brand-foreground shadow-sm transition-all duration-200 hover:opacity-90 hover:shadow-md active:scale-[0.98] sm:h-[46px] sm:px-5"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand active:scale-[0.98]"
           >
             <LogIn className="h-4 w-4" />
             <span>Login Admin</span>
@@ -66,59 +64,55 @@ function Home() {
           className="pointer-events-none absolute left-1/2 top-24 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-brand/10 blur-3xl"
         />
 
-        <section className="mx-auto max-w-3xl px-4 pt-10 pb-6 text-center sm:px-6 sm:pt-16">
-          {c.heroBadge && (
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-background/70 px-3 py-1 text-xs font-medium text-brand shadow-sm backdrop-blur">
-              <span className="h-2 w-2 rounded-full bg-accent-green" />
-              {c.heroBadge}
-            </span>
-          )}
-          <h1 className="mt-5 text-[28px] font-bold leading-tight tracking-tight text-foreground sm:text-[36px] lg:text-[40px]">
-            {c.title}
+        <section className="mx-auto max-w-3xl px-4 pt-12 pb-6 text-center sm:px-6 sm:pt-20">
+          <span className="inline-flex items-center gap-2 rounded-full border border-brand/20 bg-white/70 px-3 py-1 text-xs font-medium text-brand shadow-sm backdrop-blur">
+            <span className="h-2 w-2 rounded-full bg-accent-green" />
+            Konsultasi Pendidikan Anak
+          </span>
+          <h1 className="mt-5 text-[28px] font-bold leading-tight tracking-tight text-foreground sm:text-[40px]">
+            Konsultasi & Rekomendasi Pendidikan Untuk Anak
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-[15px] leading-relaxed text-muted-foreground sm:text-[17px]">
-            {c.description}
+            Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak.
+            Pilih jenjang di bawah ini untuk memulai konsultasi.
           </p>
         </section>
 
-        {/* Cards — always 3 columns */}
-        <section className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6 sm:pt-10">
-          <div className="grid grid-cols-3 gap-3 sm:gap-5 lg:gap-6">
-            {c.levels.slice(0, 3).map((lvl) => (
-              <a
-                key={lvl.id}
-                href={lvl.link || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex min-h-[130px] flex-col items-center justify-between rounded-[18px] border border-border/70 bg-card p-3 text-center shadow-[0_4px_16px_-4px_rgba(21,101,216,0.08)] transition-all duration-[250ms] ease-out hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_12px_28px_-8px_rgba(21,101,216,0.25)] sm:min-h-[220px] sm:p-6"
+        {/* Level cards */}
+        <section className="mx-auto max-w-6xl px-4 pb-20 pt-6 sm:px-6 sm:pt-10">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-6">
+            {LEVELS.map(({ id, Icon, name, tag, description }) => (
+              <Link
+                key={id}
+                to="/formulir/$jenjang"
+                params={{ jenjang: id }}
+                className="group flex flex-col rounded-2xl border border-border/70 bg-card p-5 text-left shadow-[0_4px_16px_-4px_rgba(15,45,82,0.08)] transition-all duration-200 hover:-translate-y-1 hover:border-brand/30 hover:shadow-[0_12px_28px_-8px_rgba(15,45,82,0.2)] sm:p-6"
               >
-                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-soft text-2xl transition-transform duration-300 group-hover:scale-110 sm:h-16 sm:w-16 sm:text-4xl">
-                  {lvl.emoji}
+                <div className="flex items-center gap-3">
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-brand-soft text-brand transition-transform duration-300 group-hover:scale-110">
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <span className="rounded-full bg-accent-gold/15 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent-gold-foreground">
+                    {tag}
+                  </span>
                 </div>
-                <h2 className="mt-2 line-clamp-2 text-[13px] font-bold leading-tight text-foreground sm:mt-4 sm:text-[18px]">
-                  {lvl.name}
-                </h2>
-                <p className="mt-2 hidden flex-1 text-sm text-muted-foreground sm:block">
-                  {lvl.description}
-                </p>
-                <span className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-brand sm:mt-5 sm:h-[46px] sm:w-full sm:justify-center sm:gap-2 sm:rounded-full sm:bg-brand sm:px-5 sm:text-[15px] sm:text-brand-foreground sm:shadow-sm sm:transition sm:group-hover:shadow-md">
-                  <span className="sm:hidden">Lihat</span>
-                  <span className="hidden sm:inline">{lvl.buttonLabel}</span>
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
+                <h2 className="mt-4 text-xl font-bold text-foreground">{name}</h2>
+                <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+                <span className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition group-hover:shadow-md">
+                  Mulai Konsultasi
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border/60">
-        <div className="mx-auto max-w-6xl px-4 py-8 text-center sm:px-6 sm:py-10">
-          <p className="text-sm text-muted-foreground">{c.footer}</p>
-          {c.contact && (
-            <p className="mt-2 text-xs text-muted-foreground/80">{c.contact}</p>
-          )}
+        <div className="mx-auto max-w-6xl px-4 py-8 text-center sm:px-6">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} EduKonsul — Sekolah Alam Al-Karim.
+          </p>
         </div>
       </footer>
     </div>
