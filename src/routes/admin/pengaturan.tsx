@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker } from "lucide-react";
+import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, Cpu, CheckCircle2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { logActivity, saveSettingsAction } from "@/actions/admin-actions";
+import { logActivity, saveSettingsAction, getAiProvidersAction, saveAiProviderAction } from "@/actions/admin-actions";
 import { PromptAIPage } from "./prompt";
 import { TestingPage } from "./testing";
 
@@ -16,9 +16,13 @@ function PengaturanPage() {
   const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testingAi, setTestingAi] = useState(false);
   const [testingWa, setTestingWa] = useState(false);
   const [activeTab, setActiveTab] = useState("umum");
+
+  // AI Providers state
+  const [providers, setProviders] = useState<any[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+  const [savingProvider, setSavingProvider] = useState(false);
 
   const defaultSettings = {
     appName: "EduKonsul",
@@ -26,10 +30,6 @@ function PengaturanPage() {
     heroDesc: "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak.",
     footerText: "Copyright 2026",
     adminWa: "",
-    geminiKey: "",
-    geminiModel: "gemini-1.5-pro",
-    geminiTemperature: 0.7,
-    geminiMaxTokens: 2048,
     waProvider: "mock",
     waApiUrl: "",
     waApiKey: "",
@@ -39,22 +39,20 @@ function PengaturanPage() {
   const [settings, setSettings] = useState(defaultSettings);
 
   useEffect(() => {
-    loadSettings();
+    loadData();
   }, []);
 
-  async function loadSettings() {
+  async function loadData() {
     setLoading(true);
     try {
-      const { data: allSettings, error } = await supabase.from("settings").select("*");
-      if (error) throw error;
+      const [{ data: allSettings }, providersData] = await Promise.all([
+        supabase.from("settings").select("*"),
+        getAiProvidersAction()
+      ]);
       
       const findVal = (key: string) => allSettings?.find((s: any) => s.key === key)?.value || {};
-      
-      const geminiKey = findVal("ai.gemini_key")?.key || "";
-      const geminiParams = findVal("ai.gemini_params");
       const waConfig = findVal("wa.provider_config");
       const contactObj = findVal("site.contact");
-      
       const brandObj = findVal("site.brand");
       const heroObj = findVal("site.hero");
       const footerObj = findVal("site.footer");
@@ -65,15 +63,16 @@ function PengaturanPage() {
         heroDesc: heroObj.description || defaultSettings.heroDesc,
         footerText: footerObj.text || defaultSettings.footerText,
         adminWa: contactObj.whatsapp || "",
-        geminiKey,
-        geminiModel: geminiParams.model || "gemini-1.5-pro",
-        geminiTemperature: geminiParams.temperature || 0.7,
-        geminiMaxTokens: geminiParams.max_tokens || 2048,
         waProvider: waConfig.provider || "mock",
         waApiUrl: waConfig.api_url || "",
         waApiKey: waConfig.api_key || "",
         waDeviceId: waConfig.device_id || "",
       });
+
+      setProviders(providersData || []);
+      if (providersData && providersData.length > 0) {
+        setSelectedProvider(providersData.find((p: any) => p.is_default) || providersData[0]);
+      }
     } catch (e) {
       console.error(e);
       toast.error("Gagal memuat pengaturan");
@@ -82,13 +81,11 @@ function PengaturanPage() {
     }
   }
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const allUpdates = [
-        { key: "ai.gemini_key", value: { key: settings.geminiKey }, is_public: false },
-        { key: "ai.gemini_params", value: { model: settings.geminiModel, temperature: Number(settings.geminiTemperature), max_tokens: Number(settings.geminiMaxTokens) }, is_public: false },
         { key: "wa.provider_config", value: { provider: settings.waProvider, api_url: settings.waApiUrl, api_key: settings.waApiKey, device_id: settings.waDeviceId }, is_public: false },
         { key: "site.contact", value: { whatsapp: settings.adminWa }, is_public: false },
         { key: "site.brand", value: { name: settings.appName }, is_public: true },
@@ -96,13 +93,11 @@ function PengaturanPage() {
         { key: "site.footer", value: { text: settings.footerText }, is_public: true }
       ];
 
-      // Dual Save Strategy: 1. Try server function (admin bypass) -> 2. Client upsert
       let saved = false;
       try {
         await saveSettingsAction({ updates: allUpdates });
         saved = true;
       } catch (serverErr) {
-        console.warn("Server action save attempt failed, falling back to client upsert:", serverErr);
         for (const item of allUpdates) {
           const { error } = await supabase.from("settings").upsert(item as any, { onConflict: "key" });
           if (error) throw error;
@@ -112,39 +107,39 @@ function PengaturanPage() {
 
       if (saved) {
         toast.success("Pengaturan berhasil disimpan");
-        
-        // Log activity safely without blocking
         try {
           await logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
         } catch (_) {}
       }
     } catch (e: any) {
-      console.error("Save settings failed:", e);
-      toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error RLS/Database"));
+      toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error database"));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReset = async () => {
-    if (!confirm("Reset semua pengaturan di tab ini ke default?")) return;
-    
-    if (activeTab === "umum") {
-      setSettings(prev => ({ ...prev, appName: defaultSettings.appName, heroTitle: defaultSettings.heroTitle, heroDesc: defaultSettings.heroDesc, footerText: defaultSettings.footerText }));
-    } else if (activeTab === "ai") {
-      setSettings(prev => ({ ...prev, geminiModel: defaultSettings.geminiModel, geminiTemperature: defaultSettings.geminiTemperature, geminiMaxTokens: defaultSettings.geminiMaxTokens }));
-    } else if (activeTab === "wa") {
-      setSettings(prev => ({ ...prev, waProvider: defaultSettings.waProvider }));
+  const handleSaveProvider = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProvider) return;
+    setSavingProvider(true);
+    try {
+      await saveAiProviderAction({
+        data: {
+          provider: selectedProvider,
+          email: userEmail || "admin"
+        }
+      });
+      toast.success(`Konfigurasi Provider ${selectedProvider.provider_name} berhasil disimpan`);
+      const updatedProviders = await getAiProvidersAction();
+      setProviders(updatedProviders || []);
+      if (updatedProviders) {
+        setSelectedProvider(updatedProviders.find((p: any) => p.id === selectedProvider.id) || selectedProvider);
+      }
+    } catch (e: any) {
+      toast.error("Gagal menyimpan provider: " + (e.message || "Error database"));
+    } finally {
+      setSavingProvider(false);
     }
-  };
-
-  const testGemini = async () => {
-    setTestingAi(true);
-    setTimeout(() => {
-      if (settings.geminiKey) toast.success("Koneksi API Gemini berhasil!");
-      else toast.error("Koneksi gagal. API Key tidak valid.");
-      setTestingAi(false);
-    }, 1500);
   };
 
   const testWhatsApp = async () => {
@@ -161,7 +156,7 @@ function PengaturanPage() {
 
   const tabs = [
     { id: "umum", label: "Umum", icon: Building2 },
-    { id: "ai", label: "Google Gemini", icon: LayoutTemplate },
+    { id: "provider", label: "AI Provider Engine", icon: Cpu },
     { id: "wa", label: "WhatsApp", icon: MessageSquare },
     { id: "prompt", label: "Prompt AI", icon: Sparkles },
     { id: "testing", label: "Testing & Simulasi", icon: Beaker },
@@ -180,7 +175,7 @@ function PengaturanPage() {
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-brand">Pengaturan Sistem</h1>
-          <p className="text-sm text-muted-foreground mt-1">Konfigurasi umum, integrasi AI, prompt, dan notifikasi.</p>
+          <p className="text-sm text-muted-foreground mt-1">Konfigurasi umum, AI Provider Engine, Prompt Multiguna, dan Notifikasi.</p>
         </div>
       </div>
 
@@ -214,8 +209,160 @@ function PengaturanPage() {
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <TestingPage />
             </div>
+          ) : activeTab === "provider" ? (
+            /* Tab AI Provider Engine */
+            <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
+              <div className="border-b pb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
+                  <Cpu className="h-5 w-5" /> Manajemen AI Provider Engine
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pilih provider AI yang digunakan secara otomatis saat analisis berlangsung tanpa mengubah source code.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Sidebar Provider List */}
+                <div className="space-y-2 lg:col-span-1 border-r pr-4">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Daftar Provider (9 Terintegrasi)</label>
+                  {providers.map((p) => (
+                    <button
+                      key={p.id || p.provider_key}
+                      type="button"
+                      onClick={() => setSelectedProvider(p)}
+                      className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
+                        selectedProvider?.provider_key === p.provider_key
+                          ? "border-brand bg-brand/10 text-brand font-medium shadow-sm"
+                          : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="truncate text-sm">{p.provider_name}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {p.is_default && (
+                          <span className="bg-amber-500 text-white p-1 rounded-full text-[10px]" title="Default Provider">
+                            <Star className="h-3 w-3 fill-current" />
+                          </span>
+                        )}
+                        {p.is_active && (
+                          <span className="bg-green-500 text-white p-1 rounded-full text-[10px]" title="Aktif">
+                            <CheckCircle2 className="h-3 w-3" />
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Form Provider Setting */}
+                {selectedProvider && (
+                  <form onSubmit={handleSaveProvider} className="lg:col-span-2 space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3">
+                      <h3 className="font-semibold text-base">{selectedProvider.provider_name}</h3>
+                      {selectedProvider.is_default && (
+                        <span className="rounded bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-bold flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-current" /> Default Provider Usulan
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-xs font-medium">API Key</label>
+                        <input
+                          type="password"
+                          value={selectedProvider.api_key || ""}
+                          onChange={(e) => setSelectedProvider({ ...selectedProvider, api_key: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand font-mono"
+                          placeholder="Masukkan API Key provider..."
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <label className="mb-1 block text-xs font-medium">Base API URL</label>
+                        <input
+                          type="text"
+                          value={selectedProvider.base_url || ""}
+                          onChange={(e) => setSelectedProvider({ ...selectedProvider, base_url: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand font-mono"
+                          placeholder="https://..."
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium">Nama Model</label>
+                        <input
+                          type="text"
+                          value={selectedProvider.model || ""}
+                          onChange={(e) => setSelectedProvider({ ...selectedProvider, model: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand font-mono"
+                          placeholder="gemini-1.5-pro, gpt-4o-mini, dll"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium">Temperature</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="2"
+                            value={selectedProvider.temperature ?? 0.7}
+                            onChange={(e) => setSelectedProvider({ ...selectedProvider, temperature: Number(e.target.value) })}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium">Max Tokens</label>
+                          <input
+                            type="number"
+                            value={selectedProvider.max_tokens ?? 2048}
+                            onChange={(e) => setSelectedProvider({ ...selectedProvider, max_tokens: Number(e.target.value) })}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="col-span-2 flex items-center justify-between border-t pt-3">
+                        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedProvider.is_active ?? true}
+                            onChange={(e) => setSelectedProvider({ ...selectedProvider, is_active: e.target.checked })}
+                            className="rounded"
+                          />
+                          Aktifkan Provider Ini
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedProvider({ ...selectedProvider, is_default: true, is_active: true })}
+                          disabled={selectedProvider.is_default}
+                          className="rounded bg-amber-100 text-amber-800 px-3 py-1 text-xs font-semibold hover:bg-amber-200 disabled:opacity-50"
+                        >
+                          {selectedProvider.is_default ? "Sudah Default" : "Set Jadi Default Engine"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={savingProvider}
+                        className="flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
+                      >
+                        {savingProvider ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Simpan Provider AI
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
           ) : (
-            <form onSubmit={handleSave} className="rounded-xl border bg-card p-6 shadow-sm">
+            <form onSubmit={handleSaveSettings} className="rounded-xl border bg-card p-6 shadow-sm">
               {activeTab === "umum" && (
                 <div className="space-y-5 animate-in fade-in duration-200">
                   <h2 className="text-lg font-semibold border-b pb-2 mb-4">Informasi Web</h2>
@@ -257,75 +404,6 @@ function PengaturanPage() {
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
                         rows={3}
                       />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === "ai" && (
-                <div className="space-y-5 animate-in fade-in duration-200">
-                  <div className="flex justify-between items-center border-b pb-2 mb-4">
-                    <h2 className="text-lg font-semibold">Konfigurasi Google Gemini API</h2>
-                    <button 
-                      type="button" 
-                      onClick={testGemini}
-                      disabled={testingAi}
-                      className="flex items-center gap-1.5 rounded bg-blue-100 text-blue-700 px-3 py-1.5 text-xs font-medium hover:bg-blue-200 disabled:opacity-50"
-                    >
-                      {testingAi ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
-                      Test Koneksi
-                    </button>
-                  </div>
-                  <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-3 flex gap-3 text-sm text-blue-700 dark:text-blue-300">
-                    <Info className="h-5 w-5 shrink-0" />
-                    <p>API Key disimpan aman di backend dan tidak pernah terekspos ke publik.</p>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium">API Key</label>
-                      <input
-                        type="password"
-                        value={settings.geminiKey}
-                        onChange={(e) => setSettings({ ...settings, geminiKey: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        placeholder="AIzaSy..."
-                      />
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium">Model</label>
-                        <select
-                          value={settings.geminiModel}
-                          onChange={(e) => setSettings({ ...settings, geminiModel: e.target.value })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        >
-                          <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                          <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium">Temperature</label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="2"
-                          value={settings.geminiTemperature}
-                          onChange={(e) => setSettings({ ...settings, geminiTemperature: Number(e.target.value) })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium">Max Output Tokens</label>
-                        <input
-                          type="number"
-                          step="1"
-                          value={settings.geminiMaxTokens}
-                          onChange={(e) => setSettings({ ...settings, geminiMaxTokens: Number(e.target.value) })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        />
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -397,14 +475,7 @@ function PengaturanPage() {
                 </div>
               )}
 
-              <div className="mt-8 flex justify-between border-t pt-5">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted"
-                >
-                  <RotateCcw className="h-4 w-4" /> Reset Default
-                </button>
+              <div className="mt-8 flex justify-end border-t pt-5">
                 <button
                   type="submit"
                   disabled={saving}

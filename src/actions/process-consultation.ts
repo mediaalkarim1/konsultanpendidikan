@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
+import { runAiEngineAnalysis } from "./ai-engine";
 
 export const processConsultation = createServerFn({ method: "POST" })
   .validator((consultationId: string) => consultationId)
@@ -16,21 +17,24 @@ export const processConsultation = createServerFn({ method: "POST" })
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-      // 1. Fetch settings and active prompt
-      const [{ data: settingsData }, { data: promptData }] = await Promise.all([
-        supabaseAdmin.from("settings").select("*").in("key", ["ai.gemini_key", "ai.gemini_params", "wa.provider_config", "site.contact"]),
-        supabaseAdmin.from("ai_prompts").select("*").eq("is_active", true).single()
-      ]);
+      // 1. Fetch consultation
+      const { data: consultation, error: consErr } = await supabaseAdmin
+        .from("consultations")
+        .select("*")
+        .eq("id", consultationId)
+        .single();
 
-      const geminiKey = settingsData?.find(s => s.key === "ai.gemini_key")?.value?.key;
-      const geminiParams = settingsData?.find(s => s.key === "ai.gemini_params")?.value || { temperature: 0.7, max_tokens: 2048, model: "gemini-1.5-pro" };
-      const waConfig: WaProviderConfig = settingsData?.find(s => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
-      const adminContact = settingsData?.find(s => s.key === "site.contact")?.value?.whatsapp;
+      if (consErr || !consultation) {
+        throw new Error("Data konsultasi tidak ditemukan");
+      }
 
-      // 2. Fetch consultation and answers
-      const { data: consultation } = await supabaseAdmin.from("consultations").select("*").eq("id", consultationId).single();
-      if (!consultation) throw new Error("Konsultasi tidak ditemukan");
+      // Update initial status to Menunggu Analisis
+      await supabaseAdmin.from("consultations").update({
+        status: "Menunggu Analisis",
+        error_message: null
+      }).eq("id", consultationId);
 
+      // 2. Fetch answers
       const { data: answers } = await supabaseAdmin
         .from("consultation_answers")
         .select("*, questions(question_text)")
@@ -43,21 +47,30 @@ export const processConsultation = createServerFn({ method: "POST" })
         if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
       }
 
-      // Format answers
+      // Format answers string
       const formattedAnswers = (answers || []).map(a => {
-        const qText = a.questions?.question_text;
+        const qText = a.questions?.question_text || "Pertanyaan";
         const aText = a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid]).join(", ");
         return `P: ${qText}\nJ: ${aText}`;
       }).join("\n\n");
 
-      // 3. Send WhatsApp Notifications
+      // 3. Send WhatsApp Notifications (Admin & Participant)
+      const { data: settingsData } = await supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact"]);
+      const waConfig: WaProviderConfig = settingsData?.find(s => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
+      const adminContact = settingsData?.find(s => s.key === "site.contact")?.value?.whatsapp;
+
       const dateStr = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
-      const adminMsg = `Konsultasi Baru\n\nNama Orang Tua:\n${consultation.parent_name}\n\nJenjang:\n${consultation.level}\n\nTanggal:\n${dateStr}\n\nSilakan login ke Dashboard EduKonsul untuk melihat hasil analisis AI.`;
-      const parentMsg = `Assalamu'alaikum.\n\nTerima kasih telah mengirimkan konsultasi melalui EduKonsul.\n\nData konsultasi Anda telah kami terima.\n\nTim Konsultan Sekolah Alam Al-Karim akan segera menghubungi Anda melalui nomor WhatsApp yang telah didaftarkan.\n\nMohon menunggu informasi selanjutnya.\n\nTerima kasih.`;
+      
+      const adminMsg = `Ada konsultasi baru yang masuk.\n\nNama: ${consultation.parent_name}\nNomor HP: ${consultation.whatsapp_number}\nJenjang: ${consultation.level.toUpperCase()}\nTanggal: ${dateStr}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.`;
+      
+      const parentMsg = `Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.`;
 
       const logNotification = async (type: string, target: string, message: string, result: any) => {
         await supabaseAdmin.from("notification_logs").insert({
-          consultation_id: consultationId, type, target_number: target, message,
+          consultation_id: consultationId,
+          type,
+          target_number: target,
+          message,
           status: result.success ? "success" : "failed",
           response_payload: result.responsePayload,
           error_message: result.errorMessage
@@ -81,57 +94,60 @@ export const processConsultation = createServerFn({ method: "POST" })
         notification_parent_status: parentWaStatus
       }).eq("id", consultationId);
 
-      // 4. Gemini AI processing
-      if (!geminiKey || !promptData) {
-        await supabaseAdmin.from("consultations").update({ ai_status: "failed" }).eq("id", consultationId);
-        return { success: true, ai_skipped: true };
+      // 4. Update status to Sedang Dianalisis
+      await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultationId);
+
+      // 5. Execute AI Engine Analysis
+      const aiResult = await runAiEngineAnalysis(
+        consultation.parent_name,
+        consultation.level,
+        consultation.whatsapp_number,
+        formattedAnswers
+      );
+
+      if (!aiResult.success || !aiResult.data) {
+        // Mark status as Gagal Analisis
+        const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
+        await supabaseAdmin.from("consultations").update({
+          status: "Gagal Analisis",
+          error_message: errMsg
+        }).eq("id", consultationId);
+
+        return { success: false, error: errMsg };
       }
 
-      let userPrompt = promptData.user_prompt_template;
-      userPrompt = userPrompt.replace("{{nama}}", consultation.parent_name);
-      userPrompt = userPrompt.replace("{{jenjang}}", consultation.level);
-      userPrompt = userPrompt.replace("{{jawaban}}", formattedAnswers);
+      // 6. Save Analysis Result into consultation_analysis
+      const analysisData = aiResult.data;
+      await supabaseAdmin.from("consultation_analysis").upsert({
+        consultation_id: consultationId,
+        summary: analysisData.summary,
+        analysis: analysisData.analysis,
+        strengths: analysisData.strengths,
+        weaknesses: analysisData.weaknesses,
+        potential: analysisData.potential,
+        risk: analysisData.risk,
+        education_recommendation: analysisData.education_recommendation
+      }, { onConflict: "consultation_id" });
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiParams.model || "gemini-1.5-pro"}:generateContent?key=${geminiKey}`;
-      
-      const aiRes = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: promptData.system_prompt }] },
-          contents: [{ parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: Number(geminiParams.temperature) || 0.7,
-            maxOutputTokens: Number(geminiParams.max_tokens) || 2048,
-          }
-        })
-      });
-
-      if (!aiRes.ok) {
-        await supabaseAdmin.from("consultations").update({ ai_status: "failed" }).eq("id", consultationId);
-        throw new Error("Gemini API Error");
-      }
-
-      const aiData = await aiRes.json();
-      const resultText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!resultText) {
-        await supabaseAdmin.from("consultations").update({ ai_status: "failed" }).eq("id", consultationId);
-        throw new Error("Format respons AI tidak valid");
-      }
-
-      // Save AI Result
+      // 7. Update Consultation Status to Selesai Dianalisis
       await supabaseAdmin.from("consultations").update({
-        ai_result: resultText,
-        ai_status: "success",
-        ai_created_at: new Date().toISOString(),
-        ai_prompt_used: { system: promptData.system_prompt, template: promptData.user_prompt_template },
-        status: "analyzed"
+        status: "Selesai Dianalisis",
+        ai_result: analysisData.analysis,
+        error_message: null
       }).eq("id", consultationId);
 
-      return { success: true };
-    } catch (error: any) {
-      console.error("Process Consultation Error:", error);
-      return { success: false, error: error.message };
+      return { success: true, provider: aiResult.providerName };
+
+    } catch (err: any) {
+      console.error("[processConsultation Error]:", err);
+      // Mark Gagal Analisis on unexpected error
+      try {
+        await supabaseAdmin.from("consultations").update({
+          status: "Gagal Analisis",
+          error_message: err.message || "Terjadi kesalahan sistem."
+        }).eq("id", consultationId);
+      } catch (_) {}
+
+      return { success: false, error: err.message || "Terjadi kesalahan sistem." };
     }
   });
