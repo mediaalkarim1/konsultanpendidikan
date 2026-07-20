@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getAdminSettings, saveAdminSetting } from "@/server/admin-settings";
 import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,16 +43,19 @@ function PengaturanPage() {
   async function loadSettings() {
     setLoading(true);
     try {
-      const privateData = await getAdminSettings({ data: "mediaalkarim" });
-      const geminiKey = privateData.find((s: any) => s.key === "ai.gemini_key")?.value?.key || "";
-      const geminiParams = privateData.find((s: any) => s.key === "ai.gemini_params")?.value || {};
-      const waConfig = privateData.find((s: any) => s.key === "wa.provider_config")?.value || {};
-      const contactObj = privateData.find((s: any) => s.key === "site.contact")?.value || {};
+      const { data: allSettings, error } = await supabase.from("settings").select("*");
+      if (error) throw error;
       
-      const { data: publicData } = await supabase.from("settings").select("*");
-      const brandObj = (publicData?.find((s: any) => s.key === "site.brand")?.value as any) || {};
-      const heroObj = (publicData?.find((s: any) => s.key === "site.hero")?.value as any) || {};
-      const footerObj = (publicData?.find((s: any) => s.key === "site.footer")?.value as any) || {};
+      const findVal = (key: string) => allSettings?.find((s: any) => s.key === key)?.value || {};
+      
+      const geminiKey = findVal("ai.gemini_key")?.key || "";
+      const geminiParams = findVal("ai.gemini_params");
+      const waConfig = findVal("wa.provider_config");
+      const contactObj = findVal("site.contact");
+      
+      const brandObj = findVal("site.brand");
+      const heroObj = findVal("site.hero");
+      const footerObj = findVal("site.footer");
       
       setSettings({
         appName: brandObj.name || defaultSettings.appName,
@@ -82,31 +84,23 @@ function PengaturanPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const privateUpdates = [
-        { key: "ai.gemini_key", value: { key: settings.geminiKey } },
-        { key: "ai.gemini_params", value: { model: settings.geminiModel, temperature: Number(settings.geminiTemperature), max_tokens: Number(settings.geminiMaxTokens) } },
-        { key: "wa.provider_config", value: { provider: settings.waProvider, api_url: settings.waApiUrl, api_key: settings.waApiKey, device_id: settings.waDeviceId } },
-        { key: "site.contact", value: { whatsapp: settings.adminWa } }
-      ];
-
-      for (const item of privateUpdates) {
-        await saveAdminSetting({ data: { token: "mediaalkarim", key: item.key, value: item.value } });
-      }
-
-      const publicUpdates = [
+      const allUpdates = [
+        { key: "ai.gemini_key", value: { key: settings.geminiKey }, is_public: false },
+        { key: "ai.gemini_params", value: { model: settings.geminiModel, temperature: Number(settings.geminiTemperature), max_tokens: Number(settings.geminiMaxTokens) }, is_public: false },
+        { key: "wa.provider_config", value: { provider: settings.waProvider, api_url: settings.waApiUrl, api_key: settings.waApiKey, device_id: settings.waDeviceId }, is_public: false },
+        { key: "site.contact", value: { whatsapp: settings.adminWa }, is_public: false },
         { key: "site.brand", value: { name: settings.appName }, is_public: true },
         { key: "site.hero", value: { title: settings.heroTitle, description: settings.heroDesc }, is_public: true },
         { key: "site.footer", value: { text: settings.footerText }, is_public: true }
       ];
 
-      for (const item of publicUpdates) {
-        await supabase.from("settings").upsert(item as any);
-      }
+      const { error } = await supabase.from("settings").upsert(allUpdates as any);
+      if (error) throw error;
 
       logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
       toast.success("Pengaturan berhasil disimpan");
-    } catch (e) {
-      toast.error("Gagal menyimpan pengaturan");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan pengaturan: " + e.message);
     } finally {
       setSaving(false);
     }

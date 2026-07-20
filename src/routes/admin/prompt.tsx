@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getPrompts, savePrompt, deletePrompt } from "@/server/admin-settings";
 import { Save, Loader2, Info, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { logActivity } from "@/server/admin-actions";
 
 export const Route = createFileRoute("/admin/prompt")({
   component: PromptAIPage,
@@ -18,6 +20,7 @@ type Prompt = {
 };
 
 function PromptAIPage() {
+  const { userEmail } = useAuth();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -26,7 +29,8 @@ function PromptAIPage() {
   const load = async () => {
     try {
       setLoading(true);
-      const data = await getPrompts({ data: "mediaalkarim" });
+      const { data, error } = await supabase.from("ai_prompts").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
       setPrompts(data || []);
     } catch (e) {
       console.error(e);
@@ -46,12 +50,25 @@ function PromptAIPage() {
     
     setSaving(true);
     try {
-      await savePrompt({ data: { token: "mediaalkarim", prompt: editingPrompt } });
+      // If setting active, deactivate others first
+      if (editingPrompt.is_active) {
+        await supabase.from("ai_prompts").update({ is_active: false }).neq("id", "00000000-0000-0000-0000-000000000000"); // update all
+      }
+
+      if (editingPrompt.id) {
+        const { error } = await supabase.from("ai_prompts").update(editingPrompt).eq("id", editingPrompt.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("ai_prompts").insert(editingPrompt);
+        if (error) throw error;
+      }
+      
+      logActivity({ data: { email: userEmail || "admin", action: "SAVE_PROMPT", details: { name: editingPrompt.name } } });
       toast.success("Prompt berhasil disimpan");
       setEditingPrompt(null);
       load();
-    } catch (e) {
-      toast.error("Gagal menyimpan prompt");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan prompt: " + e.message);
     } finally {
       setSaving(false);
     }
@@ -60,21 +77,26 @@ function PromptAIPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Hapus prompt ini?")) return;
     try {
-      await deletePrompt({ data: { token: "mediaalkarim", id } });
+      const { error } = await supabase.from("ai_prompts").delete().eq("id", id);
+      if (error) throw error;
+      logActivity({ data: { email: userEmail || "admin", action: "DELETE_PROMPT", details: { id } } });
       toast.success("Prompt dihapus");
       load();
-    } catch (e) {
-      toast.error("Gagal menghapus");
+    } catch (e: any) {
+      toast.error("Gagal menghapus: " + e.message);
     }
   };
 
   const handleSetActive = async (prompt: Prompt) => {
     try {
-      await savePrompt({ data: { token: "mediaalkarim", prompt: { ...prompt, is_active: true } } });
+      await supabase.from("ai_prompts").update({ is_active: false }).neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error } = await supabase.from("ai_prompts").update({ is_active: true }).eq("id", prompt.id);
+      if (error) throw error;
+      logActivity({ data: { email: userEmail || "admin", action: "SET_ACTIVE_PROMPT", details: { id: prompt.id } } });
       toast.success("Prompt diaktifkan");
       load();
-    } catch (e) {
-      toast.error("Gagal mengaktifkan prompt");
+    } catch (e: any) {
+      toast.error("Gagal mengaktifkan prompt: " + e.message);
     }
   };
 
