@@ -1,44 +1,46 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
 
 type AuthContextType = {
   isAuthenticated: boolean;
-  login: (pass: string) => boolean;
-  logout: () => void;
+  userEmail: string | null;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const auth = localStorage.getItem("admin_auth");
-    if (auth === "true") {
-      setIsAuthenticated(true);
-    }
-    setIsLoaded(true);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsLoaded(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (pass: string) => {
-    // Hardcoded logic as requested
-    if (pass === "mediaalkarim") {
-      setIsAuthenticated(true);
-      localStorage.setItem("admin_auth", "true");
-      return true;
-    }
-    return false;
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem("admin_auth");
-  };
-
-  if (!isLoaded) return null; // Prevent hydration mismatch / early redirect
+  if (!isLoaded) {
+    return null; // Wait for initial session fetch to prevent flash
+  }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ 
+      isAuthenticated: !!session, 
+      userEmail: session?.user?.email || null,
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

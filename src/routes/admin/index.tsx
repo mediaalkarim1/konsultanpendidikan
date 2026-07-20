@@ -15,66 +15,81 @@ function DashboardPage() {
     new: 0,
     analyzed: 0,
     contacted: 0,
+    done: 0,
   });
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchStats() {
-      setLoading(true);
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const { data, error } = await supabase
-        .from("consultations")
-        .select("status, created_at");
+  const fetchStats = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const { data, error } = await supabase
+      .from("consultations")
+      .select("status, created_at");
 
-      if (error || !data) {
-        console.error(error);
-        setLoading(false);
-        return;
-      }
-
-      let total = 0;
-      let countToday = 0;
-      let countNew = 0;
-      let countAnalyzed = 0;
-      let countContacted = 0;
-      
-      const dailyMap: Record<string, number> = {};
-
-      data.forEach((row) => {
-        total++;
-        if (row.status === "new") countNew++;
-        if (row.status === "analyzed") countAnalyzed++;
-        if (row.status === "contacted") countContacted++;
-        
-        const dateObj = new Date(row.created_at);
-        if (dateObj >= today) countToday++;
-        
-        // Format for chart (e.g. "DD MMM")
-        const dateStr = dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-        dailyMap[dateStr] = (dailyMap[dateStr] || 0) + 1;
-      });
-
-      setStats({
-        total,
-        today: countToday,
-        new: countNew,
-        analyzed: countAnalyzed,
-        contacted: countContacted,
-      });
-
-      // Convert dailyMap to array and take last 7 entries
-      const chartEntries = Object.entries(dailyMap).map(([date, count]) => ({
-        date,
-        count,
-      }));
-      setChartData(chartEntries.slice(-7));
+    if (error || !data) {
+      console.error(error);
       setLoading(false);
+      return;
     }
+
+    let total = 0;
+    let countToday = 0;
+    let countNew = 0;
+    let countAnalyzed = 0;
+    let countContacted = 0;
+    let countDone = 0;
+    
+    const dailyMap: Record<string, number> = {};
+
+    data.forEach((row) => {
+      total++;
+      if (row.status === "new") countNew++;
+      else if (row.status === "analyzed") countAnalyzed++;
+      else if (row.status === "contacted") countContacted++;
+      else if (row.status === "done") countDone++;
+      
+      const dateObj = new Date(row.created_at);
+      if (dateObj >= today) countToday++;
+      
+      // Format for chart (e.g. "DD MMM")
+      const dateStr = dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      dailyMap[dateStr] = (dailyMap[dateStr] || 0) + 1;
+    });
+
+    setStats({
+      total,
+      today: countToday,
+      new: countNew,
+      analyzed: countAnalyzed,
+      contacted: countContacted,
+      done: countDone,
+    });
+
+    // Convert dailyMap to array, sort by date, take last 7 entries
+    const chartEntries = Object.entries(dailyMap).map(([date, count]) => ({
+      date,
+      count,
+    }));
+    setChartData(chartEntries.slice(-7));
+    setLoading(false);
+  };
+
+  useEffect(() => {
     fetchStats();
+
+    // Supabase Realtime Subscription
+    const channel = supabase.channel('dashboard-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'consultations' }, () => {
+        // Debounce or just call directly since it's an admin dashboard
+        fetchStats();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const statCards = [
@@ -82,7 +97,8 @@ function DashboardPage() {
     { title: "Konsultasi Hari Ini", value: stats.today, icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/10" },
     { title: "Belum Diproses", value: stats.new, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/10" },
     { title: "Sudah Dianalisis", value: stats.analyzed, icon: FileText, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-    { title: "Sudah Dihubungi", value: stats.contacted, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    { title: "Sudah Dihubungi", value: stats.contacted, icon: CheckCircle, color: "text-teal-500", bg: "bg-teal-500/10" },
+    { title: "Selesai", value: stats.done, icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
 
   if (loading) {
@@ -94,11 +110,11 @@ function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard Overview</h1>
         <p className="text-sm text-muted-foreground">
-          Ringkasan statistik konsultasi pendidikan masuk.
+          Ringkasan statistik konsultasi pendidikan (Real-time).
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {statCards.map((s, i) => (
           <div key={i} className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center justify-between">

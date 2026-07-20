@@ -1,73 +1,85 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
-import { LogIn } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: ({ context }) => {
+    if (context.auth.isAuthenticated) {
+      throw redirect({ to: "/admin" });
+    }
+  },
   component: LoginPage,
 });
 
 function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === "mediaalkarim" && login(password)) {
-      toast.success("Login berhasil");
-      navigate({ to: "/admin" });
+    setLoading(true);
+    
+    // Default fallback to admin email if user typed "mediaalkarim"
+    const loginEmail = email === "mediaalkarim" ? "admin@mediaalkarim.com" : email;
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: password,
+    });
+
+    if (error) {
+      toast.error("Gagal login: " + error.message);
+      setLoading(false);
     } else {
-      toast.error("Username atau password salah");
+      toast.success("Berhasil login");
+      navigate({ to: "/admin" });
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10 font-sans">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-[0_10px_40px_-12px_rgba(15,45,82,0.15)] sm:p-10">
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-card p-8 shadow-xl">
         <div className="mb-8 text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-brand text-brand-foreground font-bold shadow-sm">
-            E
-          </div>
-          <h1 className="mt-4 text-2xl font-bold text-foreground">Login Admin</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Masukkan kredensial untuk mengakses dashboard.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-brand">EduKonsul</h1>
+          <p className="text-sm text-muted-foreground mt-2">Masuk ke Dashboard Admin</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">
-              Username
-            </label>
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Email / Username</label>
             <input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background px-4 py-2.5 outline-none transition focus:border-brand focus:ring-1 focus:ring-brand"
+              placeholder="admin@mediaalkarim.com"
               required
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">
-              Password
-            </label>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Kata Sandi</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              className="w-full rounded-lg border border-input bg-background px-4 py-2.5 outline-none transition focus:border-brand focus:ring-1 focus:ring-brand"
+              placeholder="••••••••"
               required
             />
           </div>
+
           <button
             type="submit"
-            className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand py-2.5 text-sm font-semibold text-brand-foreground transition hover:opacity-90 disabled:opacity-50"
           >
-            <LogIn className="h-4 w-4" />
-            Masuk
+            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Masuk"}
           </button>
         </form>
       </div>

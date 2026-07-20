@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GripVertical, Plus, Trash2, Edit2, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
+import { logActivity } from "@/server/admin-actions";
 
 export const Route = createFileRoute("/admin/pertanyaan")({
   component: KelolaPertanyaanPage,
@@ -25,11 +27,10 @@ type Question = {
 };
 
 function KelolaPertanyaanPage() {
+  const { userEmail } = useAuth();
   const [level, setLevel] = useState<"tksd" | "smp" | "sma">("tksd");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Drag and Drop State
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,7 +57,6 @@ function KelolaPertanyaanPage() {
     setLoading(false);
   }
 
-  // --- Drag and Drop Handlers ---
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
     e.dataTransfer.effectAllowed = "move";
@@ -78,23 +78,22 @@ function KelolaPertanyaanPage() {
     const [draggedItem] = newQuestions.splice(dragIndex, 1);
     newQuestions.splice(dropIndex, 0, draggedItem);
     
-    // Update local state for immediate feedback
     const updatedWithOrder = newQuestions.map((q, idx) => ({ ...q, order_index: idx + 1 }));
     setQuestions(updatedWithOrder);
     setDraggedId(null);
 
-    // Save to DB
     const updates = updatedWithOrder.map((q) => ({ id: q.id, order_index: q.order_index }));
     for (const update of updates) {
       await supabase.from("questions").update({ order_index: update.order_index }).eq("id", update.id);
     }
     toast.success("Urutan berhasil diperbarui");
+    logActivity({ data: { email: userEmail || "admin", action: "UPDATE_PERTANYAAN_ORDER", details: { level } } });
   };
 
-  // --- CRUD Handlers ---
   const toggleActive = async (id: string, current: boolean) => {
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, is_active: !current } : q));
     await supabase.from("questions").update({ is_active: !current }).eq("id", id);
+    logActivity({ data: { email: userEmail || "admin", action: "TOGGLE_PERTANYAAN", details: { id, is_active: !current } } });
   };
 
   const deleteQuestion = async (id: string) => {
@@ -102,6 +101,7 @@ function KelolaPertanyaanPage() {
     setQuestions(prev => prev.filter(q => q.id !== id));
     await supabase.from("questions").delete().eq("id", id);
     toast.success("Pertanyaan dihapus");
+    logActivity({ data: { email: userEmail || "admin", action: "DELETE_PERTANYAAN", details: { id } } });
   };
 
   const addQuestion = async () => {
@@ -117,6 +117,7 @@ function KelolaPertanyaanPage() {
     if (data && !error) {
       setQuestions([...questions, { ...data, options: [] }]);
       toast.success("Pertanyaan ditambahkan");
+      logActivity({ data: { email: userEmail || "admin", action: "ADD_PERTANYAAN", details: { level, id: data.id } } });
     }
   };
 
@@ -166,7 +167,13 @@ function KelolaPertanyaanPage() {
                 draggedId === q.id ? "opacity-50 border-brand" : ""
               }`}
             >
-              <QuestionEditor q={q} onUpdate={fetchQuestions} onDelete={() => deleteQuestion(q.id)} onToggleActive={() => toggleActive(q.id, q.is_active)} />
+              <QuestionEditor 
+                q={q} 
+                onUpdate={fetchQuestions} 
+                onDelete={() => deleteQuestion(q.id)} 
+                onToggleActive={() => toggleActive(q.id, q.is_active)}
+                userEmail={userEmail || "admin"} 
+              />
             </div>
           ))}
         </div>
@@ -175,8 +182,7 @@ function KelolaPertanyaanPage() {
   );
 }
 
-// Child Component for Editing Individual Question
-function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question, onUpdate: () => void, onDelete: () => void, onToggleActive: () => void }) {
+function QuestionEditor({ q, onUpdate, onDelete, onToggleActive, userEmail }: { q: Question, onUpdate: () => void, onDelete: () => void, onToggleActive: () => void, userEmail: string }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(q.question_text);
   const [type, setType] = useState<"text" | "textarea" | "single_choice" | "multi_choice">(q.question_type as any);
@@ -188,6 +194,7 @@ function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question
     await supabase.from("questions").update({ question_text: text, question_type: type, is_required: req }).eq("id", q.id);
     setEditing(false);
     toast.success("Berhasil disimpan");
+    logActivity({ data: { email: userEmail, action: "EDIT_PERTANYAAN", details: { id: q.id, text } } });
     onUpdate();
   };
 
@@ -197,11 +204,13 @@ function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question
       option_text: "Opsi Baru",
       order_index: q.options.length + 1
     });
+    logActivity({ data: { email: userEmail, action: "ADD_OPTION", details: { question_id: q.id } } });
     onUpdate();
   };
 
   const handleDeleteOption = async (optId: string) => {
     await supabase.from("question_options").delete().eq("id", optId);
+    logActivity({ data: { email: userEmail, action: "DELETE_OPTION", details: { option_id: optId } } });
     onUpdate();
   };
 
@@ -273,7 +282,7 @@ function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question
           </div>
           <div className="space-y-2">
             {q.options.map(opt => (
-              <OptionEditor key={opt.id} opt={opt} onDelete={() => handleDeleteOption(opt.id)} onUpdate={onUpdate} />
+              <OptionEditor key={opt.id} opt={opt} onDelete={() => handleDeleteOption(opt.id)} onUpdate={onUpdate} userEmail={userEmail} />
             ))}
           </div>
         </div>
@@ -287,11 +296,12 @@ function QuestionEditor({ q, onUpdate, onDelete, onToggleActive }: { q: Question
   );
 }
 
-function OptionEditor({ opt, onDelete, onUpdate }: { opt: QuestionOption, onDelete: () => void, onUpdate: () => void }) {
+function OptionEditor({ opt, onDelete, onUpdate, userEmail }: { opt: QuestionOption, onDelete: () => void, onUpdate: () => void, userEmail: string }) {
   const [val, setVal] = useState(opt.option_text);
   const handleBlur = async () => {
     if (val !== opt.option_text) {
       await supabase.from("question_options").update({ option_text: val }).eq("id", opt.id);
+      logActivity({ data: { email: userEmail, action: "EDIT_OPTION", details: { option_id: opt.id, val } } });
       onUpdate();
     }
   };

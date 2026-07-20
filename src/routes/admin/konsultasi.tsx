@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Eye, Trash2, Printer, Download, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Search, Eye, Trash2, Printer, Download, ChevronLeft, ChevronRight, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import html2pdf from "html2pdf.js";
+import { useAuth } from "@/lib/auth-context";
+import { updateConsultationStatus, deleteConsultation } from "@/server/admin-actions";
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,
@@ -22,80 +25,106 @@ type Consultation = {
 const STATUS_OPTIONS = [
   { value: "new", label: "Belum Diproses", color: "bg-amber-100 text-amber-700" },
   { value: "analyzed", label: "Sudah Dianalisis", color: "bg-indigo-100 text-indigo-700" },
-  { value: "contacted", label: "Sudah Dihubungi", color: "bg-emerald-100 text-emerald-700" },
+  { value: "contacted", label: "Sudah Dihubungi", color: "bg-teal-100 text-teal-700" },
+  { value: "done", label: "Selesai", color: "bg-emerald-100 text-emerald-700" },
 ];
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
 function KonsultasiPage() {
+  const { userEmail } = useAuth();
   const [data, setData] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("");
 
   // Pagination
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const itemsPerPage = 10;
 
   // Dialog state
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // Reset page when search changes
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     fetchData();
-  }, []);
+    
+    const channel = supabase.channel('consultations-changes-konsultasi')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'consultations' }, () => {
+        fetchData(); // Refresh on changes
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); }
+  }, [debouncedSearch, statusFilter, levelFilter, page]);
 
   async function fetchData() {
     setLoading(true);
-    const { data: cols, error } = await supabase
-      .from("consultations")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const from = (page - 1) * itemsPerPage;
+    const to = from + itemsPerPage - 1;
+
+    let query = supabase.from("consultations").select("*", { count: "exact" });
+
+    if (debouncedSearch) {
+      query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+    }
+    if (statusFilter) query = query.eq("status", statusFilter);
+    if (levelFilter) query = query.eq("level", levelFilter);
+
+    const { data: cols, count, error } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
     if (!error && cols) {
       setData(cols);
+      setTotal(count || 0);
+    } else {
+      toast.error("Gagal mengambil data");
     }
     setLoading(false);
   }
 
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const matchSearch =
-        item.parent_name.toLowerCase().includes(search.toLowerCase()) ||
-        item.whatsapp_number.includes(search);
-      const matchStatus = statusFilter ? item.status === statusFilter : true;
-      const matchLevel = levelFilter ? item.level === levelFilter : true;
-      return matchSearch && matchStatus && matchLevel;
-    });
-  }, [data, search, statusFilter, levelFilter]);
-
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const paginatedData = filteredData.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-  useEffect(() => {
-    setPage(1); // Reset page on filter change
-  }, [search, statusFilter, levelFilter]);
+  const totalPages = Math.ceil(total / itemsPerPage);
 
   async function handleStatusChange(id: string, newStatus: string) {
-    const { error } = await supabase.from("consultations").update({ status: newStatus }).eq("id", id);
-    if (error) {
-      toast.error("Gagal mengubah status");
-    } else {
-      toast.success("Status berhasil diubah");
-      setData((prev) => prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item)));
+    // Optimistic UI Update
+    setData((prev) => prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item)));
+    
+    try {
+      const res = await updateConsultationStatus({ data: { id, status: newStatus, email: userEmail || "admin" } });
+      if (res.success) toast.success("Status berhasil diubah");
+    } catch (e: any) {
+      toast.error("Gagal mengubah status: " + e.message);
+      fetchData(); // Revert on fail
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Yakin ingin menghapus data ini?")) return;
-    const { error } = await supabase.from("consultations").delete().eq("id", id);
-    if (error) {
-      toast.error("Gagal menghapus data");
-    } else {
-      toast.success("Data dihapus");
-      setData((prev) => prev.filter((item) => item.id !== id));
+    if (!confirm("Apakah Anda yakin ingin menghapus konsultasi ini? Semua jawaban terkait juga akan terhapus.")) return;
+    
+    try {
+      const res = await deleteConsultation({ data: { id, email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success("Data berhasil dihapus");
+        if (data.length === 1 && page > 1) setPage(page - 1);
+        else fetchData();
+      }
+    } catch (e: any) {
+      toast.error("Gagal menghapus data: " + e.message);
     }
   }
 
@@ -103,8 +132,8 @@ function KonsultasiPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Data Konsultasi</h1>
-          <p className="text-sm text-muted-foreground">Kelola semua permintaan konsultasi yang masuk.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-brand">Data Konsultasi</h1>
+          <p className="text-sm text-muted-foreground mt-1">Kelola semua permintaan konsultasi yang masuk (Real-time).</p>
         </div>
       </div>
 
@@ -121,7 +150,7 @@ function KonsultasiPage() {
         </div>
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus:border-brand focus:ring-1 focus:ring-brand sm:w-48"
         >
           <option value="">Semua Status</option>
@@ -131,7 +160,7 @@ function KonsultasiPage() {
         </select>
         <select
           value={levelFilter}
-          onChange={(e) => setLevelFilter(e.target.value)}
+          onChange={(e) => { setLevelFilter(e.target.value); setPage(1); }}
           className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition focus:border-brand focus:ring-1 focus:ring-brand sm:w-48"
         >
           <option value="">Semua Jenjang</option>
@@ -157,14 +186,17 @@ function KonsultasiPage() {
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Memuat...</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-brand" />
+                    Memuat...
+                  </td>
                 </tr>
-              ) : paginatedData.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Tidak ada data ditemukan.</td>
                 </tr>
               ) : (
-                paginatedData.map((row) => {
+                data.map((row) => {
                   const statusInfo = STATUS_OPTIONS.find((s) => s.value === row.status) || STATUS_OPTIONS[0];
                   return (
                     <tr key={row.id} className="transition-colors hover:bg-muted/50">
@@ -215,7 +247,7 @@ function KonsultasiPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-border px-4 py-3">
             <span className="text-sm text-muted-foreground">
-              Menampilkan {(page - 1) * itemsPerPage + 1} - {Math.min(page * itemsPerPage, filteredData.length)} dari {filteredData.length}
+              Menampilkan {data.length > 0 ? (page - 1) * itemsPerPage + 1 : 0} - {Math.min(page * itemsPerPage, total)} dari {total}
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -250,13 +282,12 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
 
   useEffect(() => {
     async function load() {
-      const { data: consultation, error: err1 } = await supabase.from("consultations").select("*").eq("id", consultId).single();
-      const { data: answers, error: err2 } = await supabase
+      const { data: consultation } = await supabase.from("consultations").select("*").eq("id", consultId).single();
+      const { data: answers } = await supabase
         .from("consultation_answers")
         .select("*, questions(question_text)")
         .eq("consultation_id", consultId);
       
-      // Also fetch option texts if there are selected_option_ids
       const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
       let optionsMap: Record<string, string> = {};
       if (allOptionIds.length > 0) {
@@ -283,12 +314,26 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
   const handlePrint = () => {
     window.print();
   };
+  
+  const handleDownloadPDF = () => {
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
+    const opt = {
+      margin: 1,
+      filename: `Konsultasi_${data?.parent_name.replace(/\s+/g, "_")}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+    toast.success("PDF sedang diunduh...");
+  };
 
   const handleCopy = () => {
     if (!data) return;
     const text = `Data Konsultasi\nNama: ${data.parent_name}\nWA: ${data.whatsapp_number}\nJenjang: ${LEVEL_LABELS[data.level]}\n\nJawaban:\n${data.answers.map((a: any, i: number) => `${i+1}. ${a.q}\nJawab: ${a.a}`).join("\n\n")}\n\nAnalisis AI:\n${data.ai_result || "Belum ada"}`;
     navigator.clipboard.writeText(text);
-    toast.success("Berhasil disalin ke clipboard");
+    toast.success("Analisis berhasil disalin.");
   };
 
   return (
@@ -300,11 +345,11 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
         </div>
 
         {loading ? (
-          <div className="py-10 text-center">Memuat detail...</div>
+          <div className="py-10 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-brand" /></div>
         ) : !data ? (
           <div className="py-10 text-center">Data tidak ditemukan.</div>
         ) : (
-          <div className="space-y-6 print:space-y-4">
+          <div id="pdf-content" className="space-y-6 print:space-y-4 bg-card">
             <div className="hidden print:block mb-6 border-b pb-4">
               <h1 className="text-2xl font-bold">Hasil Tes Potensi Anak - EduKonsul</h1>
               <p className="text-gray-500">{format(new Date(data.created_at), "dd MMMM yyyy HH:mm", { locale: id })}</p>
@@ -320,8 +365,8 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
                 <p className="font-semibold">{data.whatsapp_number}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground print:text-gray-600">Jenjang</p>
-                <p className="font-semibold">{LEVEL_LABELS[data.level]}</p>
+                <p className="text-sm font-medium text-muted-foreground print:text-gray-600">Jenjang & Status</p>
+                <p className="font-semibold">{LEVEL_LABELS[data.level]} — {STATUS_OPTIONS.find(s => s.value === data.status)?.label}</p>
               </div>
             </div>
 
@@ -351,7 +396,7 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
                 {data.ai_result ? data.ai_result : <span className="text-muted-foreground italic">(Belum dianalisis / AI dimatikan)</span>}
               </div>
               {data.ai_prompt_used && (
-                <div className="mt-4 pt-4 border-t border-brand/20 print:hidden">
+                <div className="mt-4 pt-4 border-t border-brand/20 print:hidden html2pdf__page-break">
                   <p className="text-xs font-semibold text-muted-foreground">Prompt yang digunakan:</p>
                   <pre className="mt-2 text-xs bg-black/5 p-2 rounded whitespace-pre-wrap text-muted-foreground">
                     {data.ai_prompt_used.system}
@@ -360,7 +405,7 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
               )}
             </div>
 
-            <div className="mt-8 print:hidden">
+            <div className="mt-8 print:hidden" data-html2canvas-ignore="true">
               <h3 className="mb-4 text-lg font-bold border-b pb-2">Riwayat Notifikasi WhatsApp</h3>
               <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
                 <div className="rounded border p-3">
@@ -392,16 +437,16 @@ function DetailModal({ id: consultId, onClose }: { id: string; onClose: () => vo
                 )}
               </div>
             </div>
-
-            <div className="mt-6 flex justify-end gap-3 print:hidden border-t pt-4">
+            
+            <div className="mt-6 flex justify-end gap-3 print:hidden border-t pt-4" data-html2canvas-ignore="true">
               <button onClick={handleCopy} className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
-                <FileText className="h-4 w-4" /> Salin Teks
+                <FileText className="h-4 w-4" /> Salin Analisis
               </button>
               <button onClick={handlePrint} className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">
                 <Printer className="h-4 w-4" /> Cetak
               </button>
-              <button onClick={handlePrint} className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90">
-                <Download className="h-4 w-4" /> Simpan PDF
+              <button onClick={handleDownloadPDF} className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90">
+                <Download className="h-4 w-4" /> Download PDF
               </button>
             </div>
           </div>

@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin/route'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
+import { Route as AdminLogAktivitasRouteImport } from './routes/admin/log-aktivitas'
 import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
 import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
 import { Route as AdminTestingRouteImport } from './routes/admin/testing'
@@ -56,6 +57,11 @@ const AdminKonsultasiRoute = AdminKonsultasiRouteImport.update({
   path: '/konsultasi',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLogAktivitasRoute = AdminLogAktivitasRouteImport.update({
+  id: '/log-aktivitas',
+  path: '/log-aktivitas',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPertanyaanRoute = AdminPertanyaanRouteImport.update({
   id: '/pertanyaan',
   path: '/pertanyaan',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/konsultasi': typeof AdminKonsultasiRoute
+  '/admin/log-aktivitas': typeof AdminLogAktivitasRoute
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/pengaturan': typeof AdminPengaturanRoute
   '/admin/testing': typeof AdminTestingRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/formulir/$jenjang': typeof FormulirJenjangRoute
   '/admin': typeof AdminIndexRoute
   '/admin/konsultasi': typeof AdminKonsultasiRoute
+  '/admin/log-aktivitas': typeof AdminLogAktivitasRoute
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/pengaturan': typeof AdminPengaturanRoute
   '/admin/testing': typeof AdminTestingRoute
@@ -118,10 +126,10 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
+  fullPaths: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/log-aktivitas' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
-  id: '__root__' | '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
+  to: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/konsultasi' | '/admin/log-aktivitas' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
+  id: '__root__' | '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/log-aktivitas' | '/admin/pertanyaan' | '/admin/pengaturan' | '/admin/testing' | '/admin/prompt'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -135,6 +143,7 @@ export interface RootRouteChildren {
 const AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminKonsultasiRoute: AdminKonsultasiRoute,
+  AdminLogAktivitasRoute: AdminLogAktivitasRoute,
   AdminPertanyaanRoute: AdminPertanyaanRoute,
   AdminPengaturanRoute: AdminPengaturanRoute,
   AdminTestingRoute: AdminTestingRoute,
@@ -190,6 +199,13 @@ declare module '@tanstack/react-router' {
       path: '/konsultasi'
       fullPath: '/admin/konsultasi'
       preLoaderRoute: typeof AdminKonsultasiRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/log-aktivitas': {
+      id: '/admin/log-aktivitas'
+      path: '/log-aktivitas'
+      fullPath: '/admin/log-aktivitas'
+      preLoaderRoute: typeof AdminLogAktivitasRouteImport
       parentRoute: typeof AdminRouteImport
     }
     '/admin/pertanyaan': {

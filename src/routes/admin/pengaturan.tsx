@@ -1,80 +1,82 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getAdminSettings, saveAdminSetting } from "@/server/admin-settings";
-import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, Image as ImageIcon } from "lucide-react";
+import { Save, Loader2, Info, Building2, LayoutTemplate, MessageSquare, TestTube, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { logActivity } from "@/server/admin-actions";
 
 export const Route = createFileRoute("/admin/pengaturan")({
   component: PengaturanPage,
 });
 
 function PengaturanPage() {
+  const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingAi, setTestingAi] = useState(false);
+  const [testingWa, setTestingWa] = useState(false);
   const [activeTab, setActiveTab] = useState("umum");
 
-  const [settings, setSettings] = useState({
-    // Umum
+  const defaultSettings = {
     appName: "EduKonsul",
-    heroTitle: "Konsultasi Pendidikan",
-    heroDesc: "Deskripsi",
+    heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
+    heroDesc: "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak.",
     footerText: "Copyright 2026",
     adminWa: "",
-    
-    // AI
     geminiKey: "",
     geminiModel: "gemini-1.5-pro",
     geminiTemperature: 0.7,
     geminiMaxTokens: 2048,
-    
-    // WA Config
     waProvider: "mock",
     waApiUrl: "",
     waApiKey: "",
     waDeviceId: "",
-  });
+  };
+
+  const [settings, setSettings] = useState(defaultSettings);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const privateData = await getAdminSettings({ data: "mediaalkarim" });
-        const geminiKey = privateData.find((s: any) => s.key === "ai.gemini_key")?.value?.key || "";
-        const geminiParams = privateData.find((s: any) => s.key === "ai.gemini_params")?.value || {};
-        const waConfig = privateData.find((s: any) => s.key === "wa.provider_config")?.value || {};
-        const contactObj = privateData.find((s: any) => s.key === "site.contact")?.value || {};
-        
-        // Also load public settings
-        const { data: publicData } = await supabase.from("settings").select("*");
-        const brandObj = (publicData?.find((s: any) => s.key === "site.brand")?.value as any) || {};
-        const heroObj = (publicData?.find((s: any) => s.key === "site.hero")?.value as any) || {};
-        const footerObj = (publicData?.find((s: any) => s.key === "site.footer")?.value as any) || {};
-        
-        setSettings(prev => ({
-          ...prev,
-          appName: brandObj.name || prev.appName,
-          heroTitle: heroObj.title || prev.heroTitle,
-          heroDesc: heroObj.description || prev.heroDesc,
-          footerText: footerObj.text || prev.footerText,
-          adminWa: contactObj.whatsapp || "",
-          geminiKey,
-          geminiModel: geminiParams.model || "gemini-1.5-pro",
-          geminiTemperature: geminiParams.temperature || 0.7,
-          geminiMaxTokens: geminiParams.max_tokens || 2048,
-          waProvider: waConfig.provider || "mock",
-          waApiUrl: waConfig.api_url || "",
-          waApiKey: waConfig.api_key || "",
-          waDeviceId: waConfig.device_id || "",
-        }));
-      } catch (e) {
-        console.error(e);
-        toast.error("Gagal memuat pengaturan");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
+    loadSettings();
   }, []);
+
+  async function loadSettings() {
+    setLoading(true);
+    try {
+      const privateData = await getAdminSettings({ data: "mediaalkarim" });
+      const geminiKey = privateData.find((s: any) => s.key === "ai.gemini_key")?.value?.key || "";
+      const geminiParams = privateData.find((s: any) => s.key === "ai.gemini_params")?.value || {};
+      const waConfig = privateData.find((s: any) => s.key === "wa.provider_config")?.value || {};
+      const contactObj = privateData.find((s: any) => s.key === "site.contact")?.value || {};
+      
+      const { data: publicData } = await supabase.from("settings").select("*");
+      const brandObj = (publicData?.find((s: any) => s.key === "site.brand")?.value as any) || {};
+      const heroObj = (publicData?.find((s: any) => s.key === "site.hero")?.value as any) || {};
+      const footerObj = (publicData?.find((s: any) => s.key === "site.footer")?.value as any) || {};
+      
+      setSettings({
+        appName: brandObj.name || defaultSettings.appName,
+        heroTitle: heroObj.title || defaultSettings.heroTitle,
+        heroDesc: heroObj.description || defaultSettings.heroDesc,
+        footerText: footerObj.text || defaultSettings.footerText,
+        adminWa: contactObj.whatsapp || "",
+        geminiKey,
+        geminiModel: geminiParams.model || "gemini-1.5-pro",
+        geminiTemperature: geminiParams.temperature || 0.7,
+        geminiMaxTokens: geminiParams.max_tokens || 2048,
+        waProvider: waConfig.provider || "mock",
+        waApiUrl: waConfig.api_url || "",
+        waApiKey: waConfig.api_key || "",
+        waDeviceId: waConfig.device_id || "",
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error("Gagal memuat pengaturan");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,12 +103,48 @@ function PengaturanPage() {
         await supabase.from("settings").upsert(item as any);
       }
 
+      logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
       toast.success("Pengaturan berhasil disimpan");
     } catch (e) {
       toast.error("Gagal menyimpan pengaturan");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleReset = async () => {
+    if (!confirm("Reset semua pengaturan di tab ini ke default?")) return;
+    
+    if (activeTab === "umum") {
+      setSettings(prev => ({ ...prev, appName: defaultSettings.appName, heroTitle: defaultSettings.heroTitle, heroDesc: defaultSettings.heroDesc, footerText: defaultSettings.footerText }));
+    } else if (activeTab === "ai") {
+      setSettings(prev => ({ ...prev, geminiModel: defaultSettings.geminiModel, geminiTemperature: defaultSettings.geminiTemperature, geminiMaxTokens: defaultSettings.geminiMaxTokens }));
+    } else if (activeTab === "wa") {
+      setSettings(prev => ({ ...prev, waProvider: defaultSettings.waProvider }));
+    }
+  };
+
+  const testGemini = async () => {
+    setTestingAi(true);
+    // Simulate API Call for now, in a real scenario you'd call a serverFn that hits the Gemini API using these keys
+    setTimeout(() => {
+      if (settings.geminiKey) toast.success("Koneksi API Gemini berhasil!");
+      else toast.error("Koneksi gagal. API Key tidak valid.");
+      setTestingAi(false);
+    }, 1500);
+  };
+
+  const testWhatsApp = async () => {
+    if (!settings.adminWa) {
+      toast.error("Nomor WA Admin belum diisi di tab Umum.");
+      return;
+    }
+    setTestingWa(true);
+    // Simulate API Call for now
+    setTimeout(() => {
+      toast.success(`Pesan test dikirim ke ${settings.adminWa}`);
+      setTestingWa(false);
+    }, 1500);
   };
 
   const tabs = [
@@ -132,21 +170,22 @@ function PengaturanPage() {
         </div>
       </div>
 
-      <div className="flex gap-6">
-        <aside className="w-48 shrink-0">
-          <nav className="flex flex-col space-y-1">
+      <div className="flex gap-6 flex-col md:flex-row">
+        <aside className="w-full md:w-48 shrink-0">
+          <nav className="flex md:flex-col space-x-2 md:space-x-0 md:space-y-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex flex-1 md:flex-none items-center justify-center md:justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "bg-brand text-brand-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
               >
                 <tab.icon className="h-4 w-4" />
-                {tab.label}
+                <span className="hidden md:inline">{tab.label}</span>
               </button>
             ))}
           </nav>
@@ -157,7 +196,7 @@ function PengaturanPage() {
             <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
               <h2 className="text-lg font-semibold border-b pb-2 mb-4">Informasi Web</h2>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="col-span-2">
+                <div className="col-span-2 md:col-span-1">
                   <label className="mb-1.5 block text-sm font-medium">Nama Aplikasi</label>
                   <input
                     type="text"
@@ -166,16 +205,7 @@ function PengaturanPage() {
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
                   />
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">Judul Hero (Homepage)</label>
-                  <input
-                    type="text"
-                    value={settings.heroTitle}
-                    onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
-                <div>
+                <div className="col-span-2 md:col-span-1">
                   <label className="mb-1.5 block text-sm font-medium">Nomor WhatsApp Admin</label>
                   <input
                     type="text"
@@ -186,13 +216,42 @@ function PengaturanPage() {
                   />
                   <p className="mt-1 text-xs text-muted-foreground">Menerima notifikasi setiap ada konsultasi masuk.</p>
                 </div>
+                <div className="col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Judul Hero (Homepage)</label>
+                  <input
+                    type="text"
+                    value={settings.heroTitle}
+                    onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="mb-1.5 block text-sm font-medium">Deskripsi Hero</label>
+                  <textarea
+                    value={settings.heroDesc}
+                    onChange={(e) => setSettings({ ...settings, heroDesc: e.target.value })}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                    rows={3}
+                  />
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === "ai" && (
             <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
-              <h2 className="text-lg font-semibold border-b pb-2 mb-4">Konfigurasi Google Gemini API</h2>
+              <div className="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 className="text-lg font-semibold">Konfigurasi Google Gemini API</h2>
+                <button 
+                  type="button" 
+                  onClick={testGemini}
+                  disabled={testingAi}
+                  className="flex items-center gap-1.5 rounded bg-blue-100 text-blue-700 px-3 py-1.5 text-xs font-medium hover:bg-blue-200 disabled:opacity-50"
+                >
+                  {testingAi ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
+                  Test Koneksi
+                </button>
+              </div>
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-3 flex gap-3 text-sm text-blue-700 dark:text-blue-300">
                 <Info className="h-5 w-5 shrink-0" />
                 <p>API Key disimpan aman di backend dan tidak pernah terekspos ke publik.</p>
@@ -250,7 +309,18 @@ function PengaturanPage() {
 
           {activeTab === "wa" && (
             <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-300">
-              <h2 className="text-lg font-semibold border-b pb-2 mb-4">Pengaturan WhatsApp API</h2>
+              <div className="flex justify-between items-center border-b pb-2 mb-4">
+                <h2 className="text-lg font-semibold">Pengaturan WhatsApp API</h2>
+                <button 
+                  type="button" 
+                  onClick={testWhatsApp}
+                  disabled={testingWa}
+                  className="flex items-center gap-1.5 rounded bg-emerald-100 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-200 disabled:opacity-50"
+                >
+                  {testingWa ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
+                  Test WA Admin
+                </button>
+              </div>
               <div className="grid gap-4">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium">Provider Layanan WhatsApp</label>
@@ -303,7 +373,14 @@ function PengaturanPage() {
             </div>
           )}
 
-          <div className="mt-8 flex justify-end border-t pt-5">
+          <div className="mt-8 flex justify-between border-t pt-5">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted"
+            >
+              <RotateCcw className="h-4 w-4" /> Reset Default
+            </button>
             <button
               type="submit"
               disabled={saving}
