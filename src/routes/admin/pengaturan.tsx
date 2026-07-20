@@ -96,13 +96,15 @@ function PengaturanPage() {
         { key: "site.footer", value: { text: settings.footerText }, is_public: true }
       ];
 
-      const { error } = await supabase.from("settings").upsert(allUpdates as any);
-      if (error) throw error;
+      for (const item of allUpdates) {
+        const { error } = await supabase.from("settings").upsert(item as any, { onConflict: "key" });
+        if (error) throw error;
+      }
 
       logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
       toast.success("Pengaturan berhasil disimpan");
     } catch (e: any) {
-      toast.error("Gagal menyimpan pengaturan: " + e.message);
+      toast.error("Gagal menyimpan pengaturan: " + (e.message || "RLS constraint error"));
     } finally {
       setSaving(false);
     }
