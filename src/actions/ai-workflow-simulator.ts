@@ -54,27 +54,50 @@ export const simulateAiWorkflowAction = createServerFn({ method: "POST" })
       });
     }
 
-    // 2. Step 2: WhatsApp Notification Configuration Check
+    // 2. Step 2: WhatsApp Notification Check & Actual Test Dispatch
     const s2Start = performance.now();
     try {
-      const { data: waConfig } = await supabaseAdmin.from("settings").select("value").eq("key", "wa.provider_config").single();
-      const { data: waTpls } = await supabaseAdmin.from("wa_templates").select("template_key").limit(2);
+      const [{ data: waConfigData }, { data: contactData }, { data: waTpls }] = await Promise.all([
+        supabaseAdmin.from("settings").select("value").eq("key", "wa.provider_config").maybeSingle(),
+        supabaseAdmin.from("settings").select("value").eq("key", "site.contact").maybeSingle(),
+        supabaseAdmin.from("wa_templates").select("*")
+      ]);
       
-      const sampleMsg = renderWaTemplate(
-        "Simulasi Notifikasi EduKonsul. Nama: {{nama}}, Status: {{status}}",
-        { nama: "Orang Tua Simulasi", nomor: "081234567890", jenjang: "TK & SD", tanggal: new Date().toLocaleDateString("id-ID"), status: "Menunggu Analisis", id_konsultasi: "sim-123" }
-      );
+      const waConfig: WaProviderConfig = waConfigData?.value || { provider: "mock", api_url: "", api_key: "" };
+      const adminNumber = contactData?.value?.whatsapp || "081234567890";
+
+      const adminTplContent = waTpls?.find((t: any) => t.template_key === "admin_notification")?.content || 
+        "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
+
+      const sampleMsg = renderWaTemplate(adminTplContent, {
+        nama: "Orang Tua Simulasi",
+        nomor: "081234567890",
+        jenjang: "TK & SD",
+        tanggal: new Date().toLocaleDateString("id-ID"),
+        status: "Menunggu Analisis",
+        id_konsultasi: "sim-123"
+      });
+
+      // Execute actual WA sending for test
+      const { sendWhatsAppMessage } = await import("./whatsapp-client");
+      const waSendRes = await sendWhatsAppMessage(adminNumber, sampleMsg, waConfig);
 
       steps.push({
-        stepName: "2. Konfigurasi WhatsApp Notifikasi",
-        status: "success",
+        stepName: "2. Pengiriman Notifikasi WhatsApp (Admin & Peserta)",
+        status: waSendRes.success ? "success" : "failed",
         durationMs: Math.round(performance.now() - s2Start),
-        details: { provider: waConfig?.value?.provider || "mock", templatesCount: waTpls?.length || 0, sampleRender: sampleMsg }
+        details: {
+          provider: waConfig.provider,
+          targetAdmin: adminNumber,
+          msgPreview: sampleMsg.substring(0, 80) + "...",
+          response: waSendRes.responsePayload
+        },
+        errorMessage: waSendRes.errorMessage
       });
     } catch (e: any) {
       isSuccess = false;
       steps.push({
-        stepName: "2. Konfigurasi WhatsApp Notifikasi",
+        stepName: "2. Pengiriman Notifikasi WhatsApp (Admin & Peserta)",
         status: "failed",
         durationMs: Math.round(performance.now() - s2Start),
         details: null,

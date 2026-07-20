@@ -11,19 +11,27 @@ export type WaSendResult = {
   errorMessage?: string;
 };
 
+export function normalizePhoneNumber(phone: string): string {
+  if (!phone) return "";
+  let clean = phone.replace(/[^0-9]/g, "");
+  if (clean.startsWith("0")) {
+    clean = "62" + clean.slice(1);
+  }
+  return clean;
+}
+
 export async function sendWhatsAppMessage(
   targetNumber: string,
   message: string,
   config: WaProviderConfig
 ): Promise<WaSendResult> {
-  // Format target number (ensure it starts with valid country code, e.g., Fonnte usually requires 08... or 62...)
-  // For safety, we just pass the number as is, the provider should handle it.
+  const formattedNumber = normalizePhoneNumber(targetNumber) || targetNumber;
 
   if (config.provider === "mock" || !config.api_key) {
-    console.log(`[WA MOCK] To: ${targetNumber} | Message: ${message}`);
+    console.log(`[WA MOCK] To: ${formattedNumber} (${targetNumber}) | Message: ${message}`);
     return {
       success: true,
-      responsePayload: { mock: true, message: "Mock message sent successfully" },
+      responsePayload: { mock: true, formattedNumber, message: "Mock message logged successfully" },
     };
   }
 
