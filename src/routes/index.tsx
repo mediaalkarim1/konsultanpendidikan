@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, GraduationCap, School, BookOpen } from "lucide-react";
+import { ArrowRight, GraduationCap, LogIn, School, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -43,7 +43,13 @@ function Home() {
               EduKonsul
             </span>
           </Link>
-
+          <Link
+            to="/login"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:border-brand hover:text-brand active:scale-[0.98]"
+          >
+            <LogIn className="h-4 w-4" />
+            <span>Login Admin</span>
+          </Link>
         </div>
       </header>
 

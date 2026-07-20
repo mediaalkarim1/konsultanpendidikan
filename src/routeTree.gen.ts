@@ -10,12 +10,28 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SuksesRouteImport } from './routes/sukses'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin/route'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
+import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
+import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
 import { Route as FormulirJenjangRouteImport } from './routes/formulir.$jenjang'
 
 const SuksesRoute = SuksesRouteImport.update({
   id: '/sukses',
   path: '/sukses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,35 +44,81 @@ const FormulirJenjangRoute = FormulirJenjangRouteImport.update({
   path: '/formulir/$jenjang',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminKonsultasiRoute = AdminKonsultasiRouteImport.update({
+  id: '/konsultasi',
+  path: '/konsultasi',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPertanyaanRoute = AdminPertanyaanRouteImport.update({
+  id: '/pertanyaan',
+  path: '/pertanyaan',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPengaturanRoute = AdminPengaturanRouteImport.update({
+  id: '/pengaturan',
+  path: '/pengaturan',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sukses': typeof SuksesRoute
+  '/login': typeof LoginRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
+  '/admin': typeof AdminRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/konsultasi': typeof AdminKonsultasiRoute
+  '/admin/pertanyaan': typeof AdminPertanyaanRoute
+  '/admin/pengaturan': typeof AdminPengaturanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sukses': typeof SuksesRoute
+  '/login': typeof LoginRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/konsultasi': typeof AdminKonsultasiRoute
+  '/admin/pertanyaan': typeof AdminPertanyaanRoute
+  '/admin/pengaturan': typeof AdminPengaturanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/sukses': typeof SuksesRoute
+  '/login': typeof LoginRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
+  '/admin': typeof AdminRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/konsultasi': typeof AdminKonsultasiRoute
+  '/admin/pertanyaan': typeof AdminPertanyaanRoute
+  '/admin/pengaturan': typeof AdminPengaturanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sukses' | '/formulir/$jenjang'
+  fullPaths: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sukses' | '/formulir/$jenjang'
-  id: '__root__' | '/' | '/sukses' | '/formulir/$jenjang'
+  to: '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan'
+  id: '__root__' | '/' | '/sukses' | '/login' | '/formulir/$jenjang' | '/admin' | '/admin/' | '/admin/konsultasi' | '/admin/pertanyaan' | '/admin/pengaturan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SuksesRoute: typeof SuksesRoute
+  LoginRoute: typeof LoginRoute
   FormulirJenjangRoute: typeof FormulirJenjangRoute
+  AdminRoute: typeof AdminRoute
+}
+
+const AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminKonsultasiRoute: AdminKonsultasiRoute,
+  AdminPertanyaanRoute: AdminPertanyaanRoute,
+  AdminPengaturanRoute: AdminPengaturanRoute,
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/sukses'
       fullPath: '/sukses'
       preLoaderRoute: typeof SuksesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -82,13 +151,50 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FormulirJenjangRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/konsultasi': {
+      id: '/admin/konsultasi'
+      path: '/konsultasi'
+      fullPath: '/admin/konsultasi'
+      preLoaderRoute: typeof AdminKonsultasiRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/pertanyaan': {
+      id: '/admin/pertanyaan'
+      path: '/pertanyaan'
+      fullPath: '/admin/pertanyaan'
+      preLoaderRoute: typeof AdminPertanyaanRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/pengaturan': {
+      id: '/admin/pengaturan'
+      path: '/pengaturan'
+      fullPath: '/admin/pengaturan'
+      preLoaderRoute: typeof AdminPengaturanRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SuksesRoute: SuksesRoute,
+  LoginRoute: LoginRoute,
   FormulirJenjangRoute: FormulirJenjangRoute,
+  AdminRoute: AdminRoute._addFileChildren(AdminRouteChildren),
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
