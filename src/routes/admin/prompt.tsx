@@ -19,7 +19,7 @@ type Prompt = {
   created_at?: string;
 };
 
-function PromptAIPage() {
+export function PromptAIPage() {
   const { userEmail } = useAuth();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);

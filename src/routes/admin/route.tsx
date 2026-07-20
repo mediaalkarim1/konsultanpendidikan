@@ -32,9 +32,7 @@ function AdminLayout() {
     { name: "Dashboard", to: "/admin", icon: LayoutDashboard },
     { name: "Data Konsultasi", to: "/admin/konsultasi", icon: Users },
     { name: "Kelola Pertanyaan", to: "/admin/pertanyaan", icon: FileQuestion },
-    { name: "Prompt AI", to: "/admin/prompt", icon: Sparkles },
     { name: "Log Aktivitas", to: "/admin/log-aktivitas", icon: History },
-    { name: "Testing & Simulasi", to: "/admin/testing", icon: Beaker },
     { name: "Pengaturan", to: "/admin/pengaturan", icon: Settings },
   ];
 

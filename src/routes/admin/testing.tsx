@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/testing")({
   component: TestingPage,
 });
 
-function TestingPage() {
+export function TestingPage() {
   const [waAdminLoading, setWaAdminLoading] = useState(false);
   const [waTargetLoading, setWaTargetLoading] = useState(false);
   const [targetNumber, setTargetNumber] = useState("");
