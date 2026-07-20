@@ -34,16 +34,31 @@ const SUGGESTED_MODELS: Record<string, string[]> = {
   ollama: ["llama3", "mistral", "gemma2"]
 };
 
+const DEFAULT_AI_PROVIDERS = [
+  { provider_name: "Lovable AI Gateway", provider_key: "lovable", model: "google/gemini-2.5-flash", base_url: "https://ai-gateway.lovable.dev/v1", temperature: 0.7, max_tokens: 2048, is_default: true, is_active: true },
+  { provider_name: "Google Gemini", provider_key: "gemini", model: "gemini-1.5-pro", base_url: "https://generativelanguage.googleapis.com/v1beta/models", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "OpenAI GPT", provider_key: "openai", model: "gpt-4o-mini", base_url: "https://api.openai.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "Anthropic Claude", provider_key: "claude", model: "claude-3-5-sonnet-20241022", base_url: "https://api.anthropic.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "OpenRouter", provider_key: "openrouter", model: "auto", base_url: "https://openrouter.ai/api/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "DeepSeek", provider_key: "deepseek", model: "deepseek-chat", base_url: "https://api.deepseek.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "Groq", provider_key: "groq", model: "llama-3.3-70b-versatile", base_url: "https://api.groq.com/openai/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "Mistral AI", provider_key: "mistral", model: "mistral-small-latest", base_url: "https://api.mistral.ai/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
+  { provider_name: "Ollama (Self Hosted)", provider_key: "ollama", model: "llama3", base_url: "http://localhost:11434", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true }
+];
+
+const DEFAULT_ADMIN_WA_TEMPLATE = "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
+const DEFAULT_PARTICIPANT_WA_TEMPLATE = "Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.";
+
 function PengaturanPage() {
   const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingWa, setTestingWa] = useState(false);
-  const [activeTab, setActiveTab] = useState("workflow"); // Default to Alur Sistem AI
+  const [activeTab, setActiveTab] = useState("workflow");
 
   // AI Providers & Workflow State
-  const [providers, setProviders] = useState<any[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
+  const [providers, setProviders] = useState<any[]>(DEFAULT_AI_PROVIDERS);
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(DEFAULT_AI_PROVIDERS[0]);
   const [savingProvider, setSavingProvider] = useState(false);
 
   const defaultWorkflowConfig = {
@@ -72,8 +87,8 @@ function PengaturanPage() {
   const [simResult, setSimResult] = useState<SimulationResult | null>(null);
 
   // WA Templates State
-  const [waAdminTemplate, setWaAdminTemplate] = useState("");
-  const [waParticipantTemplate, setWaParticipantTemplate] = useState("");
+  const [waAdminTemplate, setWaAdminTemplate] = useState(DEFAULT_ADMIN_WA_TEMPLATE);
+  const [waParticipantTemplate, setWaParticipantTemplate] = useState(DEFAULT_PARTICIPANT_WA_TEMPLATE);
   const [savingWaTemplates, setSavingWaTemplates] = useState(false);
 
   const defaultSettings = {
@@ -137,23 +152,14 @@ function PengaturanPage() {
         waDeviceId: waConfig.device_id || "",
       });
 
-      setProviders(providersData || []);
-      if (providersData && providersData.length > 0) {
-        setSelectedProvider(providersData.find((p: any) => p.is_default) || providersData[0]);
-      } else {
-        setSelectedProvider({
-          provider_name: "Lovable AI Gateway",
-          provider_key: "lovable",
-          model: "google/gemini-2.5-flash",
-          is_default: true,
-          is_active: true
-        });
-      }
+      const activeProviders = (providersData && providersData.length > 0) ? providersData : DEFAULT_AI_PROVIDERS;
+      setProviders(activeProviders);
+      setSelectedProvider(activeProviders.find((p: any) => p.is_default) || activeProviders[0]);
 
-      if (waTemplatesData) {
-        setWaAdminTemplate(waTemplatesData.find((t: any) => t.template_key === "admin_notification")?.content || "");
-        setWaParticipantTemplate(waTemplatesData.find((t: any) => t.template_key === "participant_notification")?.content || "");
-      }
+      const adminTpl = waTemplatesData?.find((t: any) => t.template_key === "admin_notification")?.content;
+      const partTpl = waTemplatesData?.find((t: any) => t.template_key === "participant_notification")?.content;
+      setWaAdminTemplate(adminTpl || DEFAULT_ADMIN_WA_TEMPLATE);
+      setWaParticipantTemplate(partTpl || DEFAULT_PARTICIPANT_WA_TEMPLATE);
 
       if (wfData) {
         setWfConfig({ ...defaultWorkflowConfig, ...wfData });
