@@ -93,6 +93,17 @@ function PengaturanPage() {
   const [waParticipantTemplate, setWaParticipantTemplate] = useState(DEFAULT_PARTICIPANT_WA_TEMPLATE);
   const [savingWaTemplates, setSavingWaTemplates] = useState(false);
 
+  // Simulasi kirim WA state
+  const [simName, setSimName] = useState("Budi Santoso");
+  const [simAdminNum, setSimAdminNum] = useState("");
+  const [simTargetNum, setSimTargetNum] = useState("08123456789");
+  const [simJenjang, setSimJenjang] = useState("TK & SD");
+  const [simAdminMsg, setSimAdminMsg] = useState("");
+  const [simParentMsg, setSimParentMsg] = useState("");
+  const [simEdited, setSimEdited] = useState(false);
+  const [simSending, setSimSending] = useState(false);
+  const [simResultWa, setSimResultWa] = useState<SimulateWaResult | null>(null);
+
   const defaultSettings = {
     appName: "EduKonsul",
     heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
