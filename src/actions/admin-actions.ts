@@ -292,8 +292,41 @@ export const getWaTemplatesAction = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
-      const { data } = await supabaseAdmin.from("wa_templates").select("*").order("template_key", { ascending: true });
-      return data || [];
+
+      // 1. First attempt: Try fetching from wa_templates table if present
+      try {
+        const { data, error } = await supabaseAdmin.from("wa_templates" as any).select("*").order("template_key", { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data;
+        }
+      } catch (_) {
+        // Table wa_templates does not exist in schema cache
+      }
+
+      // 2. Second attempt: Fetch from settings table (key: "wa.templates")
+      const { data: settingRow } = await supabaseAdmin
+        .from("settings")
+        .select("value")
+        .eq("key", "wa.templates")
+        .maybeSingle();
+
+      if (settingRow && settingRow.value && Array.isArray(settingRow.value) && settingRow.value.length > 0) {
+        return settingRow.value;
+      }
+
+      // 3. Fallback defaults if neither table nor settings record exists
+      return [
+        {
+          template_key: "admin_notification",
+          template_name: "Notifikasi Admin",
+          content: "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi."
+        },
+        {
+          template_key: "participant_notification",
+          template_name: "Notifikasi Orang Tua",
+          content: "Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih."
+        }
+      ];
     } catch (e) {
       console.error("getWaTemplatesAction exception:", e);
       return [];
@@ -306,18 +339,43 @@ export const saveWaTemplatesAction = createServerFn({ method: "POST" })
     const supabaseAdmin = getAdminSupabase();
     const { templates, email } = ctx.data;
 
-    for (const tpl of templates) {
-      const { error } = await supabaseAdmin.from("wa_templates").upsert({
-        template_key: tpl.template_key,
-        template_name: tpl.template_name,
-        content: tpl.content,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "template_key" });
+    let savedToTable = false;
 
-      if (error) throw error;
+    // 1. Try saving to wa_templates table if present
+    try {
+      for (const tpl of templates) {
+        const { error } = await supabaseAdmin.from("wa_templates" as any).upsert({
+          template_key: tpl.template_key,
+          template_name: tpl.template_name,
+          content: tpl.content,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "template_key" });
+
+        if (error) {
+          console.warn("[saveWaTemplatesAction] wa_templates table missing or failed, saving to settings table:", error.message);
+          savedToTable = false;
+          break;
+        }
+        savedToTable = true;
+      }
+    } catch (_) {
+      savedToTable = false;
     }
 
-    await logActivityInternal(email, "SAVE_WA_TEMPLATES", { count: templates.length });
+    // 2. Guaranteed Save: Save to settings table under key "wa.templates"
+    const { error: settingsErr } = await supabaseAdmin.from("settings").upsert({
+      key: "wa.templates",
+      value: templates as any,
+      is_public: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "key" });
+
+    if (settingsErr && !savedToTable) {
+      console.error("[saveWaTemplatesAction] Failed to save templates into settings table:", settingsErr);
+      return { success: false, error: settingsErr.message };
+    }
+
+    await logActivityInternal(email, "SAVE_WA_TEMPLATES", { count: templates.length, savedToTable });
     return { success: true };
   });
 

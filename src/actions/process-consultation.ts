@@ -256,10 +256,18 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultation.id);
 
       // Fetch WA Provider Config, WA Templates, and Workflow Config
-      const [{ data: settingsData }, { data: waTemplates }] = await Promise.all([
-        supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact", "ai.workflow_config"]),
-        supabaseAdmin.from("wa_templates").select("*")
-      ]);
+      const { data: settingsData } = await supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact", "ai.workflow_config", "wa.templates"]);
+
+      let waTemplates: any[] = [];
+      try {
+        const { data: tData } = await supabaseAdmin.from("wa_templates" as any).select("*");
+        if (tData && tData.length > 0) waTemplates = tData;
+      } catch (_) {}
+
+      if (waTemplates.length === 0) {
+        const tRow = (settingsData || []).find((s: any) => s.key === "wa.templates");
+        if (tRow && Array.isArray(tRow.value)) waTemplates = tRow.value;
+      }
 
       const waConfig: WaProviderConfig = (settingsData || []).find((s: any) => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
       const adminContact = (settingsData || []).find((s: any) => s.key === "site.contact")?.value?.whatsapp;
