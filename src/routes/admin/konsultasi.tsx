@@ -320,7 +320,7 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
       }
 
       // Fetch consultation_analysis
-      const { data: analysisData } = await supabase
+      const { data: analysisData } = await (supabase as any)
         .from("consultation_analysis")
         .select("*")
         .eq("consultation_id", consultId)
