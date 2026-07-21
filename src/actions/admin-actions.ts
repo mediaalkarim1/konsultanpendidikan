@@ -362,21 +362,72 @@ export const saveWaTemplatesAction = createServerFn({ method: "POST" })
       savedToTable = false;
     }
 
-    // 2. Guaranteed Save: Save to settings table under key "wa.templates"
-    const { error: settingsErr } = await supabaseAdmin.from("settings").upsert({
-      key: "wa.templates",
-      value: templates as any,
-      is_public: false,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "key" });
-
-    if (settingsErr && !savedToTable) {
-      console.error("[saveWaTemplatesAction] Failed to save templates into settings table:", settingsErr);
-      return { success: false, error: settingsErr.message };
+    // 2. Guaranteed Save: Save to settings table under key "wa.templates" using admin service role (bypasses RLS)
+    try {
+      const { data: existing } = await supabaseAdmin.from("settings").select("key").eq("key", "wa.templates").maybeSingle();
+      if (existing) {
+        await supabaseAdmin.from("settings").update({
+          value: templates as any,
+          is_public: false,
+          updated_at: new Date().toISOString()
+        }).eq("key", "wa.templates");
+      } else {
+        await supabaseAdmin.from("settings").insert({
+          key: "wa.templates",
+          value: templates as any,
+          is_public: false,
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (sErr: any) {
+      console.error("[saveWaTemplatesAction] Settings fallback save notice:", sErr);
+      if (!savedToTable) return { success: false, error: sErr.message };
     }
 
     await logActivityInternal(email, "SAVE_WA_TEMPLATES", { count: templates.length, savedToTable });
     return { success: true };
+  });
+
+// --- Homepage Settings Management (Server Action - Bypasses RLS) ---
+export const saveHomepageSettingsAction = createServerFn({ method: "POST" })
+  .validator((payload: { config: any; email: string }) => payload)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    const { config, email } = ctx.data;
+
+    try {
+      const { data: existing } = await supabaseAdmin.from("settings").select("key").eq("key", "site.homepage_config").maybeSingle();
+
+      if (existing) {
+        const { error: updateErr } = await supabaseAdmin.from("settings").update({
+          value: config as any,
+          is_public: true,
+          updated_at: new Date().toISOString()
+        }).eq("key", "site.homepage_config");
+
+        if (updateErr) {
+          await supabaseAdmin.from("settings").upsert({
+            key: "site.homepage_config",
+            value: config as any,
+            is_public: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: "key" });
+        }
+      } else {
+        await supabaseAdmin.from("settings").insert({
+          key: "site.homepage_config",
+          value: config as any,
+          is_public: true,
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      await logActivityInternal(email, "SAVE_HOMEPAGE_CONFIG", {});
+      return { success: true };
+    } catch (e: any) {
+      console.error("[saveHomepageSettingsAction exception]:", e);
+      return { success: false, error: e.message };
+    }
   });
 
 // --- AI Workflow Config Management ---

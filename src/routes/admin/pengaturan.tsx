@@ -14,12 +14,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth-context";
+import { saveHomepageSettingsAction } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/pengaturan")({
   component: PengaturanPage,
 });
 
 export function PengaturanPage() {
+  const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -67,15 +70,18 @@ export function PengaturanPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const { error } = await supabase.from("settings").upsert({
-        key: "site.homepage_config",
-        value: homeForm as any,
-        is_public: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: "key" });
+      const res = await saveHomepageSettingsAction({
+        data: {
+          config: homeForm,
+          email: userEmail || "admin"
+        }
+      });
 
-      if (error) throw error;
-      toast.success("Tampilan & Konten Homepage berhasil diperbarui secara Realtime!");
+      if (res.success) {
+        toast.success("Tampilan & Konten Homepage berhasil diperbarui secara Realtime!");
+      } else {
+        toast.error("Gagal menyimpan tampilan homepage: " + (res.error || "Error server"));
+      }
     } catch (err: any) {
       toast.error("Gagal menyimpan tampilan homepage: " + err.message);
     } finally {
