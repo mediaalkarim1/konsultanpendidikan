@@ -1,11 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, Info, Building2, MessageSquare, TestTube, RotateCcw, Sparkles, Beaker, GitFork, CheckCircle2, Star, FileText, ToggleLeft, ToggleRight, Play, AlertCircle, ShieldCheck, Cpu } from "lucide-react";
+import { 
+  Save, 
+  Loader2, 
+  Info, 
+  Building2, 
+  MessageSquare, 
+  TestTube, 
+  RotateCcw, 
+  Sparkles, 
+  Beaker, 
+  GitFork, 
+  CheckCircle2, 
+  Star, 
+  FileText, 
+  ToggleLeft, 
+  ToggleRight, 
+  Play, 
+  AlertCircle, 
+  ShieldCheck, 
+  Cpu,
+  Layout,
+  Globe,
+  School,
+  BookOpen,
+  GraduationCap,
+  ArrowRight,
+  Eye,
+  Sliders,
+  MessageCircle,
+  Key
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import {
-  logActivity,
   saveSettingsAction,
   getAiProvidersAction,
   saveAiProviderAction,
@@ -17,8 +46,6 @@ import {
 import { simulateAiWorkflowAction, SimulationResult } from "@/actions/ai-workflow-simulator";
 import { simulateWaSend, SimulateWaResult } from "@/actions/simulate-wa";
 import { renderWaTemplate } from "@/actions/wa-template-engine";
-import { PromptAIPage } from "./prompt";
-import { TestingPage } from "./testing";
 
 export const Route = createFileRoute("/admin/pengaturan")({
   component: PengaturanPage,
@@ -30,1071 +57,666 @@ const SUGGESTED_MODELS: Record<string, string[]> = {
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4.5-preview", "gpt-4-turbo"],
   claude: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
   openrouter: ["auto", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-r1", "google/gemini-pro-1.5"],
-  deepseek: ["deepseek-chat", "deepseek-reasoner"],
-  groq: ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
-  mistral: ["mistral-small-latest", "mistral-large-latest"],
-  ollama: ["llama3", "mistral", "gemma2"]
 };
 
 const DEFAULT_AI_PROVIDERS = [
-  { provider_name: "Lovable AI Gateway", provider_key: "lovable", api_key: "lovable-gateway-auto", model: "google/gemini-2.5-flash", base_url: "https://ai-gateway.lovable.dev/v1", temperature: 0.7, max_tokens: 2048, is_default: true, is_active: true },
-  { provider_name: "Google Gemini", provider_key: "gemini", model: "gemini-1.5-pro", base_url: "https://generativelanguage.googleapis.com/v1beta/models", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "OpenAI GPT", provider_key: "openai", model: "gpt-4o-mini", base_url: "https://api.openai.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "Anthropic Claude", provider_key: "claude", model: "claude-3-5-sonnet-20241022", base_url: "https://api.anthropic.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "OpenRouter", provider_key: "openrouter", model: "auto", base_url: "https://openrouter.ai/api/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "DeepSeek", provider_key: "deepseek", model: "deepseek-chat", base_url: "https://api.deepseek.com/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "Groq", provider_key: "groq", model: "llama-3.3-70b-versatile", base_url: "https://api.groq.com/openai/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "Mistral AI", provider_key: "mistral", model: "mistral-small-latest", base_url: "https://api.mistral.ai/v1", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
-  { provider_name: "Ollama (Self Hosted)", provider_key: "ollama", model: "llama3", base_url: "http://localhost:11434", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true }
+  { provider_name: "Lovable AI Gateway", provider_key: "lovable", api_key: "lovable-gateway-auto", model: "google/gemini-3.5-flash", base_url: "https://ai-gateway.lovable.dev/v1", temperature: 0.7, max_tokens: 2048, is_default: true, is_active: true },
+  { provider_name: "Google Gemini", provider_key: "gemini", model: "google/gemini-3.5-flash", base_url: "https://generativelanguage.googleapis.com/v1beta/models", temperature: 0.7, max_tokens: 2048, is_default: false, is_active: true },
 ];
 
 const DEFAULT_ADMIN_WA_TEMPLATE = "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
 const DEFAULT_PARTICIPANT_WA_TEMPLATE = "Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.";
 
-function PengaturanPage() {
+export function PengaturanPage() {
   const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testingWa, setTestingWa] = useState(false);
-  const [activeTab, setActiveTab] = useState("workflow");
+  const [activeTab, setActiveTab] = useState("homepage");
 
-  // AI Providers & Workflow State
-  const [providers, setProviders] = useState<any[]>(DEFAULT_AI_PROVIDERS);
-  const [selectedProvider, setSelectedProvider] = useState<any | null>(DEFAULT_AI_PROVIDERS[0]);
-  const [savingProvider, setSavingProvider] = useState(false);
+  // --- 1. Homepage CMS Config State ---
+  const [homeForm, setHomeForm] = useState({
+    siteName: "EduKonsul",
+    badgeText: "Konsultasi Pendidikan Anak",
+    heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
+    heroDesc: "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak. Pilih jenjang di bawah ini untuk memulai konsultasi.",
+    btnText: "Mulai Konsultasi",
+    tksdTag: "Usia Dini",
+    tksdDesc: "Selamat datang di jenjang TK & SD! Konsultasikan kebutuhan tumbuh kembang anak usia dini untuk rekomendasi pendidikan terbaik.",
+    smpTag: "Menengah Pertama",
+    smpDesc: "Selamat datang di jenjang SMP! Petakan potensi, karakter, dan minat belajar remaja untuk sekolah menengah yang sesuai.",
+    smaTag: "Menengah Atas",
+    smaDesc: "Selamat datang di jenjang SMA! Temukan pemetaan jurusan, kesiapan perkuliahan, dan arah karier masa depan anak secara optimal.",
+    footerText: `© ${new Date().getFullYear()} EduKonsul — Sekolah Alam Al-Karim.`
+  });
 
-  const defaultWorkflowConfig = {
+  // --- 2. Workflow Config State ---
+  const [wfConfig, setWfConfig] = useState<any>({
     enable_wa_admin_notif: true,
     enable_wa_parent_notif: true,
     enable_ai_analysis: true,
     enable_ai_summary: true,
     enable_ai_recommendation: true,
     enable_auto_save: true,
-    auto_analysis: true,
-    generate_resume: true,
-    generate_recommendation: true,
-    save_ai_log: true,
-    save_prompt_history: true,
-    auto_retry: true,
-    auto_fallback: true,
-    request_timeout: 30,
-    prompt_mode: "default"
-  };
+    auto_fallback: true
+  });
 
-  const [wfConfig, setWfConfig] = useState(defaultWorkflowConfig);
-  const [savingWfConfig, setSavingWfConfig] = useState(false);
+  // --- 3. Providers State ---
+  const [providers, setProviders] = useState<any[]>(DEFAULT_AI_PROVIDERS);
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(DEFAULT_AI_PROVIDERS[0]);
 
-  // Workflow Simulator State
-  const [simulating, setSimulating] = useState(false);
-  const [simResult, setSimResult] = useState<SimulationResult | null>(null);
-
-  // WA Templates State
+  // --- 4. WA Templates State ---
   const [waAdminTemplate, setWaAdminTemplate] = useState(DEFAULT_ADMIN_WA_TEMPLATE);
   const [waParticipantTemplate, setWaParticipantTemplate] = useState(DEFAULT_PARTICIPANT_WA_TEMPLATE);
-  const [savingWaTemplates, setSavingWaTemplates] = useState(false);
-
-  // Simulasi kirim WA state
-  const [simName, setSimName] = useState("Budi Santoso");
-  const [simAdminNum, setSimAdminNum] = useState("");
-  const [simTargetNum, setSimTargetNum] = useState("08123456789");
-  const [simJenjang, setSimJenjang] = useState("TK & SD");
-  const [simAdminMsg, setSimAdminMsg] = useState("");
-  const [simParentMsg, setSimParentMsg] = useState("");
-  const [simEdited, setSimEdited] = useState(false);
-  const [simSending, setSimSending] = useState(false);
-  const [simResultWa, setSimResultWa] = useState<SimulateWaResult | null>(null);
-
-  const defaultSettings = {
-    appName: "EduKonsul",
-    heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
-    heroDesc: "Temukan rekomendasi pendidikan terbaik sesuai jenjang pendidikan anak.",
-    footerText: "Copyright 2026",
-    adminWa: "",
-    waProvider: "mock",
-    waApiUrl: "",
-    waApiKey: "",
-    waDeviceId: "",
-  };
-
-  const [settings, setSettings] = useState(defaultSettings);
 
   useEffect(() => {
-    loadData();
+    loadAllData();
   }, []);
 
-  async function loadData() {
+  async function loadAllData() {
     setLoading(true);
     try {
-      let allSettings: any[] = [];
-      try {
-        const { data } = await supabase.from("settings").select("*");
-        allSettings = data || [];
-      } catch (_) {}
+      // 1. Load Homepage Config from settings table
+      const { data: homeSetting } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", "site.homepage_config")
+        .maybeSingle();
 
-      let providersData: any[] = [];
-      try {
-        providersData = await getAiProvidersAction();
-      } catch (_) {}
+      if (homeSetting && homeSetting.value) {
+        setHomeForm((prev) => ({ ...prev, ...(homeSetting.value as any) }));
+      }
 
-      let waTemplatesData: any[] = [];
-      try {
-        waTemplatesData = await getWaTemplatesAction();
-      } catch (_) {}
+      // 2. Load Workflow Config
+      const wf = await getAiWorkflowConfigAction();
+      if (wf) setWfConfig(wf);
 
-      let wfData: any = null;
-      try {
-        wfData = await getAiWorkflowConfigAction();
-      } catch (_) {}
+      // 3. Load AI Providers
+      const provs = await getAiProvidersAction();
+      if (provs && provs.length > 0) {
+        setProviders(provs);
+        setSelectedProvider(provs.find((p: any) => p.is_default) || provs[0]);
+      }
 
-      const findVal = (key: string) => allSettings?.find((s: any) => s.key === key)?.value || {};
-      const waConfig = findVal("wa.provider_config");
-      const contactObj = findVal("site.contact");
-      const brandObj = findVal("site.brand");
-      const heroObj = findVal("site.hero");
-      const footerObj = findVal("site.footer");
-      
-      setSettings({
-        appName: brandObj.name || defaultSettings.appName,
-        heroTitle: heroObj.title || defaultSettings.heroTitle,
-        heroDesc: heroObj.description || defaultSettings.heroDesc,
-        footerText: footerObj.text || defaultSettings.footerText,
-        adminWa: contactObj.whatsapp || "",
-        waProvider: waConfig.provider || "mock",
-        waApiUrl: waConfig.api_url || "",
-        waApiKey: waConfig.api_key || "",
-        waDeviceId: waConfig.device_id || "",
-      });
-
-      let activeProviders = (providersData && providersData.length > 0) ? providersData : DEFAULT_AI_PROVIDERS;
-      activeProviders = activeProviders.map((p: any) => {
-        if (p.provider_key === "lovable" && (!p.api_key || p.api_key.trim() === "")) {
-          return { ...p, api_key: "lovable-gateway-auto" };
-        }
-        return p;
-      });
-      setProviders(activeProviders);
-      setSelectedProvider(activeProviders.find((p: any) => p.is_default) || activeProviders[0]);
-
-      const adminTpl = waTemplatesData?.find((t: any) => t.template_key === "admin_notification")?.content;
-      const partTpl = waTemplatesData?.find((t: any) => t.template_key === "participant_notification")?.content;
-      setWaAdminTemplate(adminTpl || DEFAULT_ADMIN_WA_TEMPLATE);
-      setWaParticipantTemplate(partTpl || DEFAULT_PARTICIPANT_WA_TEMPLATE);
-
-      if (wfData) {
-        setWfConfig({ ...defaultWorkflowConfig, ...wfData });
+      // 4. Load WA Templates
+      const templates = await getWaTemplatesAction();
+      if (templates) {
+        const adminT = templates.find((t: any) => t.template_key === "admin_notification");
+        const partT = templates.find((t: any) => t.template_key === "participant_notification");
+        if (adminT) setWaAdminTemplate(adminT.content);
+        if (partT) setWaParticipantTemplate(partT.content);
       }
     } catch (e) {
-      console.error("loadData error:", e);
+      console.error(e);
+      toast.error("Gagal memuat pengaturan");
     } finally {
       setLoading(false);
     }
   }
 
-  const handleSaveSettings = async (e: React.FormEvent) => {
+  // --- Save Homepage CMS Settings ---
+  const handleSaveHomepage = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const allUpdates = [
-        { key: "wa.provider_config", value: { provider: settings.waProvider, api_url: settings.waApiUrl, api_key: settings.waApiKey, device_id: settings.waDeviceId }, is_public: false },
-        { key: "site.contact", value: { whatsapp: settings.adminWa }, is_public: false },
-        { key: "site.brand", value: { name: settings.appName }, is_public: true },
-        { key: "site.hero", value: { title: settings.heroTitle, description: settings.heroDesc }, is_public: true },
-        { key: "site.footer", value: { text: settings.footerText }, is_public: true }
-      ];
+      const { error } = await supabase.from("settings").upsert({
+        key: "site.homepage_config",
+        value: homeForm as any,
+        is_public: true,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "key" });
 
-      await saveSettingsAction({ data: { updates: allUpdates } });
-      toast.success("Pengaturan berhasil disimpan");
-
-      try {
-        await logActivity({ data: { email: userEmail || "admin", action: "UPDATE_SETTINGS", details: { tab: activeTab } } });
-      } catch (_) {}
-    } catch (e: any) {
-      console.error("Gagal menyimpan pengaturan:", e);
-      toast.error("Gagal menyimpan pengaturan: " + (e.message || "Error database"));
+      if (error) throw error;
+      toast.success("Tampilan & Konten Homepage berhasil diperbarui secara Realtime!");
+    } catch (err: any) {
+      toast.error("Gagal menyimpan tampilan homepage: " + err.message);
     } finally {
       setSaving(false);
     }
   };
 
+  // --- Save Workflow Settings ---
+  const handleSaveWorkflow = async () => {
+    setSaving(true);
+    try {
+      const res = await saveAiWorkflowConfigAction({ data: { config: wfConfig, email: userEmail || "admin" } });
+      if (res.success) toast.success("Konfigurasi Alur Sistem berhasil disimpan");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan workflow: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // --- Save AI Provider Settings ---
   const handleSaveProvider = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProvider) return;
-    setSavingProvider(true);
+    setSaving(true);
     try {
-      await saveAiProviderAction({
-        data: {
-          provider: selectedProvider,
-          email: userEmail || "admin"
-        }
-      });
-      toast.success(`Provider AI ${selectedProvider.provider_name} berhasil disimpan`);
-      const updatedProviders = await getAiProvidersAction();
-      setProviders(updatedProviders || []);
-      if (updatedProviders) {
-        setSelectedProvider(updatedProviders.find((p: any) => p.id === selectedProvider.id) || selectedProvider);
+      const res = await saveAiProviderAction({ data: { provider: selectedProvider, email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success("Konfigurasi Provider AI berhasil disimpan");
+        const updated = await getAiProvidersAction();
+        if (updated) setProviders(updated);
       }
     } catch (e: any) {
-      toast.error("Gagal menyimpan provider: " + (e.message || "Error database"));
+      toast.error("Gagal menyimpan provider: " + e.message);
     } finally {
-      setSavingProvider(false);
+      setSaving(false);
     }
   };
 
-  const handleSaveWfConfig = async () => {
-    setSavingWfConfig(true);
-    try {
-      await saveAiWorkflowConfigAction({
-        data: {
-          config: wfConfig,
-          email: userEmail || "admin"
-        }
-      });
-      toast.success("Pengaturan Alur Sistem AI berhasil disimpan");
-    } catch (e: any) {
-      toast.error("Gagal menyimpan Alur Sistem AI: " + e.message);
-    } finally {
-      setSavingWfConfig(false);
-    }
-  };
-
+  // --- Save WA Templates ---
   const handleSaveWaTemplates = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavingWaTemplates(true);
+    setSaving(true);
     try {
-      await saveWaTemplatesAction({
+      const res = await saveWaTemplatesAction({
         data: {
           templates: [
-            { template_key: "admin_notification", template_name: "Pesan Notifikasi Admin", content: waAdminTemplate },
-            { template_key: "participant_notification", template_name: "Pesan Notifikasi Peserta", content: waParticipantTemplate }
+            { template_key: "admin_notification", template_name: "Notifikasi Admin", content: waAdminTemplate },
+            { template_key: "participant_notification", template_name: "Notifikasi Orang Tua", content: waParticipantTemplate }
           ],
           email: userEmail || "admin"
         }
       });
-      toast.success("Template WhatsApp Notifikasi berhasil disimpan");
+      if (res.success) toast.success("Template Notifikasi WhatsApp berhasil disimpan");
     } catch (e: any) {
-      toast.error("Gagal menyimpan template WA: " + (e.message || "Error database"));
+      toast.error("Gagal menyimpan template WhatsApp: " + e.message);
     } finally {
-      setSavingWaTemplates(false);
+      setSaving(false);
     }
   };
-
-  const handleRunWorkflowSimulation = async () => {
-    setSimulating(true);
-    setSimResult(null);
-    try {
-      const result = await simulateAiWorkflowAction();
-      setSimResult(result);
-      if (result.overallStatus === "success") {
-        toast.success("Simulasi Alur Sistem AI Berhasil!");
-      } else {
-        toast.error("Simulasi Alur Sistem AI Mengalami Kendala.");
-      }
-    } catch (e: any) {
-      toast.error("Gagal menjalankan simulasi: " + e.message);
-    } finally {
-      setSimulating(false);
-    }
-  };
-
-  const testWhatsApp = async () => {
-    if (!settings.adminWa) {
-      toast.error("Nomor WA Admin belum diisi di tab Umum.");
-      return;
-    }
-    setTestingWa(true);
-    setTimeout(() => {
-      toast.success(`Pesan test dikirim ke ${settings.adminWa}`);
-      setTestingWa(false);
-    }, 1500);
-  };
-
-  // Auto-sync simulation admin number with settings on load
-  useEffect(() => {
-    if (settings.adminWa && !simAdminNum) setSimAdminNum(settings.adminWa);
-  }, [settings.adminWa]);
-
-  // Auto-fill simulation messages from templates when user hasn't manually edited
-  useEffect(() => {
-    if (simEdited) return;
-    const tplData = {
-      nama: simName || "-",
-      nomor: simTargetNum || "-",
-      jenjang: simJenjang || "-",
-      tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-      status: "Menunggu Analisis",
-      id_konsultasi: "SIMULASI-" + Date.now().toString().slice(-6),
-    };
-    setSimAdminMsg(renderWaTemplate(waAdminTemplate, tplData));
-    setSimParentMsg(renderWaTemplate(waParticipantTemplate, tplData));
-  }, [simName, simTargetNum, simJenjang, waAdminTemplate, waParticipantTemplate, simEdited]);
-
-  const handleSimulateWa = async () => {
-    if (!simName.trim()) return toast.error("Nama orang tua wajib diisi");
-    if (!simAdminNum.trim() && !simTargetNum.trim()) return toast.error("Isi minimal salah satu nomor tujuan");
-    setSimSending(true);
-    setSimResultWa(null);
-    try {
-      const res = await simulateWaSend({
-        data: {
-          targetAdmin: simAdminNum.trim(),
-          targetParent: simTargetNum.trim(),
-          adminMessage: simAdminMsg,
-          parentMessage: simParentMsg,
-        },
-      });
-      setSimResultWa(res);
-      const ok = (res.admin.success || !simAdminNum) && (res.parent.success || !simTargetNum);
-      if (ok) toast.success(`Simulasi terkirim (provider: ${res.provider})`);
-      else toast.error("Sebagian pesan gagal terkirim. Cek detail di bawah.");
-    } catch (e: any) {
-      toast.error("Gagal menjalankan simulasi: " + (e.message || "Error"));
-    } finally {
-      setSimSending(false);
-    }
-  };
-
-  const resetSimEdits = () => {
-    setSimEdited(false);
-    toast.success("Template dimuat ulang");
-  };
-
-
-  const tabs = [
-    { id: "workflow", label: "Alur Sistem AI", icon: GitFork },
-    { id: "umum", label: "Umum", icon: Building2 },
-    { id: "wa", label: "WhatsApp Provider", icon: MessageSquare },
-    { id: "watemplate", label: "WhatsApp Template", icon: FileText },
-    { id: "prompt", label: "Konfigurasi Prompt", icon: Sparkles },
-    { id: "testing", label: "Testing & Simulasi", icon: Beaker },
-  ];
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-32 items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-brand" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b pb-4">
+    <div className="space-y-6 max-w-5xl">
+      {/* Header Title */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-brand flex items-center gap-2">
-            <GitFork className="h-6 w-6" /> Pusat Kendali Alur Sistem AI EduKonsul
+            <Layout className="h-6 w-6 text-brand" /> Pengaturan Tampilan & Sistem
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Atur AI Provider, Model, Prompt, Saklar Workflow (*toggles*), WhatsApp, serta Simulasi Alur Realtime.
+            Kelola teks & tampilan visual Halaman Utama (Homepage) serta konfigurasi sistem AI & WhatsApp.
           </p>
         </div>
+
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition"
+        >
+          <Eye className="h-4 w-4 text-brand" />
+          Lihat Homepage
+        </a>
       </div>
 
-      <div className="flex gap-6 flex-col md:flex-row">
-        <aside className="w-full md:w-56 shrink-0">
-          <nav className="flex md:flex-col space-x-1 md:space-x-0 md:space-y-1 overflow-x-auto pb-2 md:pb-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex shrink-0 items-center justify-start gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? "bg-brand text-brand-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <tab.icon className="h-4 w-4 shrink-0" />
-                <span>{tab.label}</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
+      {/* Tabs Bar */}
+      <div className="flex flex-wrap gap-2 border-b border-border pb-2">
+        <button
+          onClick={() => setActiveTab("homepage")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "homepage"
+              ? "bg-brand text-brand-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          Edit Tampilan Homepage
+        </button>
 
-        <div className="flex-1">
-          {activeTab === "workflow" ? (
-            /* HALAMAN UTAMA: ALUR SISTEM AI (7 SECTION) */
-            <div className="space-y-8 animate-in fade-in duration-200">
-              
-              {/* SECTION 1 & 2: AI PROVIDER & MODEL SELECTION */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-6">
-                <div className="flex items-center justify-between border-b pb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-brand flex items-center gap-2">
-                      <Cpu className="h-5 w-5" /> 1. Pemilihan AI Provider & Model AI (Aktif Single)
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Pilih salah satu dari 9 AI Provider terintegrasi untuk menjadi engine analisis utama.</p>
-                  </div>
-                  <button
-                    onClick={handleSaveProvider}
-                    disabled={savingProvider}
-                    className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {savingProvider ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    Simpan Provider
-                  </button>
-                </div>
+        <button
+          onClick={() => setActiveTab("workflow")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "workflow"
+              ? "bg-brand text-brand-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <GitFork className="h-4 w-4" />
+          Alur Sistem & Otomasi
+        </button>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                  {providers.map((p) => {
-                    const isSelected = selectedProvider?.provider_key === p.provider_key;
-                    return (
-                      <button
-                        key={p.id || p.provider_key}
-                        type="button"
-                        onClick={() => setSelectedProvider({ ...p, is_default: true, is_active: true })}
-                        className={`p-3 rounded-xl border text-left transition-all relative flex flex-col justify-between h-24 ${
-                          isSelected
-                            ? "border-brand bg-brand/10 text-brand font-semibold shadow-md ring-2 ring-brand/30"
-                            : "border-border hover:bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-bold truncate">{p.provider_name}</span>
-                          {p.is_default && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 shrink-0" />}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground truncate font-mono mt-1">{p.model || "Default Model"}</p>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded w-max mt-2 font-bold ${p.is_default ? 'bg-amber-100 text-amber-800' : 'bg-zinc-100 text-zinc-700'}`}>
-                          {p.is_default ? "ACTIVE ENGINE" : "TERSEDIA"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+        <button
+          onClick={() => setActiveTab("ai")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "ai"
+              ? "bg-brand text-brand-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          Provider & Model AI
+        </button>
 
-                {/* Form Editor Selected Provider & Model */}
-                {selectedProvider && (
-                  <div className="rounded-lg bg-muted/20 border p-4 space-y-4">
-                    <h3 className="text-sm font-semibold text-foreground border-b pb-2">
-                      Konfigurasi Engine: <span className="text-brand">{selectedProvider.provider_name}</span>
-                    </h3>
-                    
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Pilih / Input Model AI</label>
-                        <select
-                          value={selectedProvider.model || ""}
-                          onChange={(e) => setSelectedProvider({ ...selectedProvider, model: e.target.value })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-brand font-mono"
-                        >
-                          {(SUGGESTED_MODELS[selectedProvider.provider_key] || [selectedProvider.model]).map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                      </div>
+        <button
+          onClick={() => setActiveTab("wa")}
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+            activeTab === "wa"
+              ? "bg-brand text-brand-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          <MessageCircle className="h-4 w-4" />
+          Template WhatsApp
+        </button>
+      </div>
 
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="block text-xs font-medium">API Key</label>
-                          {selectedProvider.provider_key === "lovable" && (
-                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
-                              ✓ Terisi Otomatis (Lovable Gateway)
-                            </span>
-                          )}
-                        </div>
-                        <input
-                          type={selectedProvider.provider_key === "lovable" ? "text" : "password"}
-                          value={selectedProvider.api_key || (selectedProvider.provider_key === "lovable" ? "lovable-gateway-auto" : "")}
-                          onChange={(e) => setSelectedProvider({ ...selectedProvider, api_key: e.target.value })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-brand font-mono"
-                          placeholder="Masukkan API Key..."
-                        />
-                      </div>
+      {/* TAB 1: EDIT TAMPILAN HOMEPAGE (CMS) */}
+      {activeTab === "homepage" && (
+        <form onSubmit={handleSaveHomepage} className="space-y-6">
+          {/* Section 1: Header & Branding */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+              <Globe className="h-5 w-5" /> 1. Header & Brand Logo
+            </h2>
 
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Base API URL</label>
-                        <input
-                          type="text"
-                          value={selectedProvider.base_url || ""}
-                          onChange={(e) => setSelectedProvider({ ...selectedProvider, base_url: e.target.value })}
-                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-brand font-mono"
-                          placeholder="https://..."
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Nama Aplikasi / Brand
+                </label>
+                <input
+                  type="text"
+                  value={homeForm.siteName}
+                  onChange={(e) => setHomeForm({ ...homeForm, siteName: e.target.value })}
+                  className="w-full rounded-lg border p-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand/40"
+                  required
+                />
               </div>
 
-              {/* SECTION 3: PROMPT ANALISIS */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b pb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-brand flex items-center gap-2">
-                      <Sparkles className="h-5 w-5" /> 2. Mode Prompt Analisis
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Pilih apakah menggunakan Default Prompt teruji atau Custom Prompt buatan sendiri.</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() => setWfConfig({ ...wfConfig, prompt_mode: "default" })}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition ${wfConfig.prompt_mode === "default" ? "bg-card shadow text-brand font-bold" : "text-muted-foreground"}`}
-                    >
-                      Default Prompt
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setWfConfig({ ...wfConfig, prompt_mode: "custom" })}
-                      className={`px-3 py-1 text-xs font-medium rounded-md transition ${wfConfig.prompt_mode === "custom" ? "bg-card shadow text-brand font-bold" : "text-muted-foreground"}`}
-                    >
-                      Custom Prompt
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg text-xs text-blue-700 dark:text-blue-300">
-                  <span>Prompt AI memandu Gemini/OpenAI dalam menghasilkan Resume, Analisis, dan Rekomendasi Pendidikan.</span>
-                  <button type="button" onClick={() => setActiveTab("prompt")} className="underline font-bold hover:text-blue-800">
-                    Buka Editor Prompt AI Lengkap $\rightarrow$
-                  </button>
-                </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Teks Lencana Atas (Pill Badge)
+                </label>
+                <input
+                  type="text"
+                  value={homeForm.badgeText}
+                  onChange={(e) => setHomeForm({ ...homeForm, badgeText: e.target.value })}
+                  className="w-full rounded-lg border p-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand/40"
+                  required
+                />
               </div>
-
-              {/* SECTION 4: WORKFLOW SISTEM (STEP TOGGLES) */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-6">
-                <div className="border-b pb-3 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-brand flex items-center gap-2">
-                      <GitFork className="h-5 w-5" /> 3. Workflow Sistem (Urutan Langkah Toggles)
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Aktifkan atau nonaktifkan setiap langkah alur yang dieksekusi setelah formulir dikirim.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleSaveWfConfig}
-                    disabled={savingWfConfig}
-                    className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {savingWfConfig ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    Simpan Alur Workflow
-                  </button>
-                </div>
-
-                {/* Workflow Step Visualizer */}
-                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  {/* Langkah 1 */}
-                  <div className="p-3.5 rounded-xl border bg-muted/40 opacity-80">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Langkah 1 (Mandatory)</span>
-                    <h4 className="font-semibold text-xs mt-1">Data Disimpan ke Database</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Identitas & jawaban kuesioner tersimpan di Supabase DB.</p>
-                    <span className="inline-block mt-2 text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">AUTO DB</span>
-                  </div>
-
-                  {/* Langkah 2: AI Engine Request */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_analysis ? 'border-brand/40 bg-brand/5' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-brand">Langkah 2</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_analysis: !wfConfig.enable_ai_analysis })}
-                      >
-                        {wfConfig.enable_ai_analysis ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Kirim ke Google Gemini / AI</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Jawaban otomatis dikirim ke Gemini AI Engine.</p>
-                  </div>
-
-                  {/* Langkah 3: Prompt Analysis */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_summary ? 'border-blue-300 bg-blue-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-blue-700">Langkah 3</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_summary: !wfConfig.enable_ai_summary })}
-                      >
-                        {wfConfig.enable_ai_summary ? <ToggleRight className="h-6 w-6 text-blue-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Analisis Berdasarkan Prompt AI</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Gemini menyusun analisis 7 komponen profil anak.</p>
-                  </div>
-
-                  {/* Langkah 4: Simpan Hasil DB */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_auto_save ? 'border-indigo-300 bg-indigo-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-indigo-700">Langkah 4</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_auto_save: !wfConfig.enable_auto_save })}
-                      >
-                        {wfConfig.enable_auto_save ? <ToggleRight className="h-6 w-6 text-indigo-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Hasil Disimpan ke Database</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Tulis ke tabel consultation_analysis.</p>
-                  </div>
-
-                  {/* Langkah 5: WA Admin */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_wa_admin_notif ? 'border-emerald-300 bg-emerald-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 5</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_wa_admin_notif: !wfConfig.enable_wa_admin_notif })}
-                        className="text-brand"
-                      >
-                        {wfConfig.enable_wa_admin_notif ? <ToggleRight className="h-6 w-6 text-emerald-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Notifikasi WA Admin</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Admin menerima notifikasi WhatsApp.</p>
-                  </div>
-
-                  {/* Langkah 6: WA Parent (Konfirmasi Tanpa Hasil) */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_wa_parent_notif ? 'border-emerald-300 bg-emerald-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 6</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_wa_parent_notif: !wfConfig.enable_wa_parent_notif })}
-                        className="text-brand"
-                      >
-                        {wfConfig.enable_wa_parent_notif ? <ToggleRight className="h-6 w-6 text-emerald-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Notifikasi WA Orang Tua</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Konfirmasi penerimaan (tanpa hasil analisis).</p>
-                  </div>
-
-                  {/* Langkah 7: Tim Konsultan Menghubungi */}
-                  <div className="p-3.5 rounded-xl border bg-muted/40 opacity-90 col-span-1 md:col-span-2">
-                    <span className="text-[10px] font-bold uppercase text-brand">Langkah 7 (Tahap Akhir)</span>
-                    <h4 className="font-semibold text-xs mt-1">Tim Konsultan Menghubungi Orang Tua</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Tim Konsultan Sekolah Alam Al-Karim menghubungi orang tua via WhatsApp.</p>
-                    <span className="inline-block mt-2 text-[10px] bg-brand/10 text-brand font-bold px-2 py-0.5 rounded">SIAP DIHUBUNGI</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 5 & 6: WHATSAPP QUICK & PENGATURAN TAMBAHAN */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-6">
-                <div className="border-b pb-3">
-                  <h2 className="text-lg font-bold text-brand flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5" /> 4. Pengaturan Lanjutan AI & WhatsApp
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Kontrol fitur auto retry, auto fallback AI, simpan log, dan timeout request.</p>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                    <div>
-                      <p className="text-xs font-semibold">Auto Retry AI</p>
-                      <p className="text-[10px] text-muted-foreground">Ulangi jika API AI gagal</p>
-                    </div>
-                    <button type="button" onClick={() => setWfConfig({ ...wfConfig, auto_retry: !wfConfig.auto_retry })}>
-                      {wfConfig.auto_retry ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                    <div>
-                      <p className="text-xs font-semibold">Auto Fallback AI</p>
-                      <p className="text-[10px] text-muted-foreground">Alihkan ke Gemini bila error</p>
-                    </div>
-                    <button type="button" onClick={() => setWfConfig({ ...wfConfig, auto_fallback: !wfConfig.auto_fallback })}>
-                      {wfConfig.auto_fallback ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                    <div>
-                      <p className="text-xs font-semibold">Simpan Log AI</p>
-                      <p className="text-[10px] text-muted-foreground">Catat jejak aktivitas AI</p>
-                    </div>
-                    <button type="button" onClick={() => setWfConfig({ ...wfConfig, save_ai_log: !wfConfig.save_ai_log })}>
-                      {wfConfig.save_ai_log ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
-                    <div>
-                      <p className="text-xs font-semibold">Timeout Request</p>
-                      <p className="text-[10px] text-muted-foreground">Batas waktu (detik)</p>
-                    </div>
-                    <input
-                      type="number"
-                      value={wfConfig.request_timeout || 30}
-                      onChange={(e) => setWfConfig({ ...wfConfig, request_timeout: Number(e.target.value) })}
-                      className="w-16 rounded border px-2 py-1 text-xs outline-none text-right font-bold"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 7: TESTING WORKFLOW (SIMULASI ALUR REALTIME) */}
-              <div className="rounded-xl border border-brand/40 bg-brand/5 p-6 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brand/20 pb-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-brand flex items-center gap-2">
-                      <Play className="h-5 w-5" /> 5. Testing Simulasi Alur Sistem AI
-                    </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Jalankan tes simulasi alur (Database $\rightarrow$ WhatsApp $\rightarrow$ AI $\rightarrow$ Save DB) secara realtime.</p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleRunWorkflowSimulation}
-                    disabled={simulating}
-                    className="flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-xs font-semibold text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {simulating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                    Test Workflow Sekarang
-                  </button>
-                </div>
-
-                {/* Simulation Output Steps */}
-                {simResult && (
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between font-bold text-sm">
-                      <span>Hasil Simulasi Alur Workflow:</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs ${simResult.overallStatus === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {simResult.overallStatus === 'success' ? '✅ SUCCESS' : '❌ FAILED'} ({simResult.executionTimeMs} ms)
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {simResult.steps.map((st, i) => (
-                        <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card text-xs gap-2">
-                          <div className="flex items-center gap-2">
-                            {st.status === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" /> : <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />}
-                            <span className="font-semibold">{st.stepName}</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-muted-foreground font-mono">{st.durationMs} ms</span>
-                            <span className={`font-bold ${st.status === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
-                              {st.status === 'success' ? '✅ Success' : '❌ Failed'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
             </div>
-          ) : activeTab === "prompt" ? (
-            <div className="rounded-xl border bg-card p-6 shadow-sm">
-              <PromptAIPage />
+          </div>
+
+          {/* Section 2: Hero Banner */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+              <Sparkles className="h-5 w-5" /> 2. Hero Banner Utama (Headline & Subtitle)
+            </h2>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Judul Utama Banner (Hero Title)
+              </label>
+              <input
+                type="text"
+                value={homeForm.heroTitle}
+                onChange={(e) => setHomeForm({ ...homeForm, heroTitle: e.target.value })}
+                className="w-full rounded-lg border p-2.5 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-brand/40"
+                required
+              />
             </div>
-          ) : activeTab === "testing" ? (
-            <div className="rounded-xl border bg-card p-6 shadow-sm">
-              <TestingPage />
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Deskripsi Paragraf Banner (Hero Subtitle)
+              </label>
+              <textarea
+                value={homeForm.heroDesc}
+                onChange={(e) => setHomeForm({ ...homeForm, heroDesc: e.target.value })}
+                rows={3}
+                className="w-full rounded-lg border p-2.5 text-sm outline-none focus:ring-2 focus:ring-brand/40"
+                required
+              />
             </div>
-          ) : activeTab === "watemplate" ? (
-            <div className="space-y-6">
-            <form onSubmit={handleSaveWaTemplates} className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
-              <div className="border-b pb-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
-                  <FileText className="h-5 w-5" /> Kelola Template Pesan WhatsApp
-                </h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Atur format pesan notifikasi otomatis untuk Admin dan Peserta tanpa mengubah source code.
-                </p>
-              </div>
 
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 p-4 flex gap-3 text-sm text-emerald-800 dark:text-emerald-300">
-                <Info className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Teks Tombol Konsultasi (Button Label)
+              </label>
+              <input
+                type="text"
+                value={homeForm.btnText}
+                onChange={(e) => setHomeForm({ ...homeForm, btnText: e.target.value })}
+                className="w-full rounded-lg border p-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand/40"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Kartu Jenjang Pendidikan */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-6">
+            <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+              <School className="h-5 w-5" /> 3. Kartu Jenjang Pendidikan (TK/SD, SMP, SMA)
+            </h2>
+
+            {/* TK & SD */}
+            <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+              <h3 className="text-sm font-bold text-brand flex items-center gap-2">
+                <School className="h-4 w-4" /> Kartu Jenjang TK & SD
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <p className="font-semibold">Placeholder Dinamis yang Tersedia:</p>
-                  <p className="text-xs mt-1 leading-relaxed">
-                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mr-1">{"{{nama}}"}</code>: Nama Orang Tua | 
-                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{nomor}}"}</code>: Nomor WhatsApp | 
-                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{jenjang}}"}</code>: TK & SD / SMP / SMA | 
-                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono mx-1">{"{{tanggal}}"}</code>: Tanggal Pengiriman | 
-                    <code className="bg-emerald-100 dark:bg-emerald-900 px-1 py-0.5 rounded font-mono ml-1">{"{{status}}"}</code>: Status Konsultasi
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">1. Template Pesan Notifikasi Admin</label>
-                  <textarea
-                    value={waAdminTemplate}
-                    onChange={(e) => setWaAdminTemplate(e.target.value)}
-                    className="min-h-[120px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">2. Template Pesan Notifikasi Peserta</label>
-                  <textarea
-                    value={waParticipantTemplate}
-                    onChange={(e) => setWaParticipantTemplate(e.target.value)}
-                    className="min-h-[120px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end border-t">
-                <button
-                  type="submit"
-                  disabled={savingWaTemplates}
-                  className="flex items-center gap-2 rounded-lg bg-brand px-6 py-2.5 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  {savingWaTemplates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Simpan Template WhatsApp
-                </button>
-              </div>
-            </form>
-
-            <div className="space-y-5 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
-              <div className="border-b pb-3">
-                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
-                  <Play className="h-5 w-5" /> Simulasi Pengiriman Formulir & Notifikasi WhatsApp
-                </h2>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tes skenario saat orang tua selesai mengisi dan men-submit formulir konsultasi. Pesan otomatis
-                  dirender dari template di atas dan tetap dapat diedit sebelum dikirim.
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium">Nama Orang Tua</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Label Tag</label>
                   <input
                     type="text"
-                    value={simName}
-                    onChange={(e) => setSimName(e.target.value)}
-                    placeholder="Contoh: Budi Santoso"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                    value={homeForm.tksdTag}
+                    onChange={(e) => setHomeForm({ ...homeForm, tksdTag: e.target.value })}
+                    className="w-full rounded border p-2 text-sm"
                   />
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Deskripsi Kartu</label>
+                  <textarea
+                    value={homeForm.tksdDesc}
+                    onChange={(e) => setHomeForm({ ...homeForm, tksdDesc: e.target.value })}
+                    rows={2}
+                    className="w-full rounded border p-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SMP */}
+            <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+              <h3 className="text-sm font-bold text-brand flex items-center gap-2">
+                <BookOpen className="h-4 w-4" /> Kartu Jenjang SMP
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Jenjang</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Label Tag</label>
+                  <input
+                    type="text"
+                    value={homeForm.smpTag}
+                    onChange={(e) => setHomeForm({ ...homeForm, smpTag: e.target.value })}
+                    className="w-full rounded border p-2 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Deskripsi Kartu</label>
+                  <textarea
+                    value={homeForm.smpDesc}
+                    onChange={(e) => setHomeForm({ ...homeForm, smpDesc: e.target.value })}
+                    rows={2}
+                    className="w-full rounded border p-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SMA */}
+            <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+              <h3 className="text-sm font-bold text-brand flex items-center gap-2">
+                <GraduationCap className="h-4 w-4" /> Kartu Jenjang SMA
+              </h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Label Tag</label>
+                  <input
+                    type="text"
+                    value={homeForm.smaTag}
+                    onChange={(e) => setHomeForm({ ...homeForm, smaTag: e.target.value })}
+                    className="w-full rounded border p-2 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Deskripsi Kartu</label>
+                  <textarea
+                    value={homeForm.smaDesc}
+                    onChange={(e) => setHomeForm({ ...homeForm, smaDesc: e.target.value })}
+                    rows={2}
+                    className="w-full rounded border p-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Footer */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+              <FileText className="h-5 w-5" /> 4. Teks Footer & Hak Cipta
+            </h2>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Teks Footer Copyright
+              </label>
+              <input
+                type="text"
+                value={homeForm.footerText}
+                onChange={(e) => setHomeForm({ ...homeForm, footerText: e.target.value })}
+                className="w-full rounded-lg border p-2.5 text-sm outline-none focus:ring-2 focus:ring-brand/40"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end pt-4 border-t">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95 disabled:opacity-50"
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Simpan Tampilan Homepage
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 2: ALUR SISTEM (PIPELINE) */}
+      {activeTab === "workflow" && (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand border-b pb-2 flex items-center gap-2">
+              <GitFork className="h-5 w-5" /> Konfigurasi Sakelar Otomasi Workflow
+            </h2>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/10">
+                <div>
+                  <p className="font-semibold text-sm">Notifikasi WA Admin</p>
+                  <p className="text-xs text-muted-foreground">Kirim WhatsApp ke admin saat ada konsultasi</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWfConfig({ ...wfConfig, enable_wa_admin_notif: !wfConfig.enable_wa_admin_notif })}
+                  className="text-brand"
+                >
+                  {wfConfig.enable_wa_admin_notif ? <ToggleRight className="h-7 w-7 text-emerald-600" /> : <ToggleLeft className="h-7 w-7 text-muted-foreground" />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/10">
+                <div>
+                  <p className="font-semibold text-sm">Notifikasi WA Orang Tua</p>
+                  <p className="text-xs text-muted-foreground">Kirim WhatsApp konfirmasi ke orang tua</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWfConfig({ ...wfConfig, enable_wa_parent_notif: !wfConfig.enable_wa_parent_notif })}
+                  className="text-brand"
+                >
+                  {wfConfig.enable_wa_parent_notif ? <ToggleRight className="h-7 w-7 text-emerald-600" /> : <ToggleLeft className="h-7 w-7 text-muted-foreground" />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/10">
+                <div>
+                  <p className="font-semibold text-sm">Analisis Otomatis AI</p>
+                  <p className="text-xs text-muted-foreground">Jalankan AI Engine otomatis saat form dikirim</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWfConfig({ ...wfConfig, enable_ai_analysis: !wfConfig.enable_ai_analysis })}
+                  className="text-brand"
+                >
+                  {wfConfig.enable_ai_analysis ? <ToggleRight className="h-7 w-7 text-emerald-600" /> : <ToggleLeft className="h-7 w-7 text-muted-foreground" />}
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3.5 bg-muted/10">
+                <div>
+                  <p className="font-semibold text-sm">Simpan Otomatis ke Database</p>
+                  <p className="text-xs text-muted-foreground">Simpan hasil analisis AI ke database</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWfConfig({ ...wfConfig, enable_auto_save: !wfConfig.enable_auto_save })}
+                  className="text-brand"
+                >
+                  {wfConfig.enable_auto_save ? <ToggleRight className="h-7 w-7 text-emerald-600" /> : <ToggleLeft className="h-7 w-7 text-muted-foreground" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                type="button"
+                onClick={handleSaveWorkflow}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Simpan Alur Sistem
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: PROVIDER & MODEL AI */}
+      {activeTab === "ai" && (
+        <form onSubmit={handleSaveProvider} className="space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand border-b pb-2 flex items-center gap-2">
+              <Sparkles className="h-5 w-5" /> Pengaturan Provider & Model AI
+            </h2>
+
+            {selectedProvider && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Pilih Provider AI
+                  </label>
                   <select
-                    value={simJenjang}
-                    onChange={(e) => setSimJenjang(e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                    value={selectedProvider.provider_key}
+                    onChange={(e) => {
+                      const found = providers.find((p) => p.provider_key === e.target.value);
+                      if (found) setSelectedProvider(found);
+                    }}
+                    className="w-full rounded-lg border p-2.5 text-sm font-medium"
                   >
-                    <option>TK & SD</option>
-                    <option>SMP</option>
-                    <option>SMA</option>
+                    {providers.map((p) => (
+                      <option key={p.provider_key} value={p.provider_key}>
+                        {p.provider_name} {p.is_default ? "(Default Aktif)" : ""}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Admin</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    API Key Provider
+                  </label>
                   <input
-                    type="tel"
-                    value={simAdminNum}
-                    onChange={(e) => setSimAdminNum(e.target.value.replace(/[^\d+]/g, ""))}
-                    placeholder="Contoh: 08123456789"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                    type="password"
+                    value={selectedProvider.api_key || ""}
+                    onChange={(e) => setSelectedProvider({ ...selectedProvider, api_key: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm font-mono"
+                    placeholder="Masukkan API Key..."
                   />
-                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan notifikasi admin akan dikirim ke nomor ini.</p>
                 </div>
+
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Target (Orang Tua)</label>
-                  <input
-                    type="tel"
-                    value={simTargetNum}
-                    onChange={(e) => setSimTargetNum(e.target.value.replace(/[^\d+]/g, ""))}
-                    placeholder="Contoh: 08987654321"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                  />
-                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan konfirmasi peserta akan dikirim ke nomor ini.</p>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Model AI
+                  </label>
+                  <select
+                    value={selectedProvider.model || ""}
+                    onChange={(e) => setSelectedProvider({ ...selectedProvider, model: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm font-medium"
+                  >
+                    {(SUGGESTED_MODELS[selectedProvider.provider_key] || ["google/gemini-3.5-flash"]).map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
+            )}
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Admin (otomatis, bisa diedit)</label>
-                  <textarea
-                    value={simAdminMsg}
-                    onChange={(e) => { setSimAdminMsg(e.target.value); setSimEdited(true); }}
-                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Orang Tua (otomatis, bisa diedit)</label>
-                  <textarea
-                    value={simParentMsg}
-                    onChange={(e) => { setSimParentMsg(e.target.value); setSimEdited(true); }}
-                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={handleSimulateWa}
-                  disabled={simSending}
-                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {simSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                  Kirim Simulasi WhatsApp
-                </button>
-                <button
-                  type="button"
-                  onClick={resetSimEdits}
-                  className="flex items-center gap-2 rounded-lg border border-input px-4 py-2.5 text-sm hover:bg-muted"
-                >
-                  <RotateCcw className="h-4 w-4" /> Muat Ulang dari Template
-                </button>
-                <span className="text-[11px] text-muted-foreground">
-                  Provider aktif diambil dari tab <b>WhatsApp Provider</b>. Jika provider = <code>mock</code>, pesan hanya dicatat (tidak benar-benar dikirim).
-                </span>
-              </div>
-
-              {simResultWa && (
-                <div className="grid gap-3 md:grid-cols-2 pt-2">
-                  <SimResultCard title="Admin" target={simResultWa.admin.target} result={simResultWa.admin} />
-                  <SimResultCard title="Orang Tua" target={simResultWa.parent.target} result={simResultWa.parent} />
-                </div>
-              )}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Simpan Provider AI
+              </button>
             </div>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 4: TEMPLATE WHATSAPP */}
+      {activeTab === "wa" && (
+        <form onSubmit={handleSaveWaTemplates} className="space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand border-b pb-2 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" /> Template Pesan WhatsApp
+            </h2>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Template Notifikasi Admin
+              </label>
+              <textarea
+                value={waAdminTemplate}
+                onChange={(e) => setWaAdminTemplate(e.target.value)}
+                rows={5}
+                className="w-full rounded-lg border p-3 text-sm font-mono"
+              />
             </div>
-          ) : (
-            <form onSubmit={handleSaveSettings} className="rounded-xl border bg-card p-6 shadow-sm">
-              {activeTab === "umum" && (
-                <div className="space-y-5 animate-in fade-in duration-200">
-                  <h2 className="text-lg font-semibold border-b pb-2 mb-4">Informasi Web</h2>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="col-span-2 md:col-span-1">
-                      <label className="mb-1.5 block text-sm font-medium">Nama Aplikasi</label>
-                      <input
-                        type="text"
-                        value={settings.appName}
-                        onChange={(e) => setSettings({ ...settings, appName: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                      />
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <label className="mb-1.5 block text-sm font-medium">Nomor WhatsApp Admin</label>
-                      <input
-                        type="text"
-                        value={settings.adminWa}
-                        onChange={(e) => setSettings({ ...settings, adminWa: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        placeholder="Contoh: 081234567890"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="mb-1.5 block text-sm font-medium">Judul Hero (Homepage)</label>
-                      <input
-                        type="text"
-                        value={settings.heroTitle}
-                        onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="mb-1.5 block text-sm font-medium">Deskripsi Hero</label>
-                      <textarea
-                        value={settings.heroDesc}
-                        onChange={(e) => setSettings({ ...settings, heroDesc: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
 
-              {activeTab === "wa" && (
-                <div className="space-y-5 animate-in fade-in duration-200">
-                  <div className="flex justify-between items-center border-b pb-2 mb-4">
-                    <h2 className="text-lg font-semibold">Pengaturan WhatsApp API</h2>
-                    <button 
-                      type="button" 
-                      onClick={testWhatsApp}
-                      disabled={testingWa}
-                      className="flex items-center gap-1.5 rounded bg-emerald-100 text-emerald-700 px-3 py-1.5 text-xs font-medium hover:bg-emerald-200 disabled:opacity-50"
-                    >
-                      {testingWa ? <Loader2 className="h-3 w-3 animate-spin" /> : <TestTube className="h-3 w-3" />}
-                      Test WA Admin
-                    </button>
-                  </div>
-                  <div className="grid gap-4">
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium">Provider Layanan WhatsApp</label>
-                      <select
-                        value={settings.waProvider}
-                        onChange={(e) => setSettings({ ...settings, waProvider: e.target.value })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                      >
-                        <option value="mock">MOCK (Hanya Log, Tanpa API)</option>
-                        <option value="fonnte">Fonnte API</option>
-                        <option value="wablas">Wablas API</option>
-                      </select>
-                    </div>
-                    
-                    {settings.waProvider !== "mock" && (
-                      <>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">API URL (Opsional/Default)</label>
-                          <input
-                            type="text"
-                            value={settings.waApiUrl}
-                            onChange={(e) => setSettings({ ...settings, waApiUrl: e.target.value })}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                            placeholder={settings.waProvider === "fonnte" ? "https://api.fonnte.com/send" : "https://solo.wablas.com/api/send-message"}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium">API Key / Token</label>
-                          <input
-                            type="password"
-                            value={settings.waApiKey}
-                            onChange={(e) => setSettings({ ...settings, waApiKey: e.target.value })}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                Template Konfirmasi Orang Tua
+              </label>
+              <textarea
+                value={waParticipantTemplate}
+                onChange={(e) => setWaParticipantTemplate(e.target.value)}
+                rows={5}
+                className="w-full rounded-lg border p-3 text-sm font-mono"
+              />
+            </div>
 
-              <div className="mt-8 flex justify-end border-t pt-5">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 rounded-md bg-brand px-6 py-2 text-sm font-medium text-brand-foreground transition hover:bg-brand/90 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Simpan Perubahan
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SimResultCard({ title, target, result }: { title: string; target: string; result: { success: boolean; message: string; error?: string; responsePayload?: any } }) {
-  if (!target) {
-    return (
-      <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">
-        <div className="font-semibold text-sm text-foreground mb-1">{title}</div>
-        Nomor tidak diisi — dilewati.
-      </div>
-    );
-  }
-  return (
-    <div className={`rounded-lg border p-4 text-xs ${result.success ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-semibold text-sm text-foreground">{title} → {target}</div>
-        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${result.success ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
-          {result.success ? "TERKIRIM" : "GAGAL"}
-        </span>
-      </div>
-      {result.error && <div className="mb-2 text-red-700"><b>Error:</b> {result.error}</div>}
-      <details className="mt-1">
-        <summary className="cursor-pointer text-muted-foreground">Lihat pesan & payload</summary>
-        <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{result.message}</pre>
-        {result.responsePayload && (
-          <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{JSON.stringify(result.responsePayload, null, 2)}</pre>
-        )}
-      </details>
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Simpan Template WhatsApp
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
