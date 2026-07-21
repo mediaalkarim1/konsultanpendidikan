@@ -10,13 +10,13 @@ function getAdminSupabase() {
 
 export function isNewTKSDQuestions(qs: any[]): boolean {
   if (!qs || qs.length !== 12) return false;
-  return qs.some(q => (q.question_text || "").includes("Anak Anda berada pada jenjang"));
+  return qs.some(q => (q.question_text || "").includes("Untuk memulai konsultasi"));
 }
 
 export const DEFAULT_TKSD_QUESTIONS = [
   {
     id: "10000000-0000-4000-a000-000000000001",
-    question_text: "Anak Anda berada pada jenjang",
+    question_text: "Untuk memulai konsultasi, mohon sebutkan jenjang pendidikan anak Anda saat ini:",
     question_type: "single_choice" as const,
     order_index: 1,
     is_required: true,
@@ -30,7 +30,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000002",
-    question_text: "Usia anak",
+    question_text: "Untuk membantu kami memahami tahap perkembangannya, berapa usia anak Anda saat ini?",
     question_type: "single_choice" as const,
     order_index: 2,
     is_required: true,
@@ -45,7 +45,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000003",
-    question_text: "Apa yang paling sering menjadi tantangan di rumah? (Pilih maksimal 3)",
+    question_text: "Dalam keseharian di rumah, apa yang paling sering menjadi tantangan bagi anak? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 3,
     is_required: true,
@@ -64,7 +64,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000004",
-    question_text: "Dalam sehari, rata-rata screen time anak adalah...",
+    question_text: "Mengenai kebiasaan penggunaan media digital, dalam sehari berapa rata-rata screen time anak?",
     question_type: "single_choice" as const,
     order_index: 4,
     is_required: true,
@@ -78,7 +78,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000005",
-    question_text: "Saat gadget diambil, biasanya anak...",
+    question_text: "Saat aktivitas bersama gadget disudahi atau diambil, bagaimana reaksi anak biasanya?",
     question_type: "single_choice" as const,
     order_index: 5,
     is_required: true,
@@ -92,7 +92,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000006",
-    question_text: "Aktivitas apa yang paling sering dilakukan anak ketika di rumah?",
+    question_text: "Untuk gambaran kegiatan sehari-hari, aktivitas apa yang paling sering dilakukan anak ketika di rumah?",
     question_type: "single_choice" as const,
     order_index: 6,
     is_required: true,
@@ -107,7 +107,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000007",
-    question_text: "Seberapa mandiri anak Anda?",
+    question_text: "Mengenai kemandirian sehari-hari, seberapa mandiri anak Anda saat ini?",
     question_type: "single_choice" as const,
     order_index: 7,
     is_required: true,
@@ -119,7 +119,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000008",
-    question_text: "Ketika menghadapi kesulitan, anak biasanya...",
+    question_text: "Saat menghadapi kesulitan atau hal yang menantang, bagaimana anak biasanya merespon?",
     question_type: "single_choice" as const,
     order_index: 8,
     is_required: true,
@@ -132,7 +132,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000009",
-    question_text: "Bagaimana kemampuan anak dalam bersosialisasi?",
+    question_text: "Dalam berinteraksi dengan orang lain, bagaimana kemampuan anak dalam bersosialisasi?",
     question_type: "single_choice" as const,
     order_index: 9,
     is_required: true,
@@ -145,7 +145,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000010",
-    question_text: "Menurut Anda, nilai apa yang paling penting dimiliki anak? (Pilih maksimal 3)",
+    question_text: "Sebagai orang tua, menurut Anda nilai karakter apa yang paling penting dimiliki anak? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 10,
     is_required: true,
@@ -162,7 +162,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000011",
-    question_text: "Apa harapan terbesar Anda terhadap sekolah anak?",
+    question_text: "Dalam memilih tempat belajar, apa harapan terbesar Anda terhadap sekolah anak?",
     question_type: "multi_choice" as const,
     order_index: 11,
     is_required: true,
@@ -178,7 +178,7 @@ export const DEFAULT_TKSD_QUESTIONS = [
   },
   {
     id: "10000000-0000-4000-a000-000000000012",
-    question_text: "Jika ada sesi konsultasi GRATIS mengenai pendidikan anak, apakah Anda bersedia dihubungi?",
+    question_text: "Untuk pendampingan lebih lanjut, jika ada sesi konsultasi GRATIS mengenai pendidikan anak, apakah Anda bersedia dihubungi?",
     question_type: "single_choice" as const,
     order_index: 12,
     is_required: true,

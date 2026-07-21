@@ -10,13 +10,13 @@ function getAdminSupabase() {
 
 export function isNewSMAQuestions(qs: any[]): boolean {
   if (!qs || qs.length !== 12) return false;
-  return qs.some(q => (q.question_text || "").includes("Setelah lulus SMA, menurut Anda anak lebih tertarik"));
+  return qs.some(q => (q.question_text || "").includes("pemetaan arah masa depan"));
 }
 
 export const DEFAULT_SMA_QUESTIONS = [
   {
     id: "30000000-0000-4000-a000-000000000001",
-    question_text: "Berapa usia anak Anda?",
+    question_text: "Untuk mengawali pemetaan arah masa depan, berapa usia anak Anda saat ini?",
     question_type: "single_choice" as const,
     order_index: 1,
     is_required: true,
@@ -29,7 +29,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000002",
-    question_text: "Apa yang paling Anda khawatirkan terhadap perkembangan anak saat ini? (Pilih maksimal 3)",
+    question_text: "Menjelang kelulusan sekolah dan persiapan karier, apa yang paling Anda khawatirkan terhadap perkembangan anak saat ini? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 2,
     is_required: true,
@@ -49,7 +49,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000003",
-    question_text: "Setelah lulus SMA, menurut Anda anak lebih tertarik...",
+    question_text: "Terkait rencana jangka panjang, setelah lulus SMA menurut Anda anak lebih tertarik...",
     question_type: "single_choice" as const,
     order_index: 3,
     is_required: true,
@@ -63,7 +63,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000004",
-    question_text: "Menurut Anda, apakah anak sudah mengetahui kelebihan atau potensinya?",
+    question_text: "Mengenai pemetaan potensi diri, apakah menurut Anda anak sudah mengetahui kelebihan dan potensinya?",
     question_type: "single_choice" as const,
     order_index: 4,
     is_required: true,
@@ -76,7 +76,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000005",
-    question_text: "Seberapa sering anak mengikuti kegiatan di luar pembelajaran akademik?",
+    question_text: "Dalam membangun pengalaman mandiri, seberapa sering anak mengikuti kegiatan di luar pembelajaran akademik?",
     question_type: "single_choice" as const,
     order_index: 5,
     is_required: true,
@@ -89,7 +89,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000006",
-    question_text: "Aktivitas yang paling sering dilakukan anak di luar sekolah adalah...",
+    question_text: "Untuk memahami minat utamanya, aktivitas yang paling sering dilakukan anak di luar sekolah adalah...",
     question_type: "single_choice" as const,
     order_index: 6,
     is_required: true,
@@ -106,7 +106,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000007",
-    question_text: "Apakah anak pernah memiliki pengalaman menghasilkan karya, produk, atau bisnis sederhana?",
+    question_text: "Terkait karya atau kewirausahaan, apakah anak pernah memiliki pengalaman menghasilkan karya, produk, atau bisnis sederhana?",
     question_type: "single_choice" as const,
     order_index: 7,
     is_required: true,
@@ -120,7 +120,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000008",
-    question_text: "Kemampuan apa yang menurut Anda paling perlu dikembangkan? (Pilih maksimal 3)",
+    question_text: "Menghadapi dunia perkuliahan dan kerja, kemampuan apa yang menurut Anda paling perlu dikembangkan? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 8,
     is_required: true,
@@ -139,7 +139,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000009",
-    question_text: "Ketika menghadapi tantangan, biasanya anak...",
+    question_text: "Saat dihadapkan pada hambatan atau tantangan baru, biasanya anak...",
     question_type: "single_choice" as const,
     order_index: 9,
     is_required: true,
@@ -152,7 +152,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000010",
-    question_text: "Menurut Anda, pendidikan yang ideal seharusnya lebih banyak memberikan... (Pilih maksimal 3)",
+    question_text: "Untuk bekal masa depan yang relevan, menurut Anda pendidikan yang ideal seharusnya lebih banyak memberikan... (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 10,
     is_required: true,
@@ -170,7 +170,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000011",
-    question_text: "Seberapa penting menurut Anda pengalaman nyata seperti proyek, magang, bisnis, atau kompetisi dibandingkan nilai akademik?",
+    question_text: "Dalam mengukur kesiapan anak, seberapa penting menurut Anda pengalaman nyata (seperti proyek, magang, bisnis, atau kompetisi) dibandingkan nilai akademik?",
     question_type: "single_choice" as const,
     order_index: 11,
     is_required: true,
@@ -183,7 +183,7 @@ export const DEFAULT_SMA_QUESTIONS = [
   },
   {
     id: "30000000-0000-4000-a000-000000000012",
-    question_text: "Jika tersedia sesi konsultasi GRATIS mengenai pemetaan potensi dan arah masa depan anak, apakah Anda bersedia dihubungi?",
+    question_text: "Untuk pendampingan pemetaan jurusan dan potensi karier, jika tersedia sesi konsultasi GRATIS, apakah Anda bersedia dihubungi?",
     question_type: "single_choice" as const,
     order_index: 12,
     is_required: true,

@@ -10,13 +10,13 @@ function getAdminSupabase() {
 
 export function isNewSMPQuestions(qs: any[]): boolean {
   if (!qs || qs.length !== 12) return false;
-  return qs.some(q => (q.question_text || "").includes("Berapa usia anak Anda?"));
+  return qs.some(q => (q.question_text || "").includes("pemetaan usia remaja"));
 }
 
 export const DEFAULT_SMP_QUESTIONS = [
   {
     id: "20000000-0000-4000-a000-000000000001",
-    question_text: "Berapa usia anak Anda?",
+    question_text: "Untuk memulai pemetaan usia remaja, berapa usia anak Anda saat ini?",
     question_type: "single_choice" as const,
     order_index: 1,
     is_required: true,
@@ -31,7 +31,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000002",
-    question_text: "Apa yang paling Anda khawatirkan terhadap perkembangan anak saat ini? (Pilih maksimal 3)",
+    question_text: "Memasuki usia remaja, apa yang paling Anda khawatirkan terhadap perkembangan anak saat ini? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 2,
     is_required: true,
@@ -50,7 +50,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000003",
-    question_text: "Berapa lama rata-rata anak menggunakan gadget setiap hari?",
+    question_text: "Terkait kebiasaan digital, berapa lama rata-rata anak menggunakan gadget setiap hari?",
     question_type: "single_choice" as const,
     order_index: 3,
     is_required: true,
@@ -64,7 +64,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000004",
-    question_text: "Aktivitas yang paling sering dilakukan anak di luar sekolah adalah...",
+    question_text: "Untuk memahami pengisian waktu luangnya, aktivitas yang paling sering dilakukan anak di luar sekolah adalah...",
     question_type: "single_choice" as const,
     order_index: 4,
     is_required: true,
@@ -81,7 +81,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000005",
-    question_text: "Ketika menghadapi tantangan atau tugas yang sulit, biasanya anak...",
+    question_text: "Saat berhadapan dengan tantangan atau tugas yang sulit, biasanya anak...",
     question_type: "single_choice" as const,
     order_index: 5,
     is_required: true,
@@ -95,7 +95,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000006",
-    question_text: "Seberapa sering anak mengikuti kegiatan di luar pembelajaran biasa?",
+    question_text: "Terkait eksplorasi bakat, seberapa sering anak mengikuti kegiatan di luar pembelajaran biasa?",
     question_type: "single_choice" as const,
     order_index: 6,
     is_required: true,
@@ -108,7 +108,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000007",
-    question_text: "Kemampuan apa yang menurut Anda paling perlu dikembangkan saat ini? (Pilih maksimal 3)",
+    question_text: "Untuk mendukung kesiapan masa depannya, kemampuan apa yang menurut Anda paling perlu dikembangkan saat ini? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 7,
     is_required: true,
@@ -127,7 +127,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000008",
-    question_text: "Bagaimana kemampuan anak dalam menyampaikan pendapat?",
+    question_text: "Dalam berdiskusi dan berinteraksi, bagaimana kemampuan anak dalam menyampaikan pendapat?",
     question_type: "single_choice" as const,
     order_index: 8,
     is_required: true,
@@ -140,7 +140,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000009",
-    question_text: "Apakah anak sudah memiliki gambaran cita-cita atau tujuan masa depan?",
+    question_text: "Mengenai arah dan cita-cita, apakah anak sudah memiliki gambaran tujuan masa depan?",
     question_type: "single_choice" as const,
     order_index: 9,
     is_required: true,
@@ -153,7 +153,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000010",
-    question_text: "Apa yang paling Anda harapkan dari lingkungan pendidikan anak? (Pilih maksimal 3)",
+    question_text: "Dalam memilih sekolah menengah, apa yang paling Anda harapkan dari lingkungan pendidikan anak? (Pilih maksimal 3)",
     question_type: "multi_choice" as const,
     order_index: 10,
     is_required: true,
@@ -170,7 +170,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000011",
-    question_text: "Menurut Anda, pendidikan yang ideal seharusnya...",
+    question_text: "Sebagai orang tua, menurut Anda sistem pendidikan yang ideal seharusnya...",
     question_type: "single_choice" as const,
     order_index: 11,
     is_required: true,
@@ -184,7 +184,7 @@ export const DEFAULT_SMP_QUESTIONS = [
   },
   {
     id: "20000000-0000-4000-a000-000000000012",
-    question_text: "Apakah Anda bersedia mendapatkan hasil analisis lengkap beserta rekomendasi pendidikan yang sesuai untuk anak Anda?",
+    question_text: "Untuk tindak lanjut pemetaan potensi anak, apakah Anda bersedia mendapatkan hasil analisis lengkap beserta rekomendasi pendidikan yang sesuai?",
     question_type: "single_choice" as const,
     order_index: 12,
     is_required: true,

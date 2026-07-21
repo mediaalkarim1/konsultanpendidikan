@@ -263,17 +263,17 @@ function FormulirPage() {
               <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                 <h2 className="text-lg font-bold text-foreground">
                   {jenjang === "tksd"
-                    ? "Analisis Kebutuhan Perkembangan Anak"
+                    ? "Analisis Kebutuhan Perkembangan Anak (TK & SD)"
                     : jenjang === "smp"
-                    ? "Analisis Potensi & Perkembangan Remaja"
-                    : "Analisis Potensi, Minat & Arah Masa Depan"}
+                    ? "Analisis Potensi & Perkembangan Remaja (SMP)"
+                    : "Analisis Potensi, Minat & Arah Masa Depan (SMA)"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   {jenjang === "tksd"
-                    ? "Setiap anak memiliki cara belajar dan tumbuh yang berbeda. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis kebutuhan perkembangan anak beserta rekomendasi pendidikan yang sesuai."
+                    ? "Selamat datang di Kuesioner Konsultasi Jenjang TK & SD. Setiap anak memiliki cara belajar dan tumbuh yang unik. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh analisis mendalam mengenai kebutuhan perkembangan anak beserta rekomendasi pendidikan yang paling tepat."
                     : jenjang === "smp"
-                    ? "Setiap remaja memiliki potensi yang unik. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis mengenai kebutuhan belajar, karakter, dan pengembangan potensi anak, beserta rekomendasi pendidikan yang sesuai."
-                    : "Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis pemetaan potensi, minat karier, dan kesiapan masa depan anak beserta rekomendasi pendidikan yang sesuai."}
+                    ? "Selamat datang di Kuesioner Konsultasi Jenjang SMP. Masa remaja adalah tahap penting pembentukan potensi dan karakter anak. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh analisis pengembangan bakat, gaya belajar, dan rekomendasi sekolah yang sesuai."
+                    : "Selamat datang di Kuesioner Konsultasi Jenjang SMA. Persiapan di tingkat SMA menjadi jembatan menuju perkuliahan dan karier masa depan anak. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh pemetaan potensi, rekomendasi jurusan, dan kesiapan masa depan anak."}
                 </p>
                 <ol className="mt-6 space-y-6">
                   {questions.map((q, idx) => (
