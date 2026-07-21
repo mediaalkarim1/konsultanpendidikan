@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-ro
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processConsultation } from "@/actions/process-consultation";
-import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS } from "@/actions/seed-tksd";
+import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -70,22 +70,6 @@ function FormulirPage() {
         return;
       }
 
-      // Auto-seed TK & SD questions if empty or missing default questions
-      if (jenjang === "tksd" && (!qs || qs.length === 0)) {
-        try {
-          await seedTKSDAction();
-          const { data: retryQs } = await supabase
-            .from("questions")
-            .select("id, question_text, question_type, order_index, is_required, question_options(id, option_text, order_index)")
-            .eq("level", jenjang as "tksd" | "smp" | "sma")
-            .eq("is_active", true)
-            .order("order_index", { ascending: true });
-          if (retryQs) qs = retryQs;
-        } catch (e) {
-          console.error("Auto-seed TKSD error:", e);
-        }
-      }
-
       let mapped: Question[] = (qs ?? []).map((q: any) => ({
         id: q.id,
         question_text: q.question_text,
@@ -95,8 +79,9 @@ function FormulirPage() {
         options: (q.question_options ?? []).sort((a: any, b: any) => a.order_index - b.order_index),
       }));
 
-      if (jenjang === "tksd" && mapped.length === 0) {
+      if (jenjang === "tksd" && !isNewTKSDQuestions(mapped)) {
         mapped = DEFAULT_TKSD_QUESTIONS;
+        seedTKSDAction().catch((err) => console.warn("Auto-seed error:", err));
       }
 
       setQuestions(mapped);

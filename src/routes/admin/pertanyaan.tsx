@@ -5,7 +5,7 @@ import { GripVertical, Plus, Trash2, Edit2, Save, X, RotateCcw } from "lucide-re
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { logActivity } from "@/actions/admin-actions";
-import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS } from "@/actions/seed-tksd";
+import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
 
 export const Route = createFileRoute("/admin/pertanyaan")({
   component: KelolaPertanyaanPage,
@@ -53,7 +53,7 @@ function KelolaPertanyaanPage() {
         ...q,
         options: (q.question_options || []).sort((a: any, b: any) => a.order_index - b.order_index)
       }));
-      if (level === "tksd" && formatted.length === 0) {
+      if (level === "tksd" && !isNewTKSDQuestions(formatted)) {
         formatted = DEFAULT_TKSD_QUESTIONS.map(q => ({
           ...q,
           is_active: true

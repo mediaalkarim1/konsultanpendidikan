@@ -8,6 +8,11 @@ function getAdminSupabase() {
   return createClient(supabaseUrl, supabaseServiceKey);
 }
 
+export function isNewTKSDQuestions(qs: any[]): boolean {
+  if (!qs || qs.length !== 12) return false;
+  return qs.some(q => (q.question_text || "").includes("Anak Anda berada pada jenjang"));
+}
+
 export const DEFAULT_TKSD_QUESTIONS = [
   {
     id: "10000000-0000-4000-a000-000000000001",
