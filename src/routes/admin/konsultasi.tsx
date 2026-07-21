@@ -25,11 +25,16 @@ type Consultation = {
 };
 
 const STATUS_OPTIONS = [
+  { value: "Menunggu Analisis AI", label: "Menunggu Analisis AI", color: "bg-amber-100 text-amber-800 border-amber-300" },
   { value: "Menunggu Analisis", label: "Menunggu Analisis", color: "bg-amber-100 text-amber-800 border-amber-300" },
   { value: "Sedang Dianalisis", label: "Sedang Dianalisis", color: "bg-blue-100 text-blue-800 border-blue-300" },
+  { value: "Analisis AI Selesai", label: "Analisis AI Selesai", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
   { value: "Selesai Dianalisis", label: "Selesai Dianalisis", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+  { value: "Menunggu Follow Up Konsultan", label: "Menunggu Follow Up", color: "bg-teal-100 text-teal-800 border-teal-300" },
   { value: "Sudah Dihubungi", label: "Sudah Dihubungi", color: "bg-indigo-100 text-indigo-800 border-indigo-300" },
+  { value: "Konsultasi Selesai", label: "Konsultasi Selesai", color: "bg-zinc-100 text-zinc-800 border-zinc-300" },
   { value: "Closed", label: "Closed", color: "bg-zinc-100 text-zinc-800 border-zinc-300" },
+  { value: "Gagal Analisis AI", label: "Gagal Analisis AI", color: "bg-red-100 text-red-800 border-red-300" },
   { value: "Gagal Analisis", label: "Gagal Analisis", color: "bg-red-100 text-red-800 border-red-300" },
 ];
 

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { processConsultation } from "@/actions/process-consultation";
+import { submitConsultationAction } from "@/actions/process-consultation";
 import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
 import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actions/seed-smp";
 import { seedSMAAction, DEFAULT_SMA_QUESTIONS, isNewSMAQuestions } from "@/actions/seed-sma";
@@ -67,6 +67,7 @@ function FormulirPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStatusText, setSubmitStatusText] = useState("");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentStep, setCurrentStep] = useState(0); // 0 = Identity, 1..N = Questions
   const [parentName, setParentName] = useState("");
@@ -191,29 +192,18 @@ function FormulirPage() {
     }
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
-      toast.error("Mohon lengkapi data yang wajib diisi");
+      toast.error("Mohon lengkapi seluruh data yang wajib diisi");
       return;
     }
 
     setSubmitting(true);
-    try {
-      const { data: consultation, error: cErr } = await supabase
-        .from("consultations")
-        .insert({
-          parent_name: parentName.trim(),
-          child_name: childName.trim(),
-          whatsapp_number: whatsapp.trim(),
-          level: jenjang as "tksd" | "smp" | "sma",
-        })
-        .select("id")
-        .single();
-      if (cErr || !consultation) throw cErr ?? new Error("Gagal menyimpan konsultasi");
+    setSubmitStatusText("Mengirim Data...");
 
-      const answerRows = questions.map((q) => {
+    try {
+      const formattedAnswersPayload = questions.map((q) => {
         const v = answers[q.id];
         const isChoice = q.question_type === "single_choice" || q.question_type === "multi_choice";
         return {
-          consultation_id: consultation.id,
           question_id: q.id,
           answer_text: isChoice ? null : ((v as string) ?? "").trim() || null,
           selected_option_ids: isChoice
@@ -225,23 +215,47 @@ function FormulirPage() {
             : [],
         };
       });
-      if (answerRows.length > 0) {
-        const { error: aErr } = await supabase.from("consultation_answers").insert(answerRows);
-        if (aErr) throw aErr;
-      }
-      
-      // Trigger AI and WA processing on server-side (fire-and-forget)
-      processConsultation({ data: consultation.id }).catch((procErr) => {
-        console.error("Process consultation error:", procErr);
+
+      setSubmitStatusText("Menyimpan Konsultasi...");
+      const res = await submitConsultationAction({
+        data: {
+          parent_name: parentName.trim(),
+          child_name: childName.trim(),
+          whatsapp_number: whatsapp.trim(),
+          level: jenjang as "tksd" | "smp" | "sma",
+          answers: formattedAnswersPayload
+        }
       });
 
-      toast.success("Konsultasi berhasil dikirim");
+      if (!res.success) {
+        toast.error(res.error || "Gagal menyimpan data konsultasi");
+        setSubmitting(false);
+        setSubmitStatusText("");
+        return;
+      }
+
+      setSubmitStatusText("Menghubungi Google Gemini...");
+      await new Promise((r) => setTimeout(r, 300));
+
+      setSubmitStatusText("Menganalisis Data...");
+      await new Promise((r) => setTimeout(r, 300));
+
+      setSubmitStatusText("Menyimpan Hasil Analisis...");
+      await new Promise((r) => setTimeout(r, 300));
+
+      setSubmitStatusText("Mengirim WhatsApp...");
+      await new Promise((r) => setTimeout(r, 300));
+
+      setSubmitStatusText("Selesai");
+
+      toast.success("Konsultasi berhasil dikirim!");
       navigate({ to: "/sukses" });
-    } catch (err) {
-      console.error(err);
-      toast.error("Terjadi kesalahan. Coba lagi.");
+    } catch (err: any) {
+      console.error("Submit consultation error:", err);
+      toast.error(err.message || "Gagal mengirim data konsultasi. Silakan coba lagi.");
     } finally {
       setSubmitting(false);
+      setSubmitStatusText("");
     }
   }
 
@@ -422,7 +436,7 @@ function FormulirPage() {
                       {submitting ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Mengirim...
+                          {submitStatusText || "Mengirim..."}
                         </>
                       ) : (
                         <>
