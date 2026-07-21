@@ -7,12 +7,30 @@ import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actio
 import { seedSMAAction, DEFAULT_SMA_QUESTIONS, isNewSMAQuestions } from "@/actions/seed-sma";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
 
 const LEVEL_LABELS: Record<string, string> = {
   tksd: "TK & SD",
   smp: "SMP",
   sma: "SMA",
+};
+
+const JENJANG_OPENING_SENTENCES: Record<string, { badge: string; title: string; greeting: string }> = {
+  tksd: {
+    badge: "Formulir Konsultasi Jenjang TK & SD (Usia Dini)",
+    title: "Analisis Kebutuhan Tumbuh Kembang & Potensi Usia Emas",
+    greeting: "Selamat datang di Kuesioner Konsultasi Jenjang TK & SD! Pada fase usia emas ini, setiap anak tumbuh dengan keunikan, cara belajar, dan potensi yang luar biasa. Silakan isi pertanyaan di bawah ini untuk membantu kami menganalisis kebutuhan perkembangan anak dan memberikan rekomendasi pendidikan terbaik bagi ananda."
+  },
+  smp: {
+    badge: "Formulir Konsultasi Jenjang SMP (Menengah Pertama)",
+    title: "Analisis Potensi, Karakter & Pendampingan Remaja",
+    greeting: "Selamat datang di Kuesioner Konsultasi Jenjang SMP! Masa remaja adalah tahap krusial dalam pembentukan karakter, eksplorasi bakat, dan kemandirian anak. Silakan lengkapi pertanyaan berikut agar kami dapat memetakan potensi belajar, tantangan remaja, serta rekomendasi sekolah menengah yang paling tepat."
+  },
+  sma: {
+    badge: "Formulir Konsultasi Jenjang SMA (Menengah Atas)",
+    title: "Analisis Pemetaan Jurusan, Kesiapan Kuliah & Masa Depan",
+    greeting: "Selamat datang di Kuesioner Konsultasi Jenjang SMA! Jenjang SMA merupakan jembatan penting menuju pendidikan tinggi dan karier masa depan ananda. Silakan jawab pertanyaan-pertanyaan berikut untuk mendapatkan pemetaan minat, kesiapan universitas, serta panduan arah masa depan anak."
+  }
 };
 
 type Question = {
@@ -218,6 +236,28 @@ function FormulirPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Jenjang Opening Banner Card */}
+            {JENJANG_OPENING_SENTENCES[jenjang] && (
+              <section className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft/80 via-background to-brand-soft/30 p-5 shadow-sm sm:p-6">
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground font-bold shadow-xs">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
+                      {JENJANG_OPENING_SENTENCES[jenjang].badge}
+                    </span>
+                    <h1 className="text-lg font-bold text-foreground sm:text-xl">
+                      {JENJANG_OPENING_SENTENCES[jenjang].title}
+                    </h1>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-medium">
+                      {JENJANG_OPENING_SENTENCES[jenjang].greeting}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Identity card */}
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <h2 className="text-lg font-bold text-foreground">Identitas Orang Tua</h2>

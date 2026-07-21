@@ -11,21 +11,21 @@ const LEVELS = [
     Icon: School,
     name: "TK & SD",
     tag: "Usia Dini",
-    description: "Untuk anak Taman Kanak-kanak dan Sekolah Dasar.",
+    description: "Selamat datang di jenjang TK & SD! Konsultasikan kebutuhan tumbuh kembang anak usia dini untuk rekomendasi pendidikan terbaik.",
   },
   {
     id: "smp",
     Icon: BookOpen,
     name: "SMP",
     tag: "Menengah Pertama",
-    description: "Untuk anak jenjang Sekolah Menengah Pertama.",
+    description: "Selamat datang di jenjang SMP! Petakan potensi, karakter, dan minat belajar remaja untuk sekolah menengah yang sesuai.",
   },
   {
     id: "sma",
     Icon: GraduationCap,
     name: "SMA",
     tag: "Menengah Atas",
-    description: "Untuk anak jenjang Sekolah Menengah Atas.",
+    description: "Selamat datang di jenjang SMA! Temukan pemetaan jurusan, kesiapan perkuliahan, dan arah karier masa depan anak secara optimal.",
   },
 ] as const;
 
