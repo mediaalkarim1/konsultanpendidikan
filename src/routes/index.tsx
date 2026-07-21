@@ -42,6 +42,11 @@ const DEFAULT_HOMEPAGE_CONFIG = {
   logoText: "EduKonsul",
   logoImg: "",
   btnLoginText: "Login Admin",
+  navItems: [
+    { label: "Beranda", link: "/" },
+    { label: "Tentang", link: "#tentang" },
+    { label: "Konsultasi", link: "#jenjang" }
+  ],
   
   // Section Visibility flags
   showHero: true,
