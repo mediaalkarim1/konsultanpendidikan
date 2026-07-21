@@ -47,16 +47,19 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       let consultation: any = null;
       let cErr: any = null;
 
-      // Primary attempt: Insert with child_name column
+      // Primary Attempt: Rich insert with all fields
       const res1 = await supabaseAdmin
         .from("consultations")
         .insert({
           parent_name: parent_name.trim(),
           child_name: child_name.trim(),
           whatsapp_number: whatsapp_number.trim(),
+          parent_phone: whatsapp_number.trim(),
           level,
+          education_level: level,
           status: "Menunggu Analisis AI",
-          error_message: null
+          ai_status: "Menunggu Analisis AI",
+          consultation_status: "Menunggu Analisis AI"
         })
         .select("*")
         .single();
@@ -64,22 +67,17 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       consultation = res1.data;
       cErr = res1.error;
 
-      // Schema Cache Fallback: If 'child_name' column does not exist in live Supabase DB table
-      if (cErr && (cErr.message?.includes("child_name") || cErr.code === "PGRST204" || cErr.details?.includes("child_name"))) {
-        console.warn("[Submit DB Warning]: 'child_name' column missing in Supabase schema cache, performing safe fallback insert...");
-        
-        const fallbackParentName = child_name.trim() 
-          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
-          : parent_name.trim();
-
+      // Fallback Attempt 1: Standard fields (parent_name, child_name, whatsapp_number, level, status)
+      if (cErr) {
+        console.warn("[Submit DB Warning]: Rich insert failed, attempting standard insert...", cErr.message);
         const res2 = await supabaseAdmin
           .from("consultations")
           .insert({
-            parent_name: fallbackParentName,
+            parent_name: parent_name.trim(),
+            child_name: child_name.trim(),
             whatsapp_number: whatsapp_number.trim(),
             level,
-            status: "Menunggu Analisis AI",
-            error_message: null
+            status: "Menunggu Analisis AI"
           })
           .select("*")
           .single();
@@ -88,10 +86,49 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         cErr = res2.error;
       }
 
+      // Fallback Attempt 2: Minimal guaranteed fields
+      if (cErr) {
+        console.warn("[Submit DB Warning]: Standard insert failed, attempting minimal guaranteed insert...", cErr.message);
+        const fallbackParentName = child_name.trim() 
+          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
+          : parent_name.trim();
+
+        const res3 = await supabaseAdmin
+          .from("consultations")
+          .insert({
+            parent_name: fallbackParentName,
+            whatsapp_number: whatsapp_number.trim(),
+            level,
+            status: "Menunggu Analisis AI"
+          })
+          .select("*")
+          .single();
+
+        consultation = res3.data;
+        cErr = res3.error;
+      }
+
       if (cErr || !consultation) {
         console.error("[Submit DB Error]: Failed to insert consultation", cErr);
+        // Log to system_logs if table exists
+        try {
+          await supabaseAdmin.from("system_logs").insert({
+            level: "error",
+            source: "submitConsultationAction",
+            message: `Gagal simpan konsultasi: ${cErr?.message || "Error DB"}`
+          });
+        } catch (_) {}
         return { success: false, error: `Gagal menyimpan data konsultasi: ${cErr?.message || "Error DB"}` };
       }
+
+      // Log success to system_logs
+      try {
+        await supabaseAdmin.from("system_logs").insert({
+          level: "info",
+          source: "submitConsultationAction",
+          message: `Konsultasi baru dibuat ID: ${consultation.id} (${parent_name})`
+        });
+      } catch (_) {}
 
       // Ensure questions exist for the given level before inserting answers
       try {
@@ -117,6 +154,8 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         .eq("level", level);
 
       const validQIds = new Set((validQuestions || []).map((q: any) => q.id));
+      const questionsTextMap: Record<string, string> = {};
+      (validQuestions || []).forEach((q: any) => { questionsTextMap[q.id] = q.question_text; });
 
       // Insert consultation answers safely
       if (answers && answers.length > 0) {
@@ -151,12 +190,26 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             }
           }
 
-          await supabaseAdmin.from("consultation_answers").insert({
-            consultation_id: consultation.id,
-            question_id: targetQId,
-            answer_text: a.answer_text || null,
-            selected_option_ids: a.selected_option_ids || []
-          });
+          const qText = questionsTextMap[a.question_id] || "Pertanyaan Kuesioner";
+          const aText = a.answer_text || (a.selected_option_ids || []).join(", ");
+
+          try {
+            await supabaseAdmin.from("consultation_answers").insert({
+              consultation_id: consultation.id,
+              question_id: targetQId,
+              question: qText,
+              answer: aText,
+              answer_text: a.answer_text || null,
+              selected_option_ids: a.selected_option_ids || []
+            });
+          } catch (_) {
+            await supabaseAdmin.from("consultation_answers").insert({
+              consultation_id: consultation.id,
+              question_id: targetQId,
+              answer_text: a.answer_text || null,
+              selected_option_ids: a.selected_option_ids || []
+            });
+          }
         }
       }
 
@@ -215,12 +268,31 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         formattedAnswers
       );
 
+      // Log to ai_logs table
+      try {
+        await supabaseAdmin.from("ai_logs").insert({
+          consultation_id: consultation.id,
+          prompt: `Analisis Kuesioner ${level.toUpperCase()}:\n${formattedAnswers}`,
+          response: aiResult.data ? JSON.stringify(aiResult.data) : aiResult.error || "-",
+          model: "Google Gemini",
+          token_usage: { provider: aiResult.providerName || "gemini" },
+          status: aiResult.success ? "success" : "failed",
+          error_message: aiResult.error || null
+        });
+      } catch (logErr) {
+        console.warn("ai_logs insert warning:", logErr);
+      }
+
       if (!aiResult.success || !aiResult.data) {
         const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
-        await supabaseAdmin.from("consultations").update({
-          status: "Gagal Analisis AI",
-          error_message: errMsg
-        }).eq("id", consultation.id);
+        try {
+          await supabaseAdmin.from("consultations").update({
+            status: "Gagal Analisis AI",
+            error_message: errMsg
+          }).eq("id", consultation.id);
+        } catch (_) {
+          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis AI" }).eq("id", consultation.id);
+        }
       } else {
         // 4. SIMPAN HASIL ANALISIS KE DATABASE
         const analysisData = aiResult.data;
