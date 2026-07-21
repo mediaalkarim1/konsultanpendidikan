@@ -6,6 +6,7 @@ ALTER TABLE public.question_options DISABLE ROW LEVEL SECURITY;
 GRANT ALL ON public.questions TO anon, authenticated, service_role, public;
 GRANT ALL ON public.question_options TO anon, authenticated, service_role, public;
 
+DROP POLICY IF EXISTS "Anyone can read active questions" ON public.questions;
 DROP POLICY IF EXISTS "Anyone can do all on questions" ON public.questions;
 CREATE POLICY "Anyone can do all on questions" ON public.questions FOR ALL USING (true) WITH CHECK (true);
 
