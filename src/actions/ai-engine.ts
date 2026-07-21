@@ -33,47 +33,84 @@ function getAdminSupabase() {
 export async function runAiEngineAnalysis(parentName: string, childName: string = "-", level: string, whatsappNumber: string, formattedAnswers: string): Promise<{ success: boolean; data?: AiAnalysisResult; providerName?: string; error?: string }> {
   const supabaseAdmin = getAdminSupabase();
 
-  // 1. Fetch active/default provider
+  // 1. Fetch active provider from settings table first
   let provider: any = null;
   try {
-    const { data: defaultProv } = await supabaseAdmin
-      .from("ai_providers")
-      .select("*")
-      .eq("is_default", true)
-      .eq("is_active", true)
+    const { data: settingsProv } = await supabaseAdmin
+      .from("settings")
+      .select("value")
+      .eq("key", "wa.provider_config") // or ai.provider_config
       .maybeSingle();
 
-    provider = defaultProv;
+    const { data: aiConfigSetting } = await supabaseAdmin
+      .from("settings")
+      .select("value")
+      .eq("key", "ai.provider_config")
+      .maybeSingle();
 
-    if (!provider) {
-      const { data: firstActive } = await supabaseAdmin
-        .from("ai_providers")
-        .select("*")
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-      provider = firstActive;
+    if (aiConfigSetting?.value && (aiConfigSetting.value as any)?.provider_name) {
+      provider = aiConfigSetting.value;
     }
-  } catch (provErr) {
-    console.warn("Notice: ai_providers table fetch:", provErr);
-  }
+  } catch (_) {}
 
   if (!provider) {
-    provider = {
-      id: "default-ai-engine",
-      provider_name: "EduKonsul AI Engine",
-      provider_key: "lovable",
-      api_key: process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
-      base_url: "https://ai-gateway.lovable.dev/v1",
-      model: "google/gemini-2.5-flash",
-      temperature: 0.7,
-      max_tokens: 2048,
-      is_default: true,
-      is_active: true
-    };
+    try {
+      const { data: defaultProv } = await supabaseAdmin
+        .from("ai_providers")
+        .select("*")
+        .eq("is_default", true)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      provider = defaultProv;
+
+      if (!provider) {
+        const { data: firstActive } = await supabaseAdmin
+          .from("ai_providers")
+          .select("*")
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+        provider = firstActive;
+      }
+    } catch (provErr) {
+      console.warn("Notice: ai_providers table fetch:", provErr);
+    }
   }
 
-  // 2. Fetch active prompts
+  // Fallback Gemini / Lovable Provider
+  const geminiEnvKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+  if (!provider) {
+    if (geminiEnvKey) {
+      provider = {
+        id: "gemini-env",
+        provider_name: "Google Gemini",
+        provider_key: "gemini",
+        api_key: geminiEnvKey,
+        base_url: "https://generativelanguage.googleapis.com/v1beta/models",
+        model: "gemini-1.5-flash",
+        temperature: 0.7,
+        max_tokens: 2048,
+        is_default: true,
+        is_active: true
+      };
+    } else {
+      provider = {
+        id: "default-ai-engine",
+        provider_name: "EduKonsul AI Engine",
+        provider_key: "lovable",
+        api_key: process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
+        base_url: "https://ai-gateway.lovable.dev/v1",
+        model: "google/gemini-2.5-flash",
+        temperature: 0.7,
+        max_tokens: 2048,
+        is_default: true,
+        is_active: true
+      };
+    }
+  }
+
+  // 2. Fetch active prompts from DB
   let systemPromptFromDb = "";
   const { data: promptSetting } = await supabaseAdmin
     .from("settings")

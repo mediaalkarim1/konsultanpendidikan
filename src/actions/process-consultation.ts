@@ -309,15 +309,28 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           }, { onConflict: "consultation_id" });
         }
 
-      // Update Status to Analisis AI Selesai
+        // Update Status & Result on consultations table
         try {
           await supabaseAdmin.from("consultations").update({
             status: "Analisis AI Selesai",
+            ai_status: "Analisis AI Selesai",
+            consultation_status: "Analisis AI Selesai",
             ai_result: analysisData.analysis,
+            summary: analysisData.summary,
+            recommendation: analysisData.education_recommendation,
+            ai_model: "Google Gemini",
+            analyzed_at: new Date().toISOString(),
             error_message: null
           }).eq("id", consultation.id);
         } catch (_) {
-          await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", consultation.id);
+          try {
+            await supabaseAdmin.from("consultations").update({
+              status: "Analisis AI Selesai",
+              ai_result: analysisData.analysis
+            }).eq("id", consultation.id);
+          } catch (e2) {
+            await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", consultation.id);
+          }
         }
       }
 

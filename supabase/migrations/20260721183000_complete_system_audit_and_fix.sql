@@ -64,6 +64,22 @@ BEGIN
         ALTER TABLE public.consultations ADD COLUMN error_message TEXT;
     END IF;
 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='summary') THEN
+        ALTER TABLE public.consultations ADD COLUMN summary TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='recommendation') THEN
+        ALTER TABLE public.consultations ADD COLUMN recommendation TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='analysis_status') THEN
+        ALTER TABLE public.consultations ADD COLUMN analysis_status TEXT;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='analyzed_at') THEN
+        ALTER TABLE public.consultations ADD COLUMN analyzed_at TIMESTAMPTZ;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='consultations' AND column_name='updated_at') THEN
         ALTER TABLE public.consultations ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now();
     END IF;
