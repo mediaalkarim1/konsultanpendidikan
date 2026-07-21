@@ -308,6 +308,57 @@ function PengaturanPage() {
     }, 1500);
   };
 
+  // Auto-sync simulation admin number with settings on load
+  useEffect(() => {
+    if (settings.adminWa && !simAdminNum) setSimAdminNum(settings.adminWa);
+  }, [settings.adminWa]);
+
+  // Auto-fill simulation messages from templates when user hasn't manually edited
+  useEffect(() => {
+    if (simEdited) return;
+    const tplData = {
+      nama: simName || "-",
+      nomor: simTargetNum || "-",
+      jenjang: simJenjang || "-",
+      tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      status: "Menunggu Analisis",
+      id_konsultasi: "SIMULASI-" + Date.now().toString().slice(-6),
+    };
+    setSimAdminMsg(renderWaTemplate(waAdminTemplate, tplData));
+    setSimParentMsg(renderWaTemplate(waParticipantTemplate, tplData));
+  }, [simName, simTargetNum, simJenjang, waAdminTemplate, waParticipantTemplate, simEdited]);
+
+  const handleSimulateWa = async () => {
+    if (!simName.trim()) return toast.error("Nama orang tua wajib diisi");
+    if (!simAdminNum.trim() && !simTargetNum.trim()) return toast.error("Isi minimal salah satu nomor tujuan");
+    setSimSending(true);
+    setSimResultWa(null);
+    try {
+      const res = await simulateWaSend({
+        data: {
+          targetAdmin: simAdminNum.trim(),
+          targetParent: simTargetNum.trim(),
+          adminMessage: simAdminMsg,
+          parentMessage: simParentMsg,
+        },
+      });
+      setSimResultWa(res);
+      const ok = (res.admin.success || !simAdminNum) && (res.parent.success || !simTargetNum);
+      if (ok) toast.success(`Simulasi terkirim (provider: ${res.provider})`);
+      else toast.error("Sebagian pesan gagal terkirim. Cek detail di bawah.");
+    } catch (e: any) {
+      toast.error("Gagal menjalankan simulasi: " + (e.message || "Error"));
+    } finally {
+      setSimSending(false);
+    }
+  };
+
+  const resetSimEdits = () => {
+    setSimEdited(false);
+    toast.success("Template dimuat ulang");
+  };
+
+
   const tabs = [
     { id: "workflow", label: "Alur Sistem AI", icon: GitFork },
     { id: "umum", label: "Umum", icon: Building2 },
