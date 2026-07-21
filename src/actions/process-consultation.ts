@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
 import { runAiEngineAnalysis } from "./ai-engine";
 import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
+import { seedTKSDQuestionsDirect } from "./seed-tksd";
+import { seedSMPQuestionsDirect } from "./seed-smp";
+import { seedSMAQuestionsDirect } from "./seed-sma";
 
 export type ConsultationSubmitPayload = {
   parent_name: string;
@@ -16,21 +20,30 @@ export type ConsultationSubmitPayload = {
   }[];
 };
 
+function getAdminSupabase() {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Kredensial Supabase server belum dikonfigurasi.");
+  }
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
+}
+
 export const submitConsultationAction = createServerFn({ method: "POST" })
   .validator((payload: ConsultationSubmitPayload) => payload)
   .handler(async (ctx) => {
     const { parent_name, child_name, whatsapp_number, level, answers } = ctx.data;
 
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Missing Supabase env vars");
-      return { success: false, error: "Konfigurasi kredensial server belum lengkap." };
+    let supabaseAdmin: any;
+    try {
+      supabaseAdmin = getAdminSupabase();
+    } catch (e: any) {
+      console.error("[submitConsultationAction]: Init error", e);
+      return { success: false, error: e.message || "Konfigurasi kredensial server belum lengkap." };
     }
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-      // 1. SIMPAN DATA KE DATABASE (Atomically via Service Role)
+      // 1. SIMPAN DATA KONSULTASI KE DATABASE
       const { data: consultation, error: cErr } = await supabaseAdmin
         .from("consultations")
         .insert({
@@ -46,23 +59,73 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
 
       if (cErr || !consultation) {
         console.error("[Submit DB Error]: Failed to insert consultation", cErr);
-        return { success: false, error: "Gagal menyimpan data konsultasi ke database." };
+        return { success: false, error: `Gagal menyimpan data konsultasi: ${cErr?.message || "Error DB"}` };
       }
 
-      // Insert consultation answers
-      if (answers && answers.length > 0) {
-        const answerRows = answers.map((a) => ({
-          consultation_id: consultation.id,
-          question_id: a.question_id,
-          answer_text: a.answer_text || null,
-          selected_option_ids: a.selected_option_ids || []
-        }));
+      // Ensure questions exist for the given level before inserting answers
+      try {
+        const { data: existingQs } = await supabaseAdmin
+          .from("questions")
+          .select("id")
+          .eq("level", level);
 
-        const { error: aErr } = await supabaseAdmin.from("consultation_answers").insert(answerRows);
-        if (aErr) {
-          console.error("[Submit DB Error]: Failed to insert answers", aErr);
-          await supabaseAdmin.from("consultations").delete().eq("id", consultation.id);
-          return { success: false, error: "Gagal menyimpan jawaban kuesioner ke database." };
+        if (!existingQs || existingQs.length === 0) {
+          console.info(`[Submit Info]: No questions found in DB for level ${level}, auto-seeding...`);
+          if (level === "tksd") await seedTKSDQuestionsDirect();
+          else if (level === "smp") await seedSMPQuestionsDirect();
+          else if (level === "sma") await seedSMAQuestionsDirect();
+        }
+      } catch (seedErr) {
+        console.warn("Auto seed warning:", seedErr);
+      }
+
+      // Fetch valid question IDs in DB
+      const { data: validQuestions } = await supabaseAdmin
+        .from("questions")
+        .select("id, question_text")
+        .eq("level", level);
+
+      const validQIds = new Set((validQuestions || []).map((q: any) => q.id));
+
+      // Insert consultation answers safely
+      if (answers && answers.length > 0) {
+        for (const a of answers) {
+          let targetQId = a.question_id;
+
+          // If question_id is not in DB, auto create placeholder question row to satisfy FK constraint
+          if (!validQIds.has(targetQId)) {
+            const { data: qCheck } = await supabaseAdmin
+              .from("questions")
+              .select("id")
+              .eq("id", targetQId)
+              .maybeSingle();
+
+            if (!qCheck) {
+              const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetQId);
+              const { data: insertedQ } = await supabaseAdmin
+                .from("questions")
+                .insert({
+                  ...(isUuid ? { id: targetQId } : {}),
+                  level,
+                  question_text: "Pertanyaan Kuesioner",
+                  question_type: a.answer_text ? "text" : "single_choice",
+                  order_index: 99,
+                  is_required: false,
+                  is_active: true
+                })
+                .select("id")
+                .maybeSingle();
+
+              if (insertedQ) targetQId = insertedQ.id;
+            }
+          }
+
+          await supabaseAdmin.from("consultation_answers").insert({
+            consultation_id: consultation.id,
+            question_id: targetQId,
+            answer_text: a.answer_text || null,
+            selected_option_ids: a.selected_option_ids || []
+          });
         }
       }
 
@@ -73,14 +136,14 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         const { data: questionsList } = await supabaseAdmin.from("questions").select("id, question_text").in("id", questionIds);
         const questionsMap: Record<string, string> = {};
         if (questionsList) {
-          questionsList.forEach(q => { questionsMap[q.id] = q.question_text; });
+          questionsList.forEach((q: any) => { questionsMap[q.id] = q.question_text; });
         }
 
         const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
         let optionsMap: Record<string, string> = {};
         if (allOptionIds.length > 0) {
           const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
-          if (opts) opts.forEach(o => { optionsMap[o.id] = o.option_text; });
+          if (opts) opts.forEach((o: any) => { optionsMap[o.id] = o.option_text; });
         }
 
         formattedAnswers = answers.map(a => {
@@ -100,9 +163,9 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         supabaseAdmin.from("wa_templates").select("*")
       ]);
 
-      const waConfig: WaProviderConfig = settingsData?.find(s => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
-      const adminContact = settingsData?.find(s => s.key === "site.contact")?.value?.whatsapp;
-      const wfConfig = settingsData?.find(s => s.key === "ai.workflow_config")?.value || {
+      const waConfig: WaProviderConfig = (settingsData || []).find((s: any) => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
+      const adminContact = (settingsData || []).find((s: any) => s.key === "site.contact")?.value?.whatsapp;
+      const wfConfig = (settingsData || []).find((s: any) => s.key === "ai.workflow_config")?.value || {
         enable_wa_admin_notif: true,
         enable_wa_parent_notif: true,
         enable_ai_analysis: true,
@@ -167,8 +230,8 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       const defaultAdminTpl = "Konsultasi Baru\n\nNama Orang Tua: {{nama}}\nNama Anak: {{nama_anak}}\nJenjang: {{jenjang}}\n\nAnalisis AI telah selesai.\n\nSilakan buka Dashboard Admin untuk melihat hasil lengkap.";
       const defaultParticipantTpl = "Terima kasih telah mengirimkan konsultasi pendidikan di Sekolah Alam Al-Karim.\n\nData konsultasi Anda telah kami terima.\n\nTim Konsultan Sekolah Alam Al-Karim akan segera menghubungi Anda melalui WhatsApp.";
 
-      const adminTplContent = waTemplates?.find((t: any) => t.template_key === "admin_notification")?.content || defaultAdminTpl;
-      const participantTplContent = waTemplates?.find((t: any) => t.template_key === "participant_notification")?.content || defaultParticipantTpl;
+      const adminTplContent = (waTemplates || []).find((t: any) => t.template_key === "admin_notification")?.content || defaultAdminTpl;
+      const participantTplContent = (waTemplates || []).find((t: any) => t.template_key === "participant_notification")?.content || defaultParticipantTpl;
 
       const adminMsg = renderWaTemplate(adminTplContent, templateData);
       const parentMsg = renderWaTemplate(participantTplContent, templateData);
@@ -226,19 +289,19 @@ export const processConsultation = createServerFn({ method: "POST" })
   .validator((consultationId: string) => consultationId)
   .handler(async (ctx) => {
     const consultationId = ctx.data;
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return { success: false, error: "Missing config" };
+    let supabaseAdmin: any;
+    try {
+      supabaseAdmin = getAdminSupabase();
+    } catch (e: any) {
+      return { success: false, error: e.message || "Init error" };
     }
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: consultation } = await supabaseAdmin.from("consultations").select("*").eq("id", consultationId).single();
     if (!consultation) return { success: false, error: "Consultation not found" };
 
     const { data: answers } = await supabaseAdmin.from("consultation_answers").select("*").eq("consultation_id", consultationId);
 
-    const formattedAnswersList = answers ? answers.map(a => `P: ${a.question_id}\nJ: ${a.answer_text || (a.selected_option_ids || []).join(", ")}`).join("\n\n") : "";
+    const formattedAnswersList = answers ? answers.map((a: any) => `P: ${a.question_id}\nJ: ${a.answer_text || (a.selected_option_ids || []).join(", ")}`).join("\n\n") : "";
 
     const aiResult = await runAiEngineAnalysis(
       consultation.parent_name,
