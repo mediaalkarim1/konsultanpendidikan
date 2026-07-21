@@ -15,6 +15,8 @@ import {
   saveAiWorkflowConfigAction
 } from "@/actions/admin-actions";
 import { simulateAiWorkflowAction, SimulationResult } from "@/actions/ai-workflow-simulator";
+import { simulateWaSend, SimulateWaResult } from "@/actions/simulate-wa";
+import { renderWaTemplate } from "@/actions/wa-template-engine";
 import { PromptAIPage } from "./prompt";
 import { TestingPage } from "./testing";
 
@@ -90,6 +92,17 @@ function PengaturanPage() {
   const [waAdminTemplate, setWaAdminTemplate] = useState(DEFAULT_ADMIN_WA_TEMPLATE);
   const [waParticipantTemplate, setWaParticipantTemplate] = useState(DEFAULT_PARTICIPANT_WA_TEMPLATE);
   const [savingWaTemplates, setSavingWaTemplates] = useState(false);
+
+  // Simulasi kirim WA state
+  const [simName, setSimName] = useState("Budi Santoso");
+  const [simAdminNum, setSimAdminNum] = useState("");
+  const [simTargetNum, setSimTargetNum] = useState("08123456789");
+  const [simJenjang, setSimJenjang] = useState("TK & SD");
+  const [simAdminMsg, setSimAdminMsg] = useState("");
+  const [simParentMsg, setSimParentMsg] = useState("");
+  const [simEdited, setSimEdited] = useState(false);
+  const [simSending, setSimSending] = useState(false);
+  const [simResultWa, setSimResultWa] = useState<SimulateWaResult | null>(null);
 
   const defaultSettings = {
     appName: "EduKonsul",
@@ -294,6 +307,57 @@ function PengaturanPage() {
       setTestingWa(false);
     }, 1500);
   };
+
+  // Auto-sync simulation admin number with settings on load
+  useEffect(() => {
+    if (settings.adminWa && !simAdminNum) setSimAdminNum(settings.adminWa);
+  }, [settings.adminWa]);
+
+  // Auto-fill simulation messages from templates when user hasn't manually edited
+  useEffect(() => {
+    if (simEdited) return;
+    const tplData = {
+      nama: simName || "-",
+      nomor: simTargetNum || "-",
+      jenjang: simJenjang || "-",
+      tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+      status: "Menunggu Analisis",
+      id_konsultasi: "SIMULASI-" + Date.now().toString().slice(-6),
+    };
+    setSimAdminMsg(renderWaTemplate(waAdminTemplate, tplData));
+    setSimParentMsg(renderWaTemplate(waParticipantTemplate, tplData));
+  }, [simName, simTargetNum, simJenjang, waAdminTemplate, waParticipantTemplate, simEdited]);
+
+  const handleSimulateWa = async () => {
+    if (!simName.trim()) return toast.error("Nama orang tua wajib diisi");
+    if (!simAdminNum.trim() && !simTargetNum.trim()) return toast.error("Isi minimal salah satu nomor tujuan");
+    setSimSending(true);
+    setSimResultWa(null);
+    try {
+      const res = await simulateWaSend({
+        data: {
+          targetAdmin: simAdminNum.trim(),
+          targetParent: simTargetNum.trim(),
+          adminMessage: simAdminMsg,
+          parentMessage: simParentMsg,
+        },
+      });
+      setSimResultWa(res);
+      const ok = (res.admin.success || !simAdminNum) && (res.parent.success || !simTargetNum);
+      if (ok) toast.success(`Simulasi terkirim (provider: ${res.provider})`);
+      else toast.error("Sebagian pesan gagal terkirim. Cek detail di bawah.");
+    } catch (e: any) {
+      toast.error("Gagal menjalankan simulasi: " + (e.message || "Error"));
+    } finally {
+      setSimSending(false);
+    }
+  };
+
+  const resetSimEdits = () => {
+    setSimEdited(false);
+    toast.success("Template dimuat ulang");
+  };
+
 
   const tabs = [
     { id: "workflow", label: "Alur Sistem AI", icon: GitFork },
@@ -735,6 +799,7 @@ function PengaturanPage() {
               <TestingPage />
             </div>
           ) : activeTab === "watemplate" ? (
+            <div className="space-y-6">
             <form onSubmit={handleSaveWaTemplates} className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
               <div className="border-b pb-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
@@ -792,6 +857,114 @@ function PengaturanPage() {
                 </button>
               </div>
             </form>
+
+            <div className="space-y-5 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
+              <div className="border-b pb-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
+                  <Play className="h-5 w-5" /> Simulasi Pengiriman Formulir & Notifikasi WhatsApp
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tes skenario saat orang tua selesai mengisi dan men-submit formulir konsultasi. Pesan otomatis
+                  dirender dari template di atas dan tetap dapat diedit sebelum dikirim.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nama Orang Tua</label>
+                  <input
+                    type="text"
+                    value={simName}
+                    onChange={(e) => setSimName(e.target.value)}
+                    placeholder="Contoh: Budi Santoso"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Jenjang</label>
+                  <select
+                    value={simJenjang}
+                    onChange={(e) => setSimJenjang(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  >
+                    <option>TK & SD</option>
+                    <option>SMP</option>
+                    <option>SMA</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Admin</label>
+                  <input
+                    type="tel"
+                    value={simAdminNum}
+                    onChange={(e) => setSimAdminNum(e.target.value.replace(/[^\d+]/g, ""))}
+                    placeholder="Contoh: 08123456789"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan notifikasi admin akan dikirim ke nomor ini.</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Target (Orang Tua)</label>
+                  <input
+                    type="tel"
+                    value={simTargetNum}
+                    onChange={(e) => setSimTargetNum(e.target.value.replace(/[^\d+]/g, ""))}
+                    placeholder="Contoh: 08987654321"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan konfirmasi peserta akan dikirim ke nomor ini.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Admin (otomatis, bisa diedit)</label>
+                  <textarea
+                    value={simAdminMsg}
+                    onChange={(e) => { setSimAdminMsg(e.target.value); setSimEdited(true); }}
+                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Orang Tua (otomatis, bisa diedit)</label>
+                  <textarea
+                    value={simParentMsg}
+                    onChange={(e) => { setSimParentMsg(e.target.value); setSimEdited(true); }}
+                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={handleSimulateWa}
+                  disabled={simSending}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {simSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Kirim Simulasi WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={resetSimEdits}
+                  className="flex items-center gap-2 rounded-lg border border-input px-4 py-2.5 text-sm hover:bg-muted"
+                >
+                  <RotateCcw className="h-4 w-4" /> Muat Ulang dari Template
+                </button>
+                <span className="text-[11px] text-muted-foreground">
+                  Provider aktif diambil dari tab <b>WhatsApp Provider</b>. Jika provider = <code>mock</code>, pesan hanya dicatat (tidak benar-benar dikirim).
+                </span>
+              </div>
+
+              {simResultWa && (
+                <div className="grid gap-3 md:grid-cols-2 pt-2">
+                  <SimResultCard title="Admin" target={simResultWa.admin.target} result={simResultWa.admin} />
+                  <SimResultCard title="Orang Tua" target={simResultWa.parent.target} result={simResultWa.parent} />
+                </div>
+              )}
+            </div>
+            </div>
           ) : (
             <form onSubmit={handleSaveSettings} className="rounded-xl border bg-card p-6 shadow-sm">
               {activeTab === "umum" && (
@@ -908,6 +1081,35 @@ function PengaturanPage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SimResultCard({ title, target, result }: { title: string; target: string; result: { success: boolean; message: string; error?: string; responsePayload?: any } }) {
+  if (!target) {
+    return (
+      <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">
+        <div className="font-semibold text-sm text-foreground mb-1">{title}</div>
+        Nomor tidak diisi — dilewati.
+      </div>
+    );
+  }
+  return (
+    <div className={`rounded-lg border p-4 text-xs ${result.success ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-sm text-foreground">{title} → {target}</div>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${result.success ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+          {result.success ? "TERKIRIM" : "GAGAL"}
+        </span>
+      </div>
+      {result.error && <div className="mb-2 text-red-700"><b>Error:</b> {result.error}</div>}
+      <details className="mt-1">
+        <summary className="cursor-pointer text-muted-foreground">Lihat pesan & payload</summary>
+        <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{result.message}</pre>
+        {result.responsePayload && (
+          <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{JSON.stringify(result.responsePayload, null, 2)}</pre>
+        )}
+      </details>
     </div>
   );
 }
