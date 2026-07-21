@@ -364,7 +364,7 @@ function PengaturanPage() {
     { id: "umum", label: "Umum", icon: Building2 },
     { id: "wa", label: "WhatsApp Provider", icon: MessageSquare },
     { id: "watemplate", label: "WhatsApp Template", icon: FileText },
-    { id: "prompt", label: "Prompt AI", icon: Sparkles },
+    { id: "prompt", label: "Konfigurasi Prompt", icon: Sparkles },
     { id: "testing", label: "Testing & Simulasi", icon: Beaker },
   ];
 
