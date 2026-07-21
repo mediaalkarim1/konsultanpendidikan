@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getParentsDatabaseAction } from "@/actions/admin-actions";
+import { getParentsDatabaseAction, normalizeParentRow } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/database-orangtua")({
   component: DatabaseOrangTuaPage,
@@ -74,11 +74,11 @@ export function DatabaseOrangTuaPage() {
         return;
       }
 
-      // Secondary Fallback: Client Supabase Query
-      let query = supabase.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, created_at, status", { count: "exact" });
+      // Secondary Fallback: Client Supabase Query using select("*") to avoid missing column errors
+      let query = supabase.from("consultations").select("*", { count: "exact" });
 
       if (debouncedSearch) {
-        query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+        query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
       }
       if (levelFilter) query = query.eq("level", levelFilter as any);
       if (dateFilter) {
@@ -95,8 +95,9 @@ export function DatabaseOrangTuaPage() {
         .range(from, to);
 
       if (!error && rows) {
-        setData(rows);
-        setTotal(count || 0);
+        const normalized = rows.map(normalizeParentRow);
+        setData(normalized);
+        setTotal(count || normalized.length);
       } else {
         toast.error("Gagal mengambil Database Orang Tua: " + (error?.message || "Error server"));
       }
@@ -112,10 +113,10 @@ export function DatabaseOrangTuaPage() {
 
   const handleExportExcel = async () => {
     try {
-      let query = supabase.from("consultations").select("parent_name, child_name, level, whatsapp_number, created_at");
+      let query = supabase.from("consultations").select("*");
 
       if (debouncedSearch) {
-        query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+        query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
       }
       if (levelFilter) query = query.eq("level", levelFilter as any);
 
@@ -126,8 +127,10 @@ export function DatabaseOrangTuaPage() {
         return;
       }
 
+      const normalizedExport = exportData.map(normalizeParentRow);
+
       const headers = ["No", "Tanggal Konsultasi", "Nama Orang Tua", "Nama Anak", "Jenjang Pendidikan", "Nomor WhatsApp (HP)"];
-      const rows = exportData.map((item, idx) => [
+      const rows = normalizedExport.map((item, idx) => [
         idx + 1,
         format(new Date(item.created_at), "dd MMMM yyyy HH:mm", { locale: id }),
         `"${(item.parent_name || "").replace(/"/g, '""')}"`,

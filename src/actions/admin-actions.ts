@@ -402,6 +402,34 @@ export const saveWaProviderConfigAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// Helper to normalize Parent & Child data across varying database schemas
+export function normalizeParentRow(row: any) {
+  if (!row) return row;
+
+  let parentName = row.parent_name || row.name || "";
+  let childName = row.child_name || "";
+  let whatsappNumber = row.whatsapp_number || row.parent_phone || row.phone || "";
+  let level = row.level || row.education_level || "tksd";
+
+  // If child_name is missing or empty, attempt to extract it from parent_name if saved as "Parent (Anak: Child)"
+  if (!childName && typeof parentName === "string" && parentName.includes(" (Anak: ")) {
+    const parts = parentName.split(" (Anak: ");
+    parentName = parts[0].trim();
+    childName = parts[1].replace(/\)$/, "").trim();
+  }
+
+  return {
+    ...row,
+    id: row.id,
+    parent_name: parentName,
+    child_name: childName || "-",
+    whatsapp_number: whatsappNumber,
+    level,
+    created_at: row.created_at || new Date().toISOString(),
+    status: row.status || "Baru"
+  };
+}
+
 // --- Database Orang Tua Server Action ---
 export const getParentsDatabaseAction = createServerFn({ method: "POST" })
   .validator((payload: { page?: number; limit?: number; search?: string; level?: string; date?: string }) => payload)
@@ -431,23 +459,54 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
           .range(from, to);
 
         if (!pErr && pData && pData.length > 0) {
-          return { success: true, data: pData, count: pCount || pData.length, source: "parents" };
+          const normalized = pData.map(normalizeParentRow);
+          return { success: true, data: normalized, count: pCount || normalized.length, source: "parents" };
         }
       } catch (_) {
         // Table parents not present, fallback
       }
 
-      // 2. Second attempt: Query 'consultations' table
+      // 2. Second attempt: Query 'consultations' table using select("*") to avoid column missing errors
       let query = supabaseAdmin
         .from("consultations")
-        .select("id, parent_name, child_name, level, whatsapp_number, created_at, status", { count: "exact" });
+        .select("*", { count: "exact" });
 
-      if (search) {
-        query = query.or(`parent_name.ilike.%${search}%,child_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+      if (level) {
+        query = query.eq("level", level as any);
       }
-      if (level) query = query.eq("level", level as any);
+
       if (date) {
         query = query.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+      }
+
+      // Safe search execution
+      if (search) {
+        // Try searching with child_name first
+        let searchAttempt = supabaseAdmin
+          .from("consultations")
+          .select("*", { count: "exact" })
+          .or(`parent_name.ilike.%${search}%,child_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+
+        if (level) searchAttempt = searchAttempt.eq("level", level as any);
+        if (date) searchAttempt = searchAttempt.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+
+        const { data: testCols, count: testCount, error: testErr } = await searchAttempt
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (!testErr && testCols) {
+          const normalized = testCols.map(normalizeParentRow);
+          return { success: true, data: normalized, count: testCount || normalized.length, source: "consultations" };
+        }
+
+        // If search failed because child_name column doesn't exist, search safe columns parent_name & whatsapp_number
+        query = supabaseAdmin
+          .from("consultations")
+          .select("*", { count: "exact" })
+          .or(`parent_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+
+        if (level) query = query.eq("level", level as any);
+        if (date) query = query.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
       }
 
       const { data: cols, count, error } = await query
@@ -459,7 +518,8 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
         return { success: false, error: error.message, data: [], count: 0 };
       }
 
-      return { success: true, data: cols || [], count: count || 0, source: "consultations" };
+      const normalized = (cols || []).map(normalizeParentRow);
+      return { success: true, data: normalized, count: count || normalized.length, source: "consultations" };
     } catch (e: any) {
       console.error("[getParentsDatabaseAction exception]:", e);
       return { success: false, error: e.message, data: [], count: 0 };

@@ -29,7 +29,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import html2pdf from "html2pdf.js";
 import { useAuth } from "@/lib/auth-context";
-import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction } from "@/actions/admin-actions";
+import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,
@@ -160,7 +160,7 @@ function KonsultasiPage() {
     let query = supabase.from("consultations").select("*", { count: "exact" });
 
     if (debouncedSearch) {
-      query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+      query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
     }
     if (statusFilter) query = query.eq("status", statusFilter);
     if (levelFilter) query = query.eq("level", levelFilter as "tksd" | "smp" | "sma");
@@ -175,10 +175,11 @@ function KonsultasiPage() {
       .range(from, to);
 
     if (!error && cols) {
-      setData(cols);
-      setTotal(count || 0);
+      const normalized = cols.map(normalizeParentRow);
+      setData(normalized);
+      setTotal(count || normalized.length);
     } else {
-      toast.error("Gagal mengambil data konsultasi");
+      toast.error("Gagal mengambil data konsultasi: " + (error?.message || "Error server"));
     }
     setLoading(false);
   }
