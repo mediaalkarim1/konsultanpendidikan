@@ -402,4 +402,68 @@ export const saveWaProviderConfigAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// --- Database Orang Tua Server Action ---
+export const getParentsDatabaseAction = createServerFn({ method: "POST" })
+  .validator((payload: { page?: number; limit?: number; search?: string; level?: string; date?: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { page = 1, limit = 10, search = "", level = "", date = "" } = ctx.data;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      // 1. First attempt: Try fetching from dedicated 'parents' table if present
+      try {
+        let parentQuery = supabaseAdmin
+          .from("parents" as any)
+          .select("*", { count: "exact" });
+
+        if (search) {
+          parentQuery = parentQuery.or(`parent_name.ilike.%${search}%,child_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%,phone.ilike.%${search}%`);
+        }
+        if (level) parentQuery = parentQuery.eq("level", level);
+        if (date) {
+          parentQuery = parentQuery.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+        }
+
+        const { data: pData, count: pCount, error: pErr } = await parentQuery
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (!pErr && pData && pData.length > 0) {
+          return { success: true, data: pData, count: pCount || pData.length, source: "parents" };
+        }
+      } catch (_) {
+        // Table parents not present, fallback
+      }
+
+      // 2. Second attempt: Query 'consultations' table
+      let query = supabaseAdmin
+        .from("consultations")
+        .select("id, parent_name, child_name, level, whatsapp_number, created_at, status", { count: "exact" });
+
+      if (search) {
+        query = query.or(`parent_name.ilike.%${search}%,child_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+      }
+      if (level) query = query.eq("level", level as any);
+      if (date) {
+        query = query.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+      }
+
+      const { data: cols, count, error } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) {
+        console.error("[getParentsDatabaseAction error]:", error);
+        return { success: false, error: error.message, data: [], count: 0 };
+      }
+
+      return { success: true, data: cols || [], count: count || 0, source: "consultations" };
+    } catch (e: any) {
+      console.error("[getParentsDatabaseAction exception]:", e);
+      return { success: false, error: e.message, data: [], count: 0 };
+    }
+  });
+
 

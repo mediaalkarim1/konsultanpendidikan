@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getParentsDatabaseAction } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/database-orangtua")({
   component: DatabaseOrangTuaPage,
@@ -54,32 +55,57 @@ export function DatabaseOrangTuaPage() {
 
   async function fetchParents() {
     setLoading(true);
-    const from = (page - 1) * itemsPerPage;
-    const to = from + itemsPerPage - 1;
+    try {
+      // Primary: Server function with auto fallback between 'parents' and 'consultations' tables
+      const res = await getParentsDatabaseAction({
+        data: {
+          page,
+          limit: itemsPerPage,
+          search: debouncedSearch,
+          level: levelFilter,
+          date: dateFilter
+        }
+      });
 
-    let query = supabase.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, created_at, status", { count: "exact" });
+      if (res && res.success && res.data) {
+        setData(res.data);
+        setTotal(res.count || 0);
+        setLoading(false);
+        return;
+      }
 
-    if (debouncedSearch) {
-      query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+      // Secondary Fallback: Client Supabase Query
+      let query = supabase.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, created_at, status", { count: "exact" });
+
+      if (debouncedSearch) {
+        query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+      }
+      if (levelFilter) query = query.eq("level", levelFilter as any);
+      if (dateFilter) {
+        const startDate = `${dateFilter}T00:00:00.000Z`;
+        const endDate = `${dateFilter}T23:59:59.999Z`;
+        query = query.gte("created_at", startDate).lte("created_at", endDate);
+      }
+
+      const from = (page - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      const { data: rows, count, error } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (!error && rows) {
+        setData(rows);
+        setTotal(count || 0);
+      } else {
+        toast.error("Gagal mengambil Database Orang Tua: " + (error?.message || "Error server"));
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Gagal memuat data orang tua: " + e.message);
+    } finally {
+      setLoading(false);
     }
-    if (levelFilter) query = query.eq("level", levelFilter as any);
-    if (dateFilter) {
-      const startDate = `${dateFilter}T00:00:00.000Z`;
-      const endDate = `${dateFilter}T23:59:59.999Z`;
-      query = query.gte("created_at", startDate).lte("created_at", endDate);
-    }
-
-    const { data: rows, count, error } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (!error && rows) {
-      setData(rows);
-      setTotal(count || 0);
-    } else {
-      toast.error("Gagal mengambil Database Orang Tua");
-    }
-    setLoading(false);
   }
 
   const totalPages = Math.ceil(total / itemsPerPage);

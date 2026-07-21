@@ -121,7 +121,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         return { success: false, error: `Gagal menyimpan data konsultasi: ${cErr?.message || "Error DB"}` };
       }
 
-      // Log success to system_logs
+      // Log success to system_logs & sync to parents table if present
       try {
         await supabaseAdmin.from("system_logs").insert({
           level: "info",
@@ -129,6 +129,20 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           message: `Konsultasi baru dibuat ID: ${consultation.id} (${parent_name})`
         });
       } catch (_) {}
+
+      // Optional sync to dedicated parents table
+      try {
+        await supabaseAdmin.from("parents" as any).insert({
+          parent_name: parent_name.trim(),
+          child_name: child_name.trim(),
+          whatsapp_number: whatsapp_number.trim(),
+          phone: whatsapp_number.trim(),
+          level,
+          consultation_id: consultation.id
+        });
+      } catch (_) {
+        // Table parents optional
+      }
 
       // Ensure questions exist for the given level before inserting answers
       try {
