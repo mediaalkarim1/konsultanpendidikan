@@ -27,7 +27,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import html2pdf from "html2pdf.js";
+import { jsPDF } from "jspdf";
 import { useAuth } from "@/lib/auth-context";
 import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow } from "@/actions/admin-actions";
 import { generateFallbackAnalysisResult } from "@/actions/ai-engine";
@@ -69,20 +69,20 @@ export async function handleDownloadPdfForConsultation(
   onStart?: () => void,
   onFinish?: () => void
 ) {
-  let tempDiv: HTMLDivElement | null = null;
   try {
     if (onStart) onStart();
-    toast.info(`Menyiapkan Dokumen Laporan PDF Resmi untuk ${item.parent_name}...`);
+    toast.info(`Menyiapkan Laporan PDF Resmi untuk ${item.parent_name}...`);
 
-    // Yield execution to main thread so UI updates button spinner immediately
-    await new Promise((resolve) => setTimeout(resolve, 80));
+    // Yield to main UI thread so spinner renders immediately
+    await new Promise((r) => setTimeout(r, 60));
 
+    // Fetch answers
     const { data: answers } = await supabase
       .from("consultation_answers")
       .select("*, questions(question_text)")
       .eq("consultation_id", item.id);
 
-    const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
+    const allOptionIds = answers?.flatMap((a) => a.selected_option_ids || []) || [];
     let optionsMap: Record<string, string> = {};
     if (allOptionIds.length > 0) {
       const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
@@ -95,103 +95,159 @@ export async function handleDownloadPdfForConsultation(
       .eq("consultation_id", item.id)
       .maybeSingle();
 
-    const mappedAnswers = (answers || []).map(a => ({
+    const mappedAnswers = (answers || []).map((a) => ({
       q: a.questions?.question_text || "Pertanyaan",
       a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
     }));
 
-    const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+    const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
     const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
 
     const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
     const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
     const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
 
-    // Create off-screen temp container to prevent viewport reflows & freeze
-    tempDiv = document.createElement("div");
-    tempDiv.style.position = "absolute";
-    tempDiv.style.left = "-9999px";
-    tempDiv.style.top = "-9999px";
-    tempDiv.style.width = "750px";
-    tempDiv.style.padding = "32px";
-    tempDiv.style.fontFamily = "'Inter', 'Segoe UI', system-ui, sans-serif";
-    tempDiv.style.color = "#0f172a";
-    tempDiv.style.backgroundColor = "#ffffff";
-    tempDiv.style.boxSizing = "border-box";
+    // Native jsPDF document creation
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
 
-    tempDiv.innerHTML = `
-      <div style="border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h1 style="font-size: 20px; font-weight: 800; color: #047857; margin: 0; letter-spacing: -0.02em;">SEKOLAH ALAM AL-KARIM — EDUKONSUL</h1>
-          <p style="font-size: 13px; font-weight: 500; color: #475569; margin: 4px 0 0 0;">Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak</p>
-        </div>
-        <div style="text-align: right;">
-          <span style="display: inline-block; background-color: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; border: 1px solid #a7f3d0;">JENJANG ${levelLabel}</span>
-          <p style="font-size: 11px; color: #64748b; margin: 6px 0 0 0; font-weight: 600;">Ref ID: #${item.id.substring(0, 8)}</p>
-        </div>
-      </div>
+    const pageWidth = doc.internal.pageSize.getWidth(); // 210 mm
+    const pageHeight = doc.internal.pageSize.getHeight(); // 297 mm
+    const margin = 15;
+    const maxTextWidth = pageWidth - margin * 2; // 180 mm
 
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;">
-        <div>
-          <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ORANG TUA</span>
-          <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Orang Tua:</p>
-          <p style="margin: 0; font-weight: 700; color: #0f172a; font-size: 14px;">${item.parent_name}</p>
-          <p style="margin: 6px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">WhatsApp: ${item.whatsapp_number}</p>
-        </div>
-        <div>
-          <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ANAK & EVALUASI</span>
-          <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Anak:</p>
-          <p style="margin: 0; font-weight: 700; color: #047857; font-size: 14px;">${item.child_name || "-"}</p>
-          <p style="margin: 6px 0 0 0; font-size: 12px; color: #475569;">Tanggal: ${dateStr}</p>
-        </div>
-      </div>
+    // 1. Top Green Decorative Bar
+    doc.setFillColor(4, 120, 87); // Emerald 700 (#047857)
+    doc.rect(0, 0, pageWidth, 5, "F");
 
-      <div style="margin-bottom: 28px;">
-        <h3 style="font-size: 14px; font-weight: 800; color: #047857; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px; letter-spacing: 0.02em;">LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN</h3>
-        <div style="font-size: 13px; line-height: 1.8; color: #334155; text-align: justify; white-space: pre-wrap; font-family: inherit;">
-${narrativeText}
-        </div>
-      </div>
+    // Kop Surat Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(4, 120, 87);
+    doc.text("SEKOLAH ALAM AL-KARIM — EDUKONSUL", margin, 17);
 
-      <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #64748b;">
-        <div>
-          <p style="margin: 0; font-weight: 600; color: #334155;">Dokumen Laporan Resmi EduKonsul</p>
-          <p style="margin: 2px 0 0 0;">Sekolah Alam Al-Karim • Diterbitkan pada ${dateStr}</p>
-        </div>
-        <div style="text-align: center; width: 200px;">
-          <p style="margin: 0 0 45px 0; font-weight: 700; color: #047857;">Tim Konsultan Pendidikan</p>
-          <p style="margin: 0; font-weight: 800; color: #0f172a; border-top: 1px solid #94a3b8; padding-top: 4px;">Sekolah Alam Al-Karim</p>
-        </div>
-      </div>
-    `;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text("Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak", margin, 23);
 
-    document.body.appendChild(tempDiv);
+    // Right Side Metadata
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(6, 95, 70);
+    doc.text(`JENJANG: ${levelLabel}`, pageWidth - margin - 40, 17);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Ref ID: #${item.id.substring(0, 8)}`, pageWidth - margin - 40, 23);
 
-    // Yield to layout cycle before running html2canvas
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Divider Line
+    doc.setDrawColor(5, 150, 105);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 27, pageWidth - margin, 27);
 
-    const opt = {
-      margin: 0.5,
-      filename: `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.95 },
-      html2canvas: { scale: 1.5, useCORS: true, logging: false },
-      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
-    };
+    // 2. Data Card Section
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, 31, maxTextWidth, 24, 2, 2, "FD");
 
-    const pdfPromise = html2pdf().set(opt).from(tempDiv).save();
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout melebih waktu tunggu")), 15000)
-    );
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(4, 120, 87);
+    doc.text("DATA ORANG TUA", margin + 5, 37);
+    doc.text("DATA ANAK & EVALUASI", margin + 95, 37);
 
-    await Promise.race([pdfPromise, timeoutPromise]);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Nama Orang Tua : ${item.parent_name}`, margin + 5, 44);
+    doc.text(`Nomor WhatsApp : ${item.whatsapp_number}`, margin + 5, 50);
+
+    doc.text(`Nama Anak          : ${item.child_name || "-"}`, margin + 95, 44);
+    doc.text(`Tanggal Evaluasi : ${dateStr}`, margin + 95, 50);
+
+    // 3. Section Title
+    let yPos = 63;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(4, 120, 87);
+    doc.text("LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN", margin, yPos);
+    yPos += 3;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 7;
+
+    // 4. Narrative Paragraphs
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(51, 65, 85);
+
+    const paragraphs = narrativeText.split("\n\n");
+
+    for (const para of paragraphs) {
+      if (!para.trim()) continue;
+      const lines = doc.splitTextToSize(para.trim(), maxTextWidth);
+      const neededHeight = lines.length * 5;
+
+      // Auto page break check
+      if (yPos + neededHeight > pageHeight - 28) {
+        doc.addPage();
+        yPos = 20;
+
+        // Header line on new page
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Laporan Evaluasi Ananda ${item.child_name || item.parent_name} (Sambungan)`, margin, yPos - 5);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(51, 65, 85);
+      }
+
+      doc.text(lines, margin, yPos, { lineHeightFactor: 1.4 });
+      yPos += lines.length * 5.2 + 4;
+    }
+
+    // 5. Footer Signature Block
+    if (yPos + 35 > pageHeight - 15) {
+      doc.addPage();
+      yPos = 20;
+    } else {
+      yPos += 8;
+    }
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Dokumen Laporan Resmi EduKonsul — Sekolah Alam Al-Karim", margin, yPos + 4);
+    doc.text(`Diterbitkan pada: ${dateStr}`, margin, yPos + 9);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(4, 120, 87);
+    doc.text("Tim Konsultan Pendidikan", pageWidth - margin - 45, yPos + 4);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.text("Sekolah Alam Al-Karim", pageWidth - margin - 45, yPos + 22);
+    doc.line(pageWidth - margin - 45, yPos + 23, pageWidth - margin, yPos + 23);
+
+    // Save File
+    const fileName = `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`;
+    doc.save(fileName);
     toast.success("Dokumen PDF berhasil diunduh!");
+
   } catch (err: any) {
-    console.error("PDF Download error:", err);
+    console.error("Native jsPDF error:", err);
     toast.error("Gagal membuat PDF. Silakan coba lagi.");
   } finally {
-    if (tempDiv && tempDiv.parentNode) {
-      tempDiv.parentNode.removeChild(tempDiv);
-    }
     if (onFinish) onFinish();
   }
 }
