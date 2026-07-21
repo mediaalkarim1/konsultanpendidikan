@@ -799,6 +799,7 @@ function PengaturanPage() {
               <TestingPage />
             </div>
           ) : activeTab === "watemplate" ? (
+            <div className="space-y-6">
             <form onSubmit={handleSaveWaTemplates} className="space-y-6 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
               <div className="border-b pb-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
