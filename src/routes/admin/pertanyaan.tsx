@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { logActivity } from "@/actions/admin-actions";
 import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
+import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actions/seed-smp";
 
 export const Route = createFileRoute("/admin/pertanyaan")({
   component: KelolaPertanyaanPage,
@@ -55,6 +56,11 @@ function KelolaPertanyaanPage() {
       }));
       if (level === "tksd" && !isNewTKSDQuestions(formatted)) {
         formatted = DEFAULT_TKSD_QUESTIONS.map(q => ({
+          ...q,
+          is_active: true
+        })) as any;
+      } else if (level === "smp" && !isNewSMPQuestions(formatted)) {
+        formatted = DEFAULT_SMP_QUESTIONS.map(q => ({
           ...q,
           is_active: true
         })) as any;
@@ -165,6 +171,27 @@ function KelolaPertanyaanPage() {
             title="Reset ke pertanyaan standar TK & SD"
           >
             <RotateCcw className="h-4 w-4" /> Reset Default TK & SD
+          </button>
+        )}
+
+        {level === "smp" && (
+          <button
+            onClick={async () => {
+              if (!confirm("Reset semua pertanyaan SMP ke default terbaru?")) return;
+              setLoading(true);
+              try {
+                await seedSMPAction();
+                toast.success("Pertanyaan SMP berhasil di-reset ke default!");
+                await fetchQuestions();
+              } catch (e: any) {
+                toast.error("Gagal mereset pertanyaan: " + (e.message || e));
+                setLoading(false);
+              }
+            }}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="Reset ke pertanyaan standar SMP"
+          >
+            <RotateCcw className="h-4 w-4" /> Reset Default SMP
           </button>
         )}
 

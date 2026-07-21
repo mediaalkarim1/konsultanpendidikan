@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processConsultation } from "@/actions/process-consultation";
 import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
+import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actions/seed-smp";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -81,7 +82,10 @@ function FormulirPage() {
 
       if (jenjang === "tksd" && !isNewTKSDQuestions(mapped)) {
         mapped = DEFAULT_TKSD_QUESTIONS;
-        seedTKSDAction().catch((err) => console.warn("Auto-seed error:", err));
+        seedTKSDAction().catch((err) => console.warn("Auto-seed TKSD error:", err));
+      } else if (jenjang === "smp" && !isNewSMPQuestions(mapped)) {
+        mapped = DEFAULT_SMP_QUESTIONS;
+        seedSMPAction().catch((err) => console.warn("Auto-seed SMP error:", err));
       }
 
       setQuestions(mapped);
@@ -254,11 +258,17 @@ function FormulirPage() {
             ) : (
               <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                 <h2 className="text-lg font-bold text-foreground">
-                  {jenjang === "tksd" ? "Analisis Kebutuhan Perkembangan Anak" : "Tes Potensi & Kesiapan Masa Depan Anak"}
+                  {jenjang === "tksd"
+                    ? "Analisis Kebutuhan Perkembangan Anak"
+                    : jenjang === "smp"
+                    ? "Analisis Potensi & Perkembangan Remaja"
+                    : "Tes Potensi & Kesiapan Masa Depan Anak"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   {jenjang === "tksd"
                     ? "Setiap anak memiliki cara belajar dan tumbuh yang berbeda. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis kebutuhan perkembangan anak beserta rekomendasi pendidikan yang sesuai."
+                    : jenjang === "smp"
+                    ? "Setiap remaja memiliki potensi yang unik. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis mengenai kebutuhan belajar, karakter, dan pengembangan potensi anak, beserta rekomendasi pendidikan yang sesuai."
                     : "Jawab pertanyaan berikut sejujurnya untuk hasil rekomendasi terbaik."}
                 </p>
                 <ol className="mt-6 space-y-6">
