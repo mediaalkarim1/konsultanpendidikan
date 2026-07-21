@@ -181,6 +181,10 @@ export function Home() {
         setConfig({
           ...DEFAULT_HOMEPAGE_CONFIG,
           ...val,
+          navItems: Array.isArray(val.navItems) ? val.navItems : DEFAULT_HOMEPAGE_CONFIG.navItems,
+          advantages: Array.isArray(val.advantages) ? val.advantages : DEFAULT_HOMEPAGE_CONFIG.advantages,
+          levels: Array.isArray(val.levels) ? val.levels : DEFAULT_HOMEPAGE_CONFIG.levels,
+          socialLinks: Array.isArray(val.socialLinks) ? val.socialLinks : DEFAULT_HOMEPAGE_CONFIG.socialLinks,
           colors: {
             ...DEFAULT_HOMEPAGE_CONFIG.colors,
             ...(val.colors || {})
@@ -253,8 +257,10 @@ export function Home() {
               <button
                 key={idx}
                 onClick={() => {
-                  if (item.link.startsWith("#")) {
+                  if (item.link?.startsWith("#")) {
                     handleScroll(item.link);
+                  } else if (item.link) {
+                    window.location.href = item.link;
                   }
                 }}
                 className="text-sm font-semibold text-slate-600 transition hover:text-[var(--primary)]"
@@ -296,8 +302,10 @@ export function Home() {
               <button
                 key={idx}
                 onClick={() => {
-                  if (item.link.startsWith("#")) {
+                  if (item.link?.startsWith("#")) {
                     handleScroll(item.link);
+                  } else if (item.link) {
+                    window.location.href = item.link;
                   }
                 }}
                 className="block w-full text-left py-2 text-sm font-bold text-slate-700 hover:text-[var(--primary)]"
