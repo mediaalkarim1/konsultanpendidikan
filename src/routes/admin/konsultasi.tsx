@@ -29,8 +29,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
 import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow } from "@/actions/admin-actions";
-import { generateFallbackAnalysisResult } from "@/actions/ai-engine";
-import { handleDownloadPdfForConsultation, type Consultation } from "@/lib/pdf-generator";
+import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult } from "@/lib/pdf-generator";
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,

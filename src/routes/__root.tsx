@@ -225,7 +225,8 @@ function RootComponent() {
           </button>
 
           <Link
-            to="/formulir/tksd"
+            to="/formulir/$jenjang"
+            params={{ jenjang: "tksd" }}
             className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-500"
           >
             <div className="p-2.5 rounded-full bg-emerald-600 text-white -mt-5 shadow-md">

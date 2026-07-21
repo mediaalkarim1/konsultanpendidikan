@@ -1,27 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-
-export type AiProviderConfig = {
-  id: string;
-  provider_name: string;
-  provider_key: string;
-  api_key: string;
-  base_url: string;
-  model: string;
-  temperature: number;
-  max_tokens: number;
-  is_default: boolean;
-  is_active: boolean;
-};
-
-export type AiAnalysisResult = {
-  summary: string;
-  analysis: string;
-  strengths: string;
-  weaknesses: string;
-  potential: string;
-  risk: string;
-  education_recommendation: string;
-};
+import { generateFallbackAnalysisResult, type AiAnalysisResult } from "../lib/pdf-generator";
 
 function getAdminSupabase() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -355,47 +333,6 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
       data: fallbackResult
     };
   }
-}
-
-export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
-  const jenjangLabel = level === "tksd" ? "TK & SD" : level === "smp" ? "SMP" : "SMA";
-  const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
-  const parentDisplay = parentName || "Orang Tua";
-
-  let parsedAnswersText = "";
-  if (formattedAnswers && formattedAnswers.trim()) {
-    const items = formattedAnswers.split("\n\n").map(item => {
-      const lines = item.split("\n");
-      const q = lines[0]?.replace(/^P:\s*/, "") || "";
-      const a = lines[1]?.replace(/^J:\s*/, "") || "";
-      return `mengenai ${q.toLowerCase()}, orang tua menyampaikan bahwa ${a.toLowerCase()}`;
-    });
-    parsedAnswersText = items.join(", serta ");
-  }
-
-  const p1_sapaan = `Ayah Bunda ${parentDisplay}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda ${nameDisplay} pada jenjang ${jenjangLabel}. Sebagaimana kita ketahui bersama, setiap anak berkembang dengan ritme keunikannya sendiri, dan perhatian hangat yang Ayah Bunda berikan merupakan fondasi awal yang sangat berharga bagi tumbuh kembang Ananda secara menyeluruh.`;
-
-  const p2_gambaran_potensi = `Secara umum, Ananda ${nameDisplay} menunjukkan profil anak yang memiliki rasa ingin tahu yang besar dan antusiasme tinggi ketika dihadapkan pada hal-hal baru yang menarik perhatiannya. Potensi yang sudah sangat terlihat adalah daya tangkapnya yang responsif terhadap stimulasi visual serta pembelajaran berbasis pengalaman praktis. Ketika diberikan ruang untuk berinteraksi langsung dan mengeksplorasi ide-idenya, Ananda mampu menunjukkan fokus yang baik dan mengekspresikan pemahamannya dengan penuh percaya diri.`;
-
-  const p3_perhatian_dan_hubungan = `Meskipun demikian, ada beberapa hal yang masih memerlukan perhatian dan pendampingan yang sabar di rumah maupun di sekolah. Berdasarkan analisis keterkaitan antara jawaban yang disampaikan, tampak bahwa ${parsedAnswersText || "kondisi keseharian anak menunjukkan perlunya penyelarasan ritme belajar dan pengelolaan fokus"}. Terlihat hubungan yang erat antara suasana lingkungan belajar dengan tingkat daya tahan konsentrasi Ananda. Ketika suasana belajar dirasakan kurang bervariasi atau terlalu menuntut hafalan kaku, energi dan fokus Ananda cenderung lebih cepat teralih. Hal ini merupakan dinamika yang sangat wajar bagi anak usia berkembang dan bukan menunjukkan suatu kendala permanen.`;
-
-  const p4_faktor_dampak = `Faktor utama yang kemungkinan mempengaruhi kondisi Ananda ${nameDisplay} saat ini adalah kebutuhan akan variasi metode belajar yang dinamis serta ritme pendampingan emosional yang konsisten. Apabila kondisi ini tidak mendapatkan pendampingan yang tepat sejak dini, anak berisiko merasa kurang dipahami, mengalami penurunan motivasi mandiri, atau cepat merasa jenuh saat menghadapi tantangan akademis yang lebih kompleks. Namun sebaliknya, apabila diberikan pendekatan yang sesuai dengan tipe belajarnya, Ananda akan tumbuh menjadi pembelajar yang tangguh, kreatif, dan mandiri.`;
-
-  const p5_harapan_dan_rekomendasi = `Harapan perkembangan Ananda ${nameDisplay} ke depan sangatlah cerah apabila mendapatkan stimulasi yang mendukung. Kami merekomendasikan agar orang tua dan sekolah bekerja sama menciptakan lingkungan belajar yang kaya akan eksplorasi interaktif, memanfaatkan media visual, serta memberikan dorongan positif atas setiap usaha kecil yang ditunjukkan anak. Pembiasaan jadwal harian yang fleksibel namun konsisten di rumah juga akan membantu Ananda melatih kedisiplinan diri tanpa merasa tertekan.`;
-
-  const p6_penutup = `Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda ${nameDisplay} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran.`;
-
-  const fullNarrative = `${p1_sapaan}\n\n${p2_gambaran_potensi}\n\n${p3_perhatian_dan_hubungan}\n\n${p4_faktor_dampak}\n\n${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`;
-
-  return {
-    summary: p1_sapaan,
-    analysis: fullNarrative,
-    strengths: p2_gambaran_potensi,
-    weaknesses: p3_perhatian_dan_hubungan,
-    potential: p4_faktor_dampak,
-    risk: p4_faktor_dampak,
-    education_recommendation: `${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`
-  };
 }
 
 function parseAiJsonResponse(text: string): AiAnalysisResult {
