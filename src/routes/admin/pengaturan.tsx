@@ -15,6 +15,8 @@ import {
   saveAiWorkflowConfigAction
 } from "@/actions/admin-actions";
 import { simulateAiWorkflowAction, SimulationResult } from "@/actions/ai-workflow-simulator";
+import { simulateWaSend, SimulateWaResult } from "@/actions/simulate-wa";
+import { renderWaTemplate } from "@/actions/wa-template-engine";
 import { PromptAIPage } from "./prompt";
 import { TestingPage } from "./testing";
 
