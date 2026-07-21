@@ -573,18 +573,63 @@ function PengaturanPage() {
 
                 {/* Workflow Step Visualizer */}
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                  {/* Step 1 & 2 */}
+                  {/* Langkah 1 */}
                   <div className="p-3.5 rounded-xl border bg-muted/40 opacity-80">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Langkah 1 & 2 (Mandatory)</span>
-                    <h4 className="font-semibold text-xs mt-1">Submit Form & Simpan DB</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Data peserta tersimpan ke Supabase secara permanen.</p>
-                    <span className="inline-block mt-2 text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">ALWAYS ON</span>
+                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Langkah 1 (Mandatory)</span>
+                    <h4 className="font-semibold text-xs mt-1">Data Disimpan ke Database</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Identitas & jawaban kuesioner tersimpan di Supabase DB.</p>
+                    <span className="inline-block mt-2 text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">AUTO DB</span>
                   </div>
 
-                  {/* Step 3: WA Admin */}
+                  {/* Langkah 2: AI Engine Request */}
+                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_analysis ? 'border-brand/40 bg-brand/5' : 'border-border bg-card'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-brand">Langkah 2</span>
+                      <button
+                        type="button"
+                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_analysis: !wfConfig.enable_ai_analysis })}
+                      >
+                        {wfConfig.enable_ai_analysis ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
+                      </button>
+                    </div>
+                    <h4 className="font-semibold text-xs mt-1">Kirim ke Google Gemini / AI</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Jawaban otomatis dikirim ke Gemini AI Engine.</p>
+                  </div>
+
+                  {/* Langkah 3: Prompt Analysis */}
+                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_summary ? 'border-blue-300 bg-blue-50/40' : 'border-border bg-card'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-blue-700">Langkah 3</span>
+                      <button
+                        type="button"
+                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_summary: !wfConfig.enable_ai_summary })}
+                      >
+                        {wfConfig.enable_ai_summary ? <ToggleRight className="h-6 w-6 text-blue-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
+                      </button>
+                    </div>
+                    <h4 className="font-semibold text-xs mt-1">Analisis Berdasarkan Prompt AI</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Gemini menyusun analisis 7 komponen profil anak.</p>
+                  </div>
+
+                  {/* Langkah 4: Simpan Hasil DB */}
+                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_auto_save ? 'border-indigo-300 bg-indigo-50/40' : 'border-border bg-card'}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-indigo-700">Langkah 4</span>
+                      <button
+                        type="button"
+                        onClick={() => setWfConfig({ ...wfConfig, enable_auto_save: !wfConfig.enable_auto_save })}
+                      >
+                        {wfConfig.enable_auto_save ? <ToggleRight className="h-6 w-6 text-indigo-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
+                      </button>
+                    </div>
+                    <h4 className="font-semibold text-xs mt-1">Hasil Disimpan ke Database</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Tulis ke tabel consultation_analysis.</p>
+                  </div>
+
+                  {/* Langkah 5: WA Admin */}
                   <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_wa_admin_notif ? 'border-emerald-300 bg-emerald-50/40' : 'border-border bg-card'}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 3</span>
+                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 5</span>
                       <button
                         type="button"
                         onClick={() => setWfConfig({ ...wfConfig, enable_wa_admin_notif: !wfConfig.enable_wa_admin_notif })}
@@ -593,14 +638,14 @@ function PengaturanPage() {
                         {wfConfig.enable_wa_admin_notif ? <ToggleRight className="h-6 w-6 text-emerald-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
                       </button>
                     </div>
-                    <h4 className="font-semibold text-xs mt-1">WhatsApp Notifikasi Admin</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Kirim pesan pemberitahuan ke WA Admin.</p>
+                    <h4 className="font-semibold text-xs mt-1">Notifikasi WA Admin</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Admin menerima notifikasi WhatsApp.</p>
                   </div>
 
-                  {/* Step 4: WA Participant */}
+                  {/* Langkah 6: WA Parent (Konfirmasi Tanpa Hasil) */}
                   <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_wa_parent_notif ? 'border-emerald-300 bg-emerald-50/40' : 'border-border bg-card'}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 4</span>
+                      <span className="text-[10px] font-bold uppercase text-emerald-700">Langkah 6</span>
                       <button
                         type="button"
                         onClick={() => setWfConfig({ ...wfConfig, enable_wa_parent_notif: !wfConfig.enable_wa_parent_notif })}
@@ -609,76 +654,16 @@ function PengaturanPage() {
                         {wfConfig.enable_wa_parent_notif ? <ToggleRight className="h-6 w-6 text-emerald-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
                       </button>
                     </div>
-                    <h4 className="font-semibold text-xs mt-1">WhatsApp Notifikasi Peserta</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Kirim pesan balasan awal ke WA Orang Tua.</p>
+                    <h4 className="font-semibold text-xs mt-1">Notifikasi WA Orang Tua</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Konfirmasi penerimaan (tanpa hasil analisis).</p>
                   </div>
 
-                  {/* Step 5: AI Engine */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_analysis ? 'border-brand/40 bg-brand/5' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-brand">Langkah 5</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_analysis: !wfConfig.enable_ai_analysis })}
-                      >
-                        {wfConfig.enable_ai_analysis ? <ToggleRight className="h-6 w-6 text-brand" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Analisis AI Engine</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Panggil AI Provider untuk memproses jawaban.</p>
-                  </div>
-
-                  {/* Step 6: Resume AI */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_summary ? 'border-blue-300 bg-blue-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-blue-700">Langkah 6</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_summary: !wfConfig.enable_ai_summary })}
-                      >
-                        {wfConfig.enable_ai_summary ? <ToggleRight className="h-6 w-6 text-blue-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">AI Membuat Resume</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Rangkum ringkasan kondisi anak.</p>
-                  </div>
-
-                  {/* Step 7: Rekomendasi AI */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_ai_recommendation ? 'border-blue-300 bg-blue-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-blue-700">Langkah 7</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_ai_recommendation: !wfConfig.enable_ai_recommendation })}
-                      >
-                        {wfConfig.enable_ai_recommendation ? <ToggleRight className="h-6 w-6 text-blue-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">AI Membuat Rekomendasi</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Susun saran pendidikan & parenting.</p>
-                  </div>
-
-                  {/* Step 8: Simpan Hasil DB */}
-                  <div className={`p-3.5 rounded-xl border transition-all ${wfConfig.enable_auto_save ? 'border-indigo-300 bg-indigo-50/40' : 'border-border bg-card'}`}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-indigo-700">Langkah 8</span>
-                      <button
-                        type="button"
-                        onClick={() => setWfConfig({ ...wfConfig, enable_auto_save: !wfConfig.enable_auto_save })}
-                      >
-                        {wfConfig.enable_auto_save ? <ToggleRight className="h-6 w-6 text-indigo-600" /> : <ToggleLeft className="h-6 w-6 text-muted-foreground" />}
-                      </button>
-                    </div>
-                    <h4 className="font-semibold text-xs mt-1">Simpan Hasil ke Database</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Tulis ke tabel consultation_analysis.</p>
-                  </div>
-
-                  {/* Step 9 */}
-                  <div className="p-3.5 rounded-xl border bg-muted/40 opacity-80">
-                    <span className="text-[10px] font-bold uppercase text-muted-foreground">Langkah 9 (Mandatory)</span>
-                    <h4 className="font-semibold text-xs mt-1">Status = "Selesai"</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1">Konsultasi siap dilihat pada Dashboard Admin.</p>
-                    <span className="inline-block mt-2 text-[10px] bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded">FINISHED</span>
+                  {/* Langkah 7: Tim Konsultan Menghubungi */}
+                  <div className="p-3.5 rounded-xl border bg-muted/40 opacity-90 col-span-1 md:col-span-2">
+                    <span className="text-[10px] font-bold uppercase text-brand">Langkah 7 (Tahap Akhir)</span>
+                    <h4 className="font-semibold text-xs mt-1">Tim Konsultan Menghubungi Orang Tua</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1">Tim Konsultan Sekolah Alam Al-Karim menghubungi orang tua via WhatsApp.</p>
+                    <span className="inline-block mt-2 text-[10px] bg-brand/10 text-brand font-bold px-2 py-0.5 rounded">SIAP DIHUBUNGI</span>
                   </div>
                 </div>
               </div>
