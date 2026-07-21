@@ -85,7 +85,7 @@ function KonsultasiPage() {
       query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
     }
     if (statusFilter) query = query.eq("status", statusFilter);
-    if (levelFilter) query = query.eq("level", levelFilter);
+    if (levelFilter) query = query.eq("level", levelFilter as "tksd" | "smp" | "sma");
 
     const { data: cols, count, error } = await query
       .order("created_at", { ascending: false })
