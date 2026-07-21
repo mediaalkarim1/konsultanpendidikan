@@ -54,6 +54,13 @@ const DEFAULT_HOMEPAGE_CONFIG = {
   logoImg: "",
   btnLoginText: "Login Admin",
   
+  // Section Visibility flags
+  showHero: true,
+  showAdvantages: true,
+  showLevels: true,
+  showCta: true,
+  showFooter: true,
+  
   heroBadge: "Konsultasi Pendidikan Anak",
   heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
   heroDesc: "Bantu pahami potensi, karakter, dan kebutuhan belajar anak melalui konsultasi pendidikan yang didampingi Tim Konsultan Sekolah Alam Al-Karim.",
@@ -416,6 +423,67 @@ export function PengaturanPage() {
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Kontrol Visibilitas Section Homepage */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+                <Layout className="h-5 w-5" /> 2. Kontrol Visibilitas Section Homepage
+              </h2>
+              <p className="text-xs text-slate-500">
+                Tampilkan atau sembunyikan bagian-bagian homepage tertentu sesuai kebutuhan.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showHero !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showHero: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Hero Section</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showAdvantages !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showAdvantages: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Keunggulan</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showLevels !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showLevels: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Pilihan Jenjang</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showCta !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showCta: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">CTA Banner</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showFooter !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showFooter: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Footer</span>
+                </label>
               </div>
             </div>
 
@@ -1146,86 +1214,96 @@ export function PengaturanPage() {
                 </header>
 
                 {/* Hero Preview */}
-                <section className="px-6 py-10 text-center space-y-4 bg-gradient-to-b from-emerald-50/50 to-transparent">
-                  <span className="inline-block rounded-full bg-emerald-50 border border-emerald-100 px-3 py-0.5 text-[10px] font-bold text-emerald-800">
-                    {homeForm.heroBadge}
-                  </span>
-                  <h1 className="text-2xl sm:text-3.5xl font-extrabold text-slate-900 max-w-2xl mx-auto leading-tight">
-                    {homeForm.heroTitle}
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
-                    {homeForm.heroDesc}
-                  </p>
-                  <div className="flex justify-center gap-2 pt-1">
-                    <button className="h-10 px-5 rounded-full bg-emerald-700 text-white text-xs font-bold shadow" style={{ backgroundColor: homeForm.colors?.button }}>
-                      {homeForm.heroBtn1}
-                    </button>
-                    <button className="h-10 px-5 rounded-full border bg-white text-slate-600 text-xs font-bold">
-                      {homeForm.heroBtn2}
-                    </button>
-                  </div>
-                </section>
+                {homeForm.showHero !== false && (
+                  <section className="px-6 py-10 text-center space-y-4 bg-gradient-to-b from-emerald-50/50 to-transparent">
+                    <span className="inline-block rounded-full bg-emerald-50 border border-emerald-100 px-3 py-0.5 text-[10px] font-bold text-emerald-800">
+                      {homeForm.heroBadge}
+                    </span>
+                    <h1 className="text-2xl sm:text-3.5xl font-extrabold text-slate-900 max-w-2xl mx-auto leading-tight">
+                      {homeForm.heroTitle}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
+                      {homeForm.heroDesc}
+                    </p>
+                    <div className="flex justify-center gap-2 pt-1">
+                      <button className="h-10 px-5 rounded-full bg-emerald-700 text-white text-xs font-bold shadow" style={{ backgroundColor: homeForm.colors?.button }}>
+                        {homeForm.heroBtn1}
+                      </button>
+                      <button className="h-10 px-5 rounded-full border bg-white text-slate-600 text-xs font-bold">
+                        {homeForm.heroBtn2}
+                      </button>
+                    </div>
+                  </section>
+                )}
 
                 {/* Keunggulan Preview */}
-                <section className="px-6 py-10 space-y-6">
-                  <div className="text-center space-y-2 max-w-lg mx-auto">
-                    <h2 className="font-bold text-slate-900 text-base sm:text-lg">{homeForm.advantagesTitle}</h2>
-                    <p className="text-xs text-slate-400">{homeForm.advantagesSub}</p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {homeForm.advantages?.map((adv, i) => (
-                      <div key={i} className="border rounded-xl p-3 bg-white space-y-2 text-left" style={{ backgroundColor: homeForm.colors?.card }}>
-                        <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center">
-                          <DynamicIcon name={adv.icon} className="h-5 w-5" />
+                {homeForm.showAdvantages !== false && (
+                  <section className="px-6 py-10 space-y-6">
+                    <div className="text-center space-y-2 max-w-lg mx-auto">
+                      <h2 className="font-bold text-slate-900 text-base sm:text-lg">{homeForm.advantagesTitle}</h2>
+                      <p className="text-xs text-slate-400">{homeForm.advantagesSub}</p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {homeForm.advantages?.map((adv, i) => (
+                        <div key={i} className="border rounded-xl p-3 bg-white space-y-2 text-left" style={{ backgroundColor: homeForm.colors?.card }}>
+                          <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center">
+                            <DynamicIcon name={adv.icon} className="h-5 w-5" />
+                          </div>
+                          <h4 className="font-bold text-xs text-slate-800">{adv.title}</h4>
+                          <p className="text-[10.5px] text-slate-400 leading-normal">{adv.desc}</p>
                         </div>
-                        <h4 className="font-bold text-xs text-slate-800">{adv.title}</h4>
-                        <p className="text-[10.5px] text-slate-400 leading-normal">{adv.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
                 {/* Jenjang Preview */}
-                <section className="px-6 py-10 bg-slate-50/50 space-y-6">
-                  <h3 className="font-bold text-slate-900 text-center text-base">{homeForm.levelsTitle}</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {homeForm.levels?.filter((l: any) => l.active !== false).map((lvl: any) => (
-                      <div key={lvl.id} className="border rounded-xl p-3 bg-white flex flex-col justify-between" style={{ backgroundColor: homeForm.colors?.card }}>
-                        <div>
-                          <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center">
-                            <DynamicIcon name={lvl.icon} className="h-5 w-5" />
+                {homeForm.showLevels !== false && (
+                  <section className="px-6 py-10 bg-slate-50/50 space-y-6">
+                    <h3 className="font-bold text-slate-900 text-center text-base">{homeForm.levelsTitle}</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {homeForm.levels?.filter((l: any) => l.active !== false).map((lvl: any) => (
+                        <div key={lvl.id} className="border rounded-xl p-3 bg-white flex flex-col justify-between" style={{ backgroundColor: homeForm.colors?.card }}>
+                          <div>
+                            <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center">
+                              <DynamicIcon name={lvl.icon} className="h-5 w-5" />
+                            </div>
+                            <h4 className="font-bold text-xs text-slate-800 mt-2">{lvl.name}</h4>
+                            <p className="text-[10px] text-slate-400 leading-normal line-clamp-2 mt-1">{lvl.desc}</p>
                           </div>
-                          <h4 className="font-bold text-xs text-slate-800 mt-2">{lvl.name}</h4>
-                          <p className="text-[10px] text-slate-400 leading-normal line-clamp-2 mt-1">{lvl.desc}</p>
+                          <div className="text-[10px] font-bold text-emerald-700 mt-3 pt-1.5 border-t text-right">
+                            {lvl.btnText} →
+                          </div>
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-700 mt-3 pt-1.5 border-t text-right">
-                          {lvl.btnText} →
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
                 {/* CTA Preview */}
-                <section className="mx-6 my-6 rounded-2xl p-6 text-center text-white space-y-2.5" style={{ backgroundColor: homeForm.ctaBg }}>
-                  <h3 className="font-bold text-base">{homeForm.ctaTitle}</h3>
-                  <p className="text-[11px] text-emerald-50">{homeForm.ctaDesc}</p>
-                  <button className="h-8 px-4 bg-white text-emerald-900 rounded-full text-[11px] font-extrabold shadow mt-1">
-                    {homeForm.ctaBtn}
-                  </button>
-                </section>
+                {homeForm.showCta !== false && (
+                  <section className="mx-6 my-6 rounded-2xl p-6 text-center text-white space-y-2.5" style={{ backgroundColor: homeForm.ctaBg }}>
+                    <h3 className="font-bold text-base">{homeForm.ctaTitle}</h3>
+                    <p className="text-[11px] text-emerald-50">{homeForm.ctaDesc}</p>
+                    <button className="h-8 px-4 bg-white text-emerald-900 rounded-full text-[11px] font-extrabold shadow mt-1">
+                      {homeForm.ctaBtn}
+                    </button>
+                  </section>
+                )}
 
                 {/* Footer Preview */}
-                <footer className="border-t border-slate-100 bg-slate-900 text-slate-400 px-6 py-8 text-left space-y-3" style={{ backgroundColor: homeForm.colors?.footer }}>
-                  <div className="text-white font-bold text-xs flex items-center gap-1.5">
-                    <div className="h-6 w-6 bg-emerald-700 text-white rounded font-bold text-center leading-6 text-xs">
-                      {homeForm.logoText?.charAt(0)}
+                {homeForm.showFooter !== false && (
+                  <footer className="border-t border-slate-100 bg-slate-900 text-slate-400 px-6 py-8 text-left space-y-3" style={{ backgroundColor: homeForm.colors?.footer }}>
+                    <div className="text-white font-bold text-xs flex items-center gap-1.5">
+                      <div className="h-6 w-6 bg-emerald-700 text-white rounded font-bold text-center leading-6 text-xs">
+                        {homeForm.logoText?.charAt(0)}
+                      </div>
+                      {homeForm.logoText}
                     </div>
-                    {homeForm.logoText}
-                  </div>
-                  <p className="text-[10px]">{homeForm.footerAddress}</p>
-                  <p className="text-[10px] text-slate-500 border-t border-slate-800 pt-3">{homeForm.footerCopyright}</p>
-                </footer>
+                    <p className="text-[10px]">{homeForm.footerAddress}</p>
+                    <p className="text-[10px] text-slate-500 border-t border-slate-800 pt-3">{homeForm.footerCopyright}</p>
+                  </footer>
+                )}
 
               </div>
             </div>

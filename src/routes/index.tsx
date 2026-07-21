@@ -21,18 +21,11 @@ import {
   Phone,
   Mail,
   MapPin,
-  Globe,
-  Loader2,
-  CheckCircle2,
-  FileText
+  Globe
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
-import { handleDownloadPdfForConsultation } from "./admin/konsultasi";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -44,18 +37,18 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
   return <IconComponent className={className} />;
 }
 
-const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
-
 const DEFAULT_HOMEPAGE_CONFIG = {
   siteName: "Sekolah Alam Al-Karim",
   logoText: "EduKonsul",
   logoImg: "",
-  navItems: [
-    { label: "Beranda", link: "/" },
-    { label: "Tentang", link: "#tentang" },
-    { label: "Konsultasi", link: "#jenjang" }
-  ],
   btnLoginText: "Login Admin",
+  
+  // Section Visibility flags
+  showHero: true,
+  showAdvantages: true,
+  showLevels: true,
+  showCta: true,
+  showFooter: true,
   
   heroBadge: "Konsultasi Pendidikan Anak",
   heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
@@ -165,14 +158,6 @@ const DEFAULT_HOMEPAGE_CONFIG = {
 export function Home() {
   const [config, setConfig] = useState(DEFAULT_HOMEPAGE_CONFIG);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeNav, setActiveNav] = useState("beranda");
-
-  // History Check Modal States
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [searchPhone, setSearchPhone] = useState("");
-  const [historyList, setHistoryList] = useState<any[]>([]);
-  const [searchingHistory, setSearchingHistory] = useState(false);
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadHomeConfig();
@@ -209,44 +194,14 @@ export function Home() {
     }
   };
 
-  // Search parent history consultations
-  const handleSearchHistory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchPhone.trim()) return;
-    setSearchingHistory(true);
-    setHistoryList([]);
-    try {
-      const cleanPhone = searchPhone.replace(/[^0-9]/g, "");
-      const { data, error } = await supabase
-        .from("consultations")
-        .select("*")
-        .or(`whatsapp_number.eq.${cleanPhone},whatsapp_number.eq.0${cleanPhone.slice(2)},whatsapp_number.eq.62${cleanPhone.slice(2)}`)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setHistoryList(data || []);
-      if (!data || data.length === 0) {
-        toast.info("Tidak ada riwayat konsultasi dengan nomor ini.");
-      }
-    } catch (e: any) {
-      toast.error("Gagal memuat riwayat: " + e.message);
-    } finally {
-      setSearchingHistory(false);
-    }
-  };
-
-  const handleDownloadReport = (row: any) => {
-    if (!downloadingId) {
-      handleDownloadPdfForConsultation(
-        row,
-        () => setDownloadingId(row.id),
-        () => setDownloadingId(null)
-      );
-    }
+  // Open global history check modal
+  const handleOpenHistoryModal = () => {
+    setMobileMenuOpen(false);
+    window.dispatchEvent(new Event("open-history-modal"));
   };
 
   return (
-    <div className="min-h-screen bg-background font-sans pb-[80px] sm:pb-0" style={{ backgroundColor: config.colors?.background }}>
+    <div className="min-h-screen bg-background font-sans" style={{ backgroundColor: config.colors?.background }}>
       {/* Inject Dynamic Colors */}
       <style>{`
         :root {
@@ -277,7 +232,7 @@ export function Home() {
                 {config.logoText ? config.logoText.charAt(0) : "E"}
               </div>
             )}
-            <div className="flex flex-col">
+            <div className="flex flex-col text-left">
               <span className="text-base font-bold leading-tight tracking-tight text-slate-800">
                 {config.logoText}
               </span>
@@ -303,7 +258,7 @@ export function Home() {
               </button>
             ))}
             <button
-              onClick={() => setHistoryOpen(true)}
+              onClick={handleOpenHistoryModal}
               className="text-sm font-semibold text-slate-600 transition hover:text-[var(--primary)] flex items-center gap-1"
             >
               <History className="h-4 w-4" /> Riwayat
@@ -346,7 +301,7 @@ export function Home() {
               </button>
             ))}
             <button
-              onClick={() => { setMobileMenuOpen(false); setHistoryOpen(true); }}
+              onClick={handleOpenHistoryModal}
               className="w-full text-left py-2 text-sm font-bold text-slate-700 hover:text-[var(--primary)] flex items-center gap-2"
             >
               <History className="h-4.5 w-4.5 text-emerald-600" /> Riwayat Konsultasi
@@ -364,342 +319,229 @@ export function Home() {
       </header>
 
       {/* 2. HERO SECTION */}
-      <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24 bg-gradient-to-b from-emerald-50/50 via-white to-transparent">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-12 md:grid-cols-12 md:items-center">
-            {/* Teks Hero */}
-            <div className="text-left md:col-span-7 space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800 shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
-                {config.heroBadge}
-              </span>
-              <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
-                {config.heroTitle}
-              </h1>
-              <p className="text-[15px] leading-relaxed text-slate-600 sm:text-lg">
-                {config.heroDesc}
-              </p>
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  onClick={() => handleScroll(config.heroBtn1Link)}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full btn-theme-primary px-7 text-sm font-bold shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {config.heroBtn1}
-                  <ArrowRight className="h-4.5 w-4.5" />
-                </button>
-                <button
-                  onClick={() => handleScroll(config.heroBtn2Link)}
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {config.heroBtn2}
-                </button>
+      {config.showHero !== false && (
+        <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24 bg-gradient-to-b from-emerald-50/50 via-white to-transparent animate-in fade-in duration-500">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="grid gap-12 md:grid-cols-12 md:items-center">
+              {/* Teks Hero */}
+              <div className="text-left md:col-span-7 space-y-6">
+                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-800 shadow-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+                  {config.heroBadge}
+                </span>
+                <h1 className="text-3xl font-extrabold leading-tight tracking-tight text-slate-900 sm:text-5xl">
+                  {config.heroTitle}
+                </h1>
+                <p className="text-[15px] leading-relaxed text-slate-600 sm:text-lg">
+                  {config.heroDesc}
+                </p>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    onClick={() => handleScroll(config.heroBtn1Link)}
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full btn-theme-primary px-7 text-sm font-bold shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {config.heroBtn1}
+                    <ArrowRight className="h-4.5 w-4.5" />
+                  </button>
+                  <button
+                    onClick={() => handleScroll(config.heroBtn2Link)}
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-7 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {config.heroBtn2}
+                  </button>
+                </div>
+              </div>
+
+              {/* Gambar Hero */}
+              <div className="relative md:col-span-5 flex justify-center">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full blur-3xl opacity-20 -z-10 animate-pulse" />
+                <img
+                  src={config.heroImg}
+                  alt="Konsultasi Anak"
+                  className="w-full max-w-[420px] rounded-3xl object-cover shadow-[0_20px_50px_-12px_rgba(4,120,87,0.25)] border-4 border-white"
+                />
               </div>
             </div>
-
-            {/* Gambar Hero */}
-            <div className="relative md:col-span-5 flex justify-center">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full blur-3xl opacity-20 -z-10 animate-pulse" />
-              <img
-                src={config.heroImg}
-                alt="Konsultasi Anak"
-                className="w-full max-w-[420px] rounded-3xl object-cover shadow-[0_20px_50px_-12px_rgba(4,120,87,0.25)] border-4 border-white"
-              />
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 3. SECTION KEUNGGULAN */}
-      <section id="keunggulan" className="py-16 md:py-24 border-t border-border/50">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 md:mb-16">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3.5xl">
-              {config.advantagesTitle}
-            </h2>
-            <p className="text-[15px] leading-relaxed text-slate-500">
-              {config.advantagesSub}
-            </p>
-          </div>
-
-          {/* Desktop Advantage Grid 3x2, Mobile 2 Columns */}
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
-            {config.advantages?.map((adv: any, idx: number) => (
-              <div
-                key={idx}
-                className="group flex flex-col rounded-2xl border border-slate-200/80 p-5 bg-card text-left transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
-                style={{ backgroundColor: config.colors?.card }}
-              >
-                <div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600 transition-transform group-hover:scale-110">
-                  <DynamicIcon name={adv.icon} className="h-6 w-6" />
-                </div>
-                <h3 className="mt-4 font-bold text-slate-800 text-sm sm:text-base">{adv.title}</h3>
-                {/* Mobile description max 2 lines */}
-                <p className="mt-2 text-xs sm:text-sm text-slate-500 line-clamp-2 md:line-clamp-none">
-                  {adv.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 4. PILIHAN JENJANG */}
-      <section id="jenjang" className="py-16 md:py-24 bg-slate-50/50 border-t border-border/50">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center space-y-3 mb-10 md:mb-14">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3.5xl">
-              {config.levelsTitle}
-            </h2>
-            <p className="text-sm text-slate-500">Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner.</p>
-          </div>
-
-          {/* Grid Layout: Desktop 3 Card, Mobile 3 Columns */}
-          <div className="grid grid-cols-3 gap-3 md:gap-6">
-            {config.levels?.filter((l: any) => l.active !== false).map((level: any) => (
-              <Link
-                key={level.id}
-                to="/formulir/$jenjang"
-                params={{ jenjang: level.id }}
-                className="group flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-card p-4 sm:p-6 text-left transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-300 hover:shadow-[0_15px_30px_-10px_rgba(4,120,87,0.15)]"
-                style={{ backgroundColor: config.colors?.card }}
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-115 transition">
-                      <DynamicIcon name={level.icon} className="h-5.5 w-5.5 sm:h-6 sm:w-6" />
-                    </div>
-                    <span className="hidden sm:inline-block rounded-full bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[10px] font-bold tracking-wider text-emerald-700 uppercase">
-                      {level.tag}
-                    </span>
-                  </div>
-                  <h3 className="mt-4 text-base sm:text-xl font-bold text-slate-800 tracking-tight">{level.name}</h3>
-                  <p className="mt-2 text-[11px] sm:text-sm text-slate-500 leading-relaxed line-clamp-3 sm:line-clamp-none">
-                    {level.desc}
-                  </p>
-                </div>
-                <div className="mt-5 flex items-center justify-between text-xs sm:text-sm font-bold text-emerald-700 group-hover:text-emerald-800 pt-2 border-t border-slate-100">
-                  <span>{level.btnText || "Mulai"}</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. CALL TO ACTION */}
-      <section className="mx-auto max-w-5xl px-4 py-8 md:py-12">
-        <div
-          className="rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-xl"
-          style={{ backgroundColor: config.ctaBg }}
-        >
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="relative z-10 space-y-5 max-w-2xl mx-auto">
-            <h2 className="text-2xl md:text-3.5xl font-extrabold leading-tight">{config.ctaTitle}</h2>
-            <p className="text-[15px] md:text-base text-emerald-50/90 leading-relaxed">{config.ctaDesc}</p>
-            <div className="pt-2">
-              <button
-                onClick={() => handleScroll(config.ctaBtnLink)}
-                className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-extrabold text-emerald-900 shadow-lg transition-transform hover:scale-105 active:scale-95"
-              >
-                {config.ctaBtn}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. FOOTER */}
-      <footer className="border-t border-border/60 bg-slate-900 text-slate-400 py-12 md:py-16" style={{ backgroundColor: config.colors?.footer }}>
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-8 md:grid-cols-4">
-            {/* Logo & School Name */}
-            <div className="space-y-4 md:col-span-2">
-              <div className="flex items-center gap-2.5">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-700 font-extrabold text-white text-base">
-                  {config.logoText?.charAt(0)}
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-base font-bold text-white leading-tight">{config.logoText}</span>
-                  <span className="text-xs text-slate-400">{config.footerSchool}</span>
-                </div>
-              </div>
-              <p className="text-xs leading-relaxed text-slate-400 max-w-sm">
-                Membimbing langkah anak menuju masa depan gemilang dengan pemahaman utuh karakter, minat, dan potensi tumbuh kembang.
+      {config.showAdvantages !== false && (
+        <section id="keunggulan" className="py-16 md:py-24 border-t border-border/50 animate-in slide-in-from-bottom duration-500">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 md:mb-16">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3.5xl">
+                {config.advantagesTitle}
+              </h2>
+              <p className="text-[15px] leading-relaxed text-slate-500">
+                {config.advantagesSub}
               </p>
             </div>
 
-            {/* Hubungi Kami */}
-            <div className="space-y-3 text-left">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Hubungi Kami</h4>
-              <ul className="space-y-2.5 text-xs">
-                <li className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>{config.footerAddress}</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="hover:text-white transition">
-                    {config.footerWa}
-                  </a>
-                </li>
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <a href={`mailto:${config.footerEmail}`} className="hover:text-white transition">
-                    {config.footerEmail}
-                  </a>
-                </li>
-              </ul>
+            {/* Desktop Advantage Grid 3x2, Mobile 2 Columns */}
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+              {config.advantages?.map((adv: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="group flex flex-col rounded-2xl border border-slate-200/80 p-5 bg-card text-left transition-all duration-300 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-lg"
+                  style={{ backgroundColor: config.colors?.card }}
+                >
+                  <div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600 transition-transform group-hover:scale-110">
+                    <DynamicIcon name={adv.icon} className="h-6 w-6" />
+                  </div>
+                  <h3 className="mt-4 font-bold text-slate-800 text-sm sm:text-base">{adv.title}</h3>
+                  <p className="mt-2 text-xs sm:text-sm text-slate-500 line-clamp-2 md:line-clamp-none">
+                    {adv.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 4. PILIHAN JENJANG */}
+      {config.showLevels !== false && (
+        <section id="jenjang" className="py-16 md:py-24 bg-slate-50/50 border-t border-border/50 animate-in slide-in-from-bottom duration-550">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="mx-auto max-w-3xl text-center space-y-3 mb-10 md:mb-14">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3.5xl">
+                {config.levelsTitle}
+              </h2>
+              <p className="text-sm text-slate-500">Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner.</p>
             </div>
 
-            {/* Tautan Resmi */}
-            <div className="space-y-3 text-left">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white">Sosial Media & Tautan</h4>
-              <ul className="space-y-2 text-xs">
-                {config.socialLinks?.map((soc: any, idx: number) => (
-                  <li key={idx}>
-                    <a href={soc.url} target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1.5">
-                      <Globe className="h-3.5 w-3.5 text-emerald-500" />
-                      {soc.platform}
+            {/* Grid Layout: Desktop 3 Card, Mobile 3 Columns */}
+            <div className="grid grid-cols-3 gap-3 md:gap-6">
+              {config.levels?.filter((l: any) => l.active !== false).map((level: any) => (
+                <Link
+                  key={level.id}
+                  to="/formulir/$jenjang"
+                  params={{ jenjang: level.id }}
+                  className="group flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-card p-4 sm:p-6 text-left transition-all duration-300 hover:-translate-y-1.5 hover:border-emerald-300 hover:shadow-[0_15px_30px_-10px_rgba(4,120,87,0.15)]"
+                  style={{ backgroundColor: config.colors?.card }}
+                >
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="grid h-10 w-10 sm:h-12 sm:w-12 place-items-center rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-115 transition">
+                        <DynamicIcon name={level.icon} className="h-5.5 w-5.5 sm:h-6 sm:w-6" />
+                      </div>
+                      <span className="hidden sm:inline-block rounded-full bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[10px] font-bold tracking-wider text-emerald-700 uppercase">
+                        {level.tag}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-base sm:text-xl font-bold text-slate-800 tracking-tight">{level.name}</h3>
+                    <p className="mt-2 text-[11px] sm:text-sm text-slate-500 leading-relaxed line-clamp-3 sm:line-clamp-none">
+                      {level.desc}
+                    </p>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between text-xs sm:text-sm font-bold text-emerald-700 group-hover:text-emerald-800 pt-2 border-t border-slate-100">
+                    <span>{level.btnText || "Mulai"}</span>
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 5. CALL TO ACTION */}
+      {config.showCta !== false && (
+        <section className="mx-auto max-w-5xl px-4 py-8 md:py-12 animate-in duration-600">
+          <div
+            className="rounded-3xl p-8 md:p-12 text-center text-white relative overflow-hidden shadow-xl"
+            style={{ backgroundColor: config.ctaBg }}
+          >
+            <div className="absolute inset-0 bg-black/10" />
+            <div className="relative z-10 space-y-5 max-w-2xl mx-auto">
+              <h2 className="text-2xl md:text-3.5xl font-extrabold leading-tight">{config.ctaTitle}</h2>
+              <p className="text-[15px] md:text-base text-emerald-50/90 leading-relaxed">{config.ctaDesc}</p>
+              <div className="pt-2">
+                <button
+                  onClick={() => handleScroll(config.ctaBtnLink)}
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-extrabold text-emerald-900 shadow-lg transition-transform hover:scale-105 active:scale-95"
+                >
+                  {config.ctaBtn}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 6. FOOTER */}
+      {config.showFooter !== false && (
+        <footer className="border-t border-border/60 bg-slate-900 text-slate-400 py-12 md:py-16" style={{ backgroundColor: config.colors?.footer }}>
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="grid gap-8 md:grid-cols-4">
+              {/* Logo & School Name */}
+              <div className="space-y-4 md:col-span-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-700 font-extrabold text-white text-base">
+                    {config.logoText?.charAt(0)}
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className="text-base font-bold text-white leading-tight">{config.logoText}</span>
+                    <span className="text-xs text-slate-400">{config.footerSchool}</span>
+                  </div>
+                </div>
+                <p className="text-xs leading-relaxed text-slate-400 max-w-sm">
+                  Membimbing langkah anak menuju masa depan gemilang dengan pemahaman utuh karakter, minat, dan potensi tumbuh kembang.
+                </p>
+              </div>
+
+              {/* Hubungi Kami */}
+              <div className="space-y-3 text-left">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">Hubungi Kami</h4>
+                <ul className="space-y-2.5 text-xs">
+                  <li className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span>{config.footerAddress}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="hover:text-white transition">
+                      {config.footerWa}
                     </a>
                   </li>
-                ))}
-                <li>
-                  <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1.5">
-                    <Globe className="h-3.5 w-3.5 text-emerald-500" />
-                    Website Sekolah
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
+                  <li className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <a href={`mailto:${config.footerEmail}`} className="hover:text-white transition">
+                      {config.footerEmail}
+                    </a>
+                  </li>
+                </ul>
+              </div>
 
-          <div className="mt-12 border-t border-slate-800 pt-6 text-center text-xs">
-            <p>{config.footerCopyright}</p>
-          </div>
-        </div>
-      </footer>
-
-      {/* 7. BOTTOM NAVIGATION MOBILE */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200/80 shadow-lg px-4 py-2 flex items-center justify-between sm:hidden" data-html2canvas-ignore="true">
-        <button
-          onClick={() => { setActiveNav("beranda"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${activeNav === "beranda" ? "text-emerald-700" : "text-slate-500"}`}
-        >
-          <HomeIcon className="h-5 w-5" />
-          <span>Beranda</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveNav("jenjang"); handleScroll("#jenjang"); }}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${activeNav === "jenjang" ? "text-emerald-700" : "text-slate-500"}`}
-        >
-          <Layers className="h-5 w-5" />
-          <span>Jenjang</span>
-        </button>
-
-        <Link
-          to="/formulir/tksd"
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-500"
-        >
-          <div className="p-2.5 rounded-full bg-emerald-600 text-white -mt-5 shadow-md">
-            <GraduationCap className="h-5 w-5" />
-          </div>
-          <span className="mt-0.5">Konsultasi</span>
-        </Link>
-
-        <button
-          onClick={() => { setActiveNav("riwayat"); setHistoryOpen(true); }}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${activeNav === "riwayat" ? "text-emerald-700" : "text-slate-500"}`}
-        >
-          <History className="h-5 w-5" />
-          <span>Riwayat</span>
-        </button>
-
-        <Link
-          to="/login"
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-500"
-        >
-          <User className="h-5 w-5" />
-          <span>Admin</span>
-        </Link>
-      </div>
-
-      {/* --- HISTORY MODAL POPUP --- */}
-      {historyOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <History className="h-5 w-5 text-emerald-600 animate-pulse" /> Cek Riwayat Konsultasi
-              </h3>
-              <button
-                onClick={() => { setHistoryOpen(false); setHistoryList([]); setSearchPhone(""); }}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
-              >
-                ✕
-              </button>
+              {/* Tautan Resmi */}
+              <div className="space-y-3 text-left">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white">Sosial Media & Tautan</h4>
+                <ul className="space-y-2 text-xs">
+                  {config.socialLinks?.map((soc: any, idx: number) => (
+                    <li key={idx}>
+                      <a href={soc.url} target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5 text-emerald-500" />
+                        {soc.platform}
+                      </a>
+                    </li>
+                  ))}
+                  <li>
+                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-emerald-500" />
+                      Website Sekolah
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <form onSubmit={handleSearchHistory} className="flex gap-2">
-              <input
-                type="tel"
-                placeholder="Masukkan No WhatsApp Orang Tua (misal: 081234567890)"
-                value={searchPhone}
-                onChange={(e) => setSearchPhone(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                required
-              />
-              <button
-                type="submit"
-                disabled={searchingHistory}
-                className="rounded-xl btn-theme-primary px-5 text-xs font-bold hover:opacity-95 disabled:opacity-60 flex items-center gap-1.5"
-              >
-                {searchingHistory ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cari"}
-              </button>
-            </form>
-
-            <div className="max-h-[300px] overflow-y-auto space-y-3 pr-1">
-              {searchingHistory ? (
-                <div className="py-10 text-center text-sm text-slate-500">Mencari riwayat konsultasi...</div>
-              ) : historyList.length > 0 ? (
-                historyList.map((row) => (
-                  <div key={row.id} className="rounded-xl border border-slate-100 p-4 bg-slate-50/50 space-y-2 flex items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <span className="inline-block rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
-                        Jenjang {(LEVEL_LABELS[row.level] || row.level).toUpperCase()}
-                      </span>
-                      <p className="text-sm font-bold text-slate-800">Anak: {row.child_name || "-"}</p>
-                      <p className="text-xs text-slate-400">
-                        {format(new Date(row.created_at), "dd MMMM yyyy, HH:mm", { locale: id })}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className="text-[11px] font-bold text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">{row.status}</span>
-                      <button
-                        onClick={() => handleDownloadReport(row)}
-                        disabled={downloadingId === row.id}
-                        className="inline-flex items-center gap-1 rounded bg-emerald-600 text-white px-2.5 py-1 text-xs font-bold hover:bg-emerald-700 disabled:opacity-60"
-                      >
-                        {downloadingId === row.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <FileText className="h-3.5 w-3.5" />
-                        )}
-                        <span>Laporan PDF</span>
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : searchPhone && !searchingHistory ? (
-                <div className="py-10 text-center text-xs text-slate-400">Tidak ada riwayat untuk nomor ini. Pastikan format nomor telepon sesuai kuesioner.</div>
-              ) : (
-                <div className="py-10 text-center text-xs text-slate-400">Silakan masukkan nomor WhatsApp untuk melihat riwayat konsultasi.</div>
-              )}
+            <div className="mt-12 border-t border-slate-800 pt-6 text-center text-xs">
+              <p>{config.footerCopyright}</p>
             </div>
           </div>
-        </div>
+        </footer>
       )}
     </div>
   );
