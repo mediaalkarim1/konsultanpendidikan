@@ -30,6 +30,7 @@ import { id } from "date-fns/locale";
 import html2pdf from "html2pdf.js";
 import { useAuth } from "@/lib/auth-context";
 import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow } from "@/actions/admin-actions";
+import { generateFallbackAnalysisResult } from "@/actions/ai-engine";
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,
@@ -670,24 +671,35 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
       const { data: notifLogs } = await supabase.from("notification_logs" as any).select("*").eq("consultation_id", consultId).order("created_at", { ascending: false });
 
       if (consultation && answers) {
+        const mappedAnswers = answers.map(a => ({
+          q: a.questions?.question_text || "Pertanyaan",
+          a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
+        }));
+
         setData({
           ...consultation,
-          answers: answers.map(a => ({
-            q: a.questions?.question_text || "Pertanyaan",
-            a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
-          })),
+          answers: mappedAnswers,
           logs: notifLogs || []
         });
 
-        const effectiveAnalysis = analysisData || {
-          summary: `Resume Konsultasi untuk ${consultation.child_name || "Anak"} (Jenjang ${(LEVEL_LABELS[consultation.level] || consultation.level).toUpperCase()}):\nOrang Tua: ${consultation.parent_name}. Data kuesioner telah diterima dan dianalisis.`,
-          analysis: (consultation as any).ai_result || "Analisis karakteristik dan kesiapan anak.",
-          strengths: "Daya tangkap cepat, komunikatif, antusias dalam aktivitas belajar.",
-          weaknesses: "Memerlukan bimbingan kedisiplinan dan rutinitas harian.",
-          potential: "Pengembangan minat kreatif dan pembelajaran berbasis proyek (project-based learning).",
-          risk: "Potensi kejenuhan jika metode pembelajaran bersifat monotun.",
-          education_recommendation: "Disarankan sekolah berbasis lingkungan/alam dan metode eksplorasi interaktif."
-        };
+        // Formatted answers text for narrative generator
+        const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, consultation.child_name || "-", consultation.level, answersFormatted);
+
+        let effectiveAnalysis = analysisData;
+
+        // If analysisData is missing or contains old static dummy text, replace with dynamic narrative
+        if (!effectiveAnalysis || (effectiveAnalysis.summary && effectiveAnalysis.summary.includes("Resume Konsultasi untuk Anak (Jenjang SMP):"))) {
+          effectiveAnalysis = {
+            summary: dynamicNarrative.summary,
+            analysis: (consultation as any).ai_result || dynamicNarrative.analysis,
+            strengths: dynamicNarrative.strengths,
+            weaknesses: dynamicNarrative.weaknesses,
+            potential: dynamicNarrative.potential,
+            risk: dynamicNarrative.risk,
+            education_recommendation: dynamicNarrative.education_recommendation
+          };
+        }
 
         setAnalysis(effectiveAnalysis);
         setEditForm({

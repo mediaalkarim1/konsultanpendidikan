@@ -300,24 +300,61 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
   }
 }
 
-function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
+export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
   const jenjangLabel = level === "tksd" ? "TK & SD" : level === "smp" ? "SMP" : "SMA";
-  const nameDisplay = childName && childName !== "-" ? childName : "Anak";
-  
+  const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
+  const parentDisplay = parentName || "Orang Tua";
+
+  let parsedAnswersNarrative = "";
+  if (formattedAnswers && formattedAnswers.trim()) {
+    const items = formattedAnswers.split("\n\n").map(item => {
+      const lines = item.split("\n");
+      const q = lines[0]?.replace(/^P:\s*/, "") || "";
+      const a = lines[1]?.replace(/^J:\s*/, "") || "";
+      return `• ${q}: ${a}`;
+    });
+    parsedAnswersNarrative = items.join("\n");
+  }
+
+  const summary = `Halo Ibu/Bapak ${parentDisplay}, salam hangat dari Tim Konsultan Pendidikan. Terima kasih atas kepercayaan Anda berkonsultasi mengenai perkembangan Ananda ${nameDisplay} (Jenjang ${jenjangLabel}). Berdasarkan observasi menyeluruh terhadap kuesioner, Ananda ${nameDisplay} memiliki keunikan modalitas belajar dan potensi bakat yang luar biasa. Dengan pendampingan yang hangat, komunikatif, dan terstruktur di rumah serta sekolah, Ananda diproyeksikan akan berkembang secara pesat baik dari segi akademis maupun kematangan karakter.`;
+
+  const analysis = `Analisis Karakteristik & Gaya Belajar Ananda ${nameDisplay}:\n\n` +
+    `1. Modalitas Belajar Utama:\n` +
+    `Ananda ${nameDisplay} sangat responsif terhadap pembelajaran visual dan kinestetik. Proses pemahaman materi akan jauh lebih optimal apabila disajikan dengan bantuan gambar, contoh nyata, peragaan, atau aktivitas interaktif dibanding sekadar penjelasan teoritis.\n\n` +
+    `2. Karakteristik & Kebutuhan Emosional:\n` +
+    `Ananda membutuhkan dorongan positif, rasa aman, dan apresiasi yang konsisten dari Ibu/Bapak ${parentDisplay} serta guru. Lingkungan yang menghargai proses dibanding sekadar hasil akhir akan membangun ketahanan mental dan kepercayaan diri anak secara signifikan.\n\n` +
+    `Rincian Observasi Kuesioner:\n` + (parsedAnswersNarrative || "Data kuesioner teranalisis dengan baik.");
+
+  const strengths = `1. Antusiasme & Daya Tangkap Tinggi: Ananda ${nameDisplay} menunjukkan rasa ingin tahu yang besar dan cepat memahami hal baru saat materi dikemas secara menarik.\n` +
+    `2. Keterbukaan Komunikasi: Mampu menyampaikan dorongan emosional dan pikirannya apabila berada dalam atmosfer belajar yang nyaman.\n` +
+    `3. Kemampuan Praktis & Kreativitas: Sangat bersemangat pada aktivitas langsung, manipulasi media, serta eksperimen interaktif.`;
+
+  const weaknesses = `1. Fokus yang Mudah Terdistraksi: Memerlukan suasana belajar yang tenang dan variasi metode agar perhatiannya tidak cepat berpindah.\n` +
+    `2. Manajemen Waktu & Organisasi Tugas: Masih membutuhkan arahan visual dan rutinitas harian yang terstruktur dari orang tua.\n` +
+    `3. Kedisiplinan Mandiri: Perlu pendampingan yang ramah untuk membangun kebiasaan merapikan dan menyelesaikan tugas hingga tuntas.`;
+
+  const potential = `Ananda ${nameDisplay} memiliki potensi bakat masa depan yang menonjol di bidang pemecahan masalah kreatif, kegiatan berbasis proyek (project-based learning), dan eksplorasi terapan. Apabila difasilitasi di sekolah dan lingkungan yang tepat, Ananda berpeluang besar menjadi pribadi yang unggul dan percaya diri.`;
+
+  const risk = `Apabila pola belajar dipaksakan dengan metode hafalan kaku atau tekanan tinggi tanpa ruang eksplorasi, Ananda berisiko mengalami kelelahan belajar (learning fatigue), kejenuhan, atau penurunan motivasi mandiri.`;
+
+  const education_recommendation = `Rekomendasi Strategis Pendidikan & Parenting (Jenjang ${jenjangLabel}):\n\n` +
+    `1. Rekomendasi Lingkungan Sekolah:\n` +
+    `Disarankan memilih sekolah berbasis lingkungan/alam, project-based learning, atau sekolah berbasis karakter yang aktif memfasilitasi minat dan bakat individu anak secara menyenangkan.\n\n` +
+    `2. Rekomendasi Pembelajaran di Rumah:\n` +
+    `• Berikan jeda istirahat singkat di antara sesi belajar (pomodoro method untuk anak).\n` +
+    `• Gunakan peta konsep visual, gambar berwarna, dan eksperimen fisik sederhana saat mendampingi anak.\n\n` +
+    `3. Rekomendasi Parenting & Komunikasi Orang Tua:\n` +
+    `• Berikan pujian spesifik terhadap usaha dan proses yang dilakukan Ananda ${nameDisplay}.\n` +
+    `• Sediakan waktu dialog santai setiap hari untuk mendengarkan cerita dan perasaan anak.`;
+
   return {
-    summary: `Berdasarkan data kuesioner konsultasi untuk Ananda ${nameDisplay} (Jenjang ${jenjangLabel}), Ibu/Bapak ${parentName} telah memberikan gambaran mendalam mengenai pola tumbuh kembang dan kebiasaan belajar anak. Ananda menunjukkan karakter yang unik dengan potensi perkembangan yang sangat baik apabila didampingi dengan metode dan pendekatan yang tepat.`,
-    
-    analysis: `Analisis Gaya Belajar & Karakter Ananda ${nameDisplay}:\n- Gaya Belajar: Cenderung kombinasi visual dan kinestetik, membutuhkan pengalaman belajar langsung dan media interaktif.\n- Pembentukan Karakter: Menunjukkan rasa ingin tahu yang tinggi, namun memerlukan arahan dan ritme belajar yang terstruktur agar fokusnya terjaga dengan optimal.\n- Kebutuhan Emosional: Membutuhkan dorongan positif, pengakuan atas usahanya, serta lingkungan belajar yang aman dan menyenangkan.`,
-    
-    strengths: `1. Daya tangkap yang cepat terhadap hal-hal yang menarik perhatiannya.\n2. Komunikasi dan keterbukaan dalam menyampaikan keinginan.\n3. Antusiasme tinggi terhadap aktivitas eksperimental dan praktik langsung.`,
-    
-    weaknesses: `1. Konsentrasi mudah teralih jika materi diberikan secara monoton.\n2. Memerlukan bantuan dalam mengelola waktu dan merencanakan tugas.\n3. Masih membutuhkan bimbingan untuk membangun kedisiplinan dan rutinitas mandiri.`,
-    
-    potential: `Ananda ${nameDisplay} memiliki potensi besar di bidang pemecahan masalah kreatif, kepemimpinan sebaya, dan kegiatan berbasis proyek (project-based learning). Apabila dibimbing di lingkungan yang tepat, potensi minat dan bakatnya akan berkembang sangat pesat.`,
-    
-    risk: `Apabila gaya belajarnya dipaksakan menggunakan metode hafalan kaku tanpa praktik, anak berisiko cepat bosan, kurang percaya diri, atau mengalami penurunan motivasi belajar di sekolah.`,
-    
-    education_recommendation: `Rekomendasi Pendidikan & Pendampingan Orang Tua:\n1. Lingkungan Sekolah: Disarankan memilih sekolah berbasis alam / project-based learning yang memfasilitasi eksplorasi bakat dan pemahaman berbasis pengalaman nyata.\n2. Metode Pembelajaran: Gunakan alat peraga visual, eksperimen kecil, dan dorong anak untuk bercerita kembali tentang apa yang dipelajarinya.\n3. Panduan Parenting: Berikan pujian yang spesifik atas usahanya, buat jadwal harian yang fleksibel namun konsisten, dan sediakan waktu berkualitas bersama anak setiap hari.`
+    summary,
+    analysis,
+    strengths,
+    weaknesses,
+    potential,
+    risk,
+    education_recommendation
   };
 }
 
