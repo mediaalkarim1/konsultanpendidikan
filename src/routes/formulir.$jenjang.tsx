@@ -179,12 +179,10 @@ function FormulirPage() {
         if (aErr) throw aErr;
       }
       
-      // Trigger AI and WA processing on server-side
-      try {
-        await processConsultation({ data: consultation.id });
-      } catch (procErr) {
+      // Trigger AI and WA processing on server-side (fire-and-forget)
+      processConsultation({ data: consultation.id }).catch((procErr) => {
         console.error("Process consultation error:", procErr);
-      }
+      });
 
       toast.success("Konsultasi berhasil dikirim");
       navigate({ to: "/sukses" });
