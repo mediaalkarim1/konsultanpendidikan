@@ -1084,3 +1084,32 @@ function PengaturanPage() {
     </div>
   );
 }
+
+function SimResultCard({ title, target, result }: { title: string; target: string; result: { success: boolean; message: string; error?: string; responsePayload?: any } }) {
+  if (!target) {
+    return (
+      <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">
+        <div className="font-semibold text-sm text-foreground mb-1">{title}</div>
+        Nomor tidak diisi — dilewati.
+      </div>
+    );
+  }
+  return (
+    <div className={`rounded-lg border p-4 text-xs ${result.success ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-sm text-foreground">{title} → {target}</div>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${result.success ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+          {result.success ? "TERKIRIM" : "GAGAL"}
+        </span>
+      </div>
+      {result.error && <div className="mb-2 text-red-700"><b>Error:</b> {result.error}</div>}
+      <details className="mt-1">
+        <summary className="cursor-pointer text-muted-foreground">Lihat pesan & payload</summary>
+        <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{result.message}</pre>
+        {result.responsePayload && (
+          <pre className="mt-2 whitespace-pre-wrap break-words rounded bg-white/70 p-2 font-mono text-[10px] leading-snug">{JSON.stringify(result.responsePayload, null, 2)}</pre>
+        )}
+      </details>
+    </div>
+  );
+}
