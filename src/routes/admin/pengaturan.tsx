@@ -25,8 +25,8 @@ export const Route = createFileRoute("/admin/pengaturan")({
 });
 
 const SUGGESTED_MODELS: Record<string, string[]> = {
-  lovable: ["google/gemini-2.5-flash", "openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet"],
-  gemini: ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+  lovable: ["google/gemini-3.5-flash", "google/gemini-3.1-flash-lite", "google/gemini-2.5-flash", "google/gemini-2.5-pro", "google/gemini-3.1-pro-preview", "openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet"],
+  gemini: ["google/gemini-3.5-flash", "google/gemini-3.1-flash-lite", "google/gemini-2.5-flash", "google/gemini-2.5-pro", "google/gemini-3.1-pro-preview", "gemini-1.5-pro", "gemini-1.5-flash"],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4.5-preview", "gpt-4-turbo"],
   claude: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
   openrouter: ["auto", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-r1", "google/gemini-pro-1.5"],

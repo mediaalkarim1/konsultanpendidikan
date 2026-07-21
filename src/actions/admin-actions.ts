@@ -140,13 +140,17 @@ export const getMultiPromptsAction = createServerFn({ method: "POST" })
           system_prompt: val.system_prompt || val.prompt || "",
           analysis_prompt: val.analysis_prompt || val.prompt || "",
           summary_prompt: val.summary_prompt || val.prompt || "",
-          recommendation_prompt: val.recommendation_prompt || val.prompt || ""
+          recommendation_prompt: val.recommendation_prompt || val.prompt || "",
+          selected_model: val.selected_model || "google/gemini-3.5-flash"
         };
       }
 
       // 2. Fallback: Try fetching from ai_prompts table if available
       const { data } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
-      return data || null;
+      if (data) {
+        return { ...data, selected_model: (data as any).selected_model || "google/gemini-3.5-flash" };
+      }
+      return null;
     } catch (e) {
       console.error("getMultiPromptsAction exception:", e);
       return null;
@@ -159,12 +163,15 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
     const supabaseAdmin = getAdminSupabase();
     const { prompts, email } = ctx.data;
 
+    const selectedModel = prompts.selected_model || "google/gemini-3.5-flash";
+
     const settingPayload = {
       id: prompts.id || "unified-prompt",
       system_prompt: prompts.system_prompt,
       analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
       summary_prompt: prompts.summary_prompt || prompts.system_prompt,
       recommendation_prompt: prompts.recommendation_prompt || prompts.system_prompt,
+      selected_model: selectedModel,
       updated_at: new Date().toISOString()
     };
 
@@ -179,6 +186,11 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
     if (setErr) {
       console.error("Save prompt to settings error:", setErr);
     }
+
+    // Update default AI Provider model in ai_providers table if existing
+    try {
+      await supabaseAdmin.from("ai_providers").update({ model: selectedModel }).eq("is_default", true);
+    } catch (_) {}
 
     // 2. Try saving to ai_prompts table if it exists
     try {
