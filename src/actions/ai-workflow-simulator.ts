@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { runAiEngineAnalysis } from "./ai-engine";
 import { renderWaTemplate } from "./wa-template-engine";
+import type { WaProviderConfig } from "./whatsapp-client";
 
 function getAdminSupabase() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
