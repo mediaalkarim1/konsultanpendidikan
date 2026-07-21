@@ -87,6 +87,7 @@ export const processConsultation = createServerFn({ method: "POST" })
       
       const templateData: WaTemplateData = {
         nama: consultation.parent_name,
+        nama_anak: consultation.child_name || "-",
         nomor: consultation.whatsapp_number,
         jenjang: consultation.level.toUpperCase(),
         tanggal: dateStr,
@@ -94,7 +95,7 @@ export const processConsultation = createServerFn({ method: "POST" })
         id_konsultasi: consultationId
       };
 
-      const defaultAdminTpl = "Ada konsultasi baru yang masuk.\n\nNama: {{nama}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
+      const defaultAdminTpl = "Ada konsultasi baru yang masuk.\n\nNama Orang Tua: {{nama}}\nNama Anak: {{nama_anak}}\nNomor HP: {{nomor}}\nJenjang: {{jenjang}}\nTanggal: {{tanggal}}\n\nSilakan login ke Dashboard Admin untuk melihat detail konsultasi.";
       const defaultParticipantTpl = "Terima kasih telah mengirim konsultasi di EduKonsul.\n\nData Anda telah kami terima.\n\nSaat ini sistem sedang melakukan analisis.\n\nTim kami akan menghubungi Anda apabila diperlukan.\n\nTerima kasih.";
 
       const adminTplContent = waTemplates?.find((t: any) => t.template_key === "admin_notification")?.content || defaultAdminTpl;
@@ -150,6 +151,7 @@ export const processConsultation = createServerFn({ method: "POST" })
       // 6. Execute AI Engine Analysis
       let aiResult = await runAiEngineAnalysis(
         consultation.parent_name,
+        consultation.child_name || "-",
         consultation.level,
         consultation.whatsapp_number,
         formattedAnswers
@@ -166,6 +168,7 @@ export const processConsultation = createServerFn({ method: "POST" })
           
           aiResult = await runAiEngineAnalysis(
             consultation.parent_name,
+            consultation.child_name || "-",
             consultation.level,
             consultation.whatsapp_number,
             formattedAnswers

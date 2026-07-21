@@ -17,6 +17,7 @@ type Consultation = {
   id: string;
   created_at: string;
   parent_name: string;
+  child_name?: string | null;
   whatsapp_number: string;
   level: string;
   status: string;
@@ -82,7 +83,7 @@ function KonsultasiPage() {
     let query = supabase.from("consultations").select("*", { count: "exact" });
 
     if (debouncedSearch) {
-      query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+      query = query.or(`parent_name.ilike.%${debouncedSearch}%,child_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
     }
     if (statusFilter) query = query.eq("status", statusFilter);
     if (levelFilter) query = query.eq("level", levelFilter as "tksd" | "smp" | "sma");
@@ -177,7 +178,7 @@ function KonsultasiPage() {
             <thead className="border-b border-border bg-muted/50">
               <tr>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Nama Orang Tua</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Orang Tua & Anak</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">WhatsApp</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Jenjang</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -204,7 +205,12 @@ function KonsultasiPage() {
                       <td className="whitespace-nowrap px-4 py-3">
                         {format(new Date(row.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
                       </td>
-                      <td className="px-4 py-3 font-medium">{row.parent_name}</td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-foreground">{row.parent_name}</div>
+                        {row.child_name && (
+                          <div className="text-xs text-brand font-medium">Anak: {row.child_name}</div>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{row.whatsapp_number}</td>
                       <td className="px-4 py-3">{LEVEL_LABELS[row.level] || row.level}</td>
                       <td className="px-4 py-3">
@@ -495,10 +501,14 @@ ${analysis?.education_recommendation || "-"}
             )}
 
             {/* Info Peserta */}
-            <div className="grid gap-4 rounded-xl border p-4 bg-muted/20 md:grid-cols-3 print:border-gray-300 print:bg-transparent">
+            <div className="grid gap-4 rounded-xl border p-4 bg-muted/20 md:grid-cols-4 print:border-gray-300 print:bg-transparent">
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Nama Orang Tua</p>
                 <p className="font-semibold text-sm">{data.parent_name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Nama Anak</p>
+                <p className="font-semibold text-sm text-brand">{data.child_name || "-"}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground">Nomor WhatsApp</p>

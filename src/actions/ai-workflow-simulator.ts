@@ -111,7 +111,8 @@ export const simulateAiWorkflowAction = createServerFn({ method: "POST" })
     try {
       const aiRes = await runAiEngineAnalysis(
         "Orang Tua Simulasi",
-        "TK & SD",
+        "Anak Simulasi",
+        "tksd",
         "081234567890",
         "P: Bagaimana gaya belajar anak?\nJ: Anak lebih cepat paham dengan media bergambar dan praktik langsung."
       );

@@ -50,7 +50,8 @@ export const Route = createFileRoute("/formulir/$jenjang")({
 });
 
 const identitySchema = z.object({
-  parent_name: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),
+  parent_name: z.string().trim().min(2, "Nama orang tua minimal 2 karakter").max(100),
+  child_name: z.string().trim().min(2, "Nama anak minimal 2 karakter").max(100),
   whatsapp_number: z
     .string()
     .trim()
@@ -68,6 +69,7 @@ function FormulirPage() {
   const [submitting, setSubmitting] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [parentName, setParentName] = useState("");
+  const [childName, setChildName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -121,13 +123,13 @@ function FormulirPage() {
   const totalSteps = questions.length + 1; // +1 for identity
   const answeredCount = useMemo(() => {
     let n = 0;
-    if (parentName.trim() && whatsapp.trim()) n = 1;
+    if (parentName.trim() && childName.trim() && whatsapp.trim()) n = 1;
     for (const q of questions) {
       const v = answers[q.id];
       if (Array.isArray(v) ? v.length > 0 : (v ?? "").trim() !== "") n++;
     }
     return n;
-  }, [answers, questions, parentName, whatsapp]);
+  }, [answers, questions, parentName, childName, whatsapp]);
   const progress = Math.round((answeredCount / totalSteps) * 100);
 
   function setAnswer(qid: string, v: string | string[]) {
@@ -137,7 +139,7 @@ function FormulirPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const idParse = identitySchema.safeParse({ parent_name: parentName, whatsapp_number: whatsapp });
+    const idParse = identitySchema.safeParse({ parent_name: parentName, child_name: childName, whatsapp_number: whatsapp });
     const newErrors: Record<string, string> = {};
     if (!idParse.success) {
       for (const issue of idParse.error.issues) {
@@ -162,6 +164,7 @@ function FormulirPage() {
         .from("consultations")
         .insert({
           parent_name: parentName.trim(),
+          child_name: childName.trim(),
           whatsapp_number: whatsapp.trim(),
           level: jenjang as "tksd" | "smp" | "sma",
         })
@@ -260,9 +263,9 @@ function FormulirPage() {
 
             {/* Identity card */}
             <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-foreground">Identitas Orang Tua</h2>
+              <h2 className="text-lg font-bold text-foreground">Identitas Orang Tua & Anak</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Data ini akan digunakan oleh Tim Konsultan untuk menghubungi Anda.
+                Data ini akan digunakan oleh Tim Konsultan untuk menghubungi Anda dan menyusun laporan potensi anak.
               </p>
               <div className="mt-5 space-y-4">
                 <Field label="Nama Orang Tua" required error={errors.parent_name}>
@@ -273,6 +276,16 @@ function FormulirPage() {
                     placeholder="Contoh: Budi Santoso"
                     className={inputClass(!!errors.parent_name)}
                     autoComplete="name"
+                  />
+                </Field>
+                <Field label="Nama Anak (Calon Siswa)" required error={errors.child_name}>
+                  <input
+                    type="text"
+                    value={childName}
+                    onChange={(e) => setChildName(e.target.value)}
+                    placeholder="Contoh: Ananda Ali"
+                    className={inputClass(!!errors.child_name)}
+                    autoComplete="off"
                   />
                 </Field>
                 <Field label="Nomor WhatsApp" required error={errors.whatsapp_number}>

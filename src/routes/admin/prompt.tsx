@@ -107,7 +107,7 @@ export function PromptAIPage() {
           <div>
             <p className="font-semibold">Variabel Dinamis yang Tersedia:</p>
             <p className="text-xs mt-1">
-              Gunakan <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium">{"{{nama_orang_tua}}"}</code>, <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium font-medium">{"{{jenjang}}"}</code>, dan <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium">{"{{jawaban_lengkap}}"}</code> di dalam instruksi prompt.
+              Gunakan <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium">{"{{nama_orang_tua}}"}</code>, <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium">{"{{nama_anak}}"}</code>, <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium font-medium">{"{{jenjang}}"}</code>, dan <code className="bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono font-medium">{"{{jawaban_lengkap}}"}</code> di dalam instruksi prompt.
             </p>
           </div>
         </div>

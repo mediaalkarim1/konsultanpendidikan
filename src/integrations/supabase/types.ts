@@ -58,6 +58,7 @@ export type Database = {
       }
       consultations: {
         Row: {
+          child_name: string | null
           created_at: string
           id: string
           level: Database["public"]["Enums"]["education_level"]
@@ -66,6 +67,7 @@ export type Database = {
           whatsapp_number: string
         }
         Insert: {
+          child_name?: string | null
           created_at?: string
           id?: string
           level: Database["public"]["Enums"]["education_level"]
@@ -74,6 +76,7 @@ export type Database = {
           whatsapp_number: string
         }
         Update: {
+          child_name?: string | null
           created_at?: string
           id?: string
           level?: Database["public"]["Enums"]["education_level"]
