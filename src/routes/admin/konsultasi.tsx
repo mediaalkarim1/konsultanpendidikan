@@ -64,9 +64,18 @@ const STATUS_OPTIONS = [
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
-export async function handleDownloadPdfForConsultation(item: Consultation) {
+export async function handleDownloadPdfForConsultation(
+  item: Consultation,
+  onStart?: () => void,
+  onFinish?: () => void
+) {
+  let tempDiv: HTMLDivElement | null = null;
   try {
+    if (onStart) onStart();
     toast.info(`Menyiapkan Dokumen Laporan PDF Resmi untuk ${item.parent_name}...`);
+
+    // Yield execution to main thread so UI updates button spinner immediately
+    await new Promise((resolve) => setTimeout(resolve, 80));
 
     const { data: answers } = await supabase
       .from("consultation_answers")
@@ -98,12 +107,17 @@ export async function handleDownloadPdfForConsultation(item: Consultation) {
     const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
     const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
 
-    const tempDiv = document.createElement("div");
+    // Create off-screen temp container to prevent viewport reflows & freeze
+    tempDiv = document.createElement("div");
+    tempDiv.style.position = "absolute";
+    tempDiv.style.left = "-9999px";
+    tempDiv.style.top = "-9999px";
+    tempDiv.style.width = "750px";
     tempDiv.style.padding = "32px";
-    tempDiv.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
+    tempDiv.style.fontFamily = "'Inter', 'Segoe UI', system-ui, sans-serif";
     tempDiv.style.color = "#0f172a";
     tempDiv.style.backgroundColor = "#ffffff";
-    tempDiv.style.width = "750px";
+    tempDiv.style.boxSizing = "border-box";
 
     tempDiv.innerHTML = `
       <div style="border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
@@ -153,20 +167,32 @@ ${narrativeText}
 
     document.body.appendChild(tempDiv);
 
+    // Yield to layout cycle before running html2canvas
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
     const opt = {
       margin: 0.5,
       filename: `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2 },
+      image: { type: 'jpeg' as const, quality: 0.95 },
+      html2canvas: { scale: 1.5, useCORS: true, logging: false },
       jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
     };
 
-    await html2pdf().set(opt).from(tempDiv).save();
-    document.body.removeChild(tempDiv);
-    toast.success("Laporan PDF berhasil diunduh!");
+    const pdfPromise = html2pdf().set(opt).from(tempDiv).save();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout melebih waktu tunggu")), 15000)
+    );
+
+    await Promise.race([pdfPromise, timeoutPromise]);
+    toast.success("Dokumen PDF berhasil diunduh!");
   } catch (err: any) {
     console.error("PDF Download error:", err);
-    toast.error("Gagal mendownload PDF: " + err.message);
+    toast.error("Gagal membuat PDF. Silakan coba lagi.");
+  } finally {
+    if (tempDiv && tempDiv.parentNode) {
+      tempDiv.parentNode.removeChild(tempDiv);
+    }
+    if (onFinish) onFinish();
   }
 }
 
@@ -199,6 +225,7 @@ function KonsultasiPage() {
   // Dialog state
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -380,112 +407,6 @@ function KonsultasiPage() {
       toast.success(`Berhasil mendownload ${exportData.length} data konsultasi (Excel/CSV)`);
     } catch (e: any) {
       toast.error("Gagal mendownload Excel: " + e.message);
-    }
-  }
-
-  async function handleDownloadPdfForConsultation(item: Consultation) {
-    try {
-      toast.info(`Menyiapkan Dokumen Laporan PDF Resmi untuk ${item.parent_name}...`);
-
-      const { data: answers } = await supabase
-        .from("consultation_answers")
-        .select("*, questions(question_text)")
-        .eq("consultation_id", item.id);
-
-      const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
-      let optionsMap: Record<string, string> = {};
-      if (allOptionIds.length > 0) {
-        const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
-        if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
-      }
-
-      const { data: analysisData } = await (supabase as any)
-        .from("consultation_analysis")
-        .select("*")
-        .eq("consultation_id", item.id)
-        .maybeSingle();
-
-      const mappedAnswers = (answers || []).map(a => ({
-        q: a.questions?.question_text || "Pertanyaan",
-        a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
-      }));
-
-      const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
-      const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
-
-      const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
-      const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
-      const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
-
-      const tempDiv = document.createElement("div");
-      tempDiv.style.padding = "32px";
-      tempDiv.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
-      tempDiv.style.color = "#0f172a";
-      tempDiv.style.backgroundColor = "#ffffff";
-      tempDiv.style.width = "750px";
-
-      tempDiv.innerHTML = `
-        <div style="border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h1 style="font-size: 20px; font-weight: 800; color: #047857; margin: 0; letter-spacing: -0.02em;">SEKOLAH ALAM AL-KARIM — EDUKONSUL</h1>
-            <p style="font-size: 13px; font-weight: 500; color: #475569; margin: 4px 0 0 0;">Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak</p>
-          </div>
-          <div style="text-align: right;">
-            <span style="display: inline-block; background-color: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; border: 1px solid #a7f3d0;">JENJANG ${levelLabel}</span>
-            <p style="font-size: 11px; color: #64748b; margin: 6px 0 0 0; font-weight: 600;">Ref ID: #${item.id.substring(0, 8)}</p>
-          </div>
-        </div>
-
-        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;">
-          <div>
-            <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ORANG TUA</span>
-            <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Orang Tua:</p>
-            <p style="margin: 0; font-weight: 700; color: #0f172a; font-size: 14px;">${item.parent_name}</p>
-            <p style="margin: 6px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">WhatsApp: ${item.whatsapp_number}</p>
-          </div>
-          <div>
-            <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ANAK & EVALUASI</span>
-            <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Anak:</p>
-            <p style="margin: 0; font-weight: 700; color: #047857; font-size: 14px;">${item.child_name || "-"}</p>
-            <p style="margin: 6px 0 0 0; font-size: 12px; color: #475569;">Tanggal: ${dateStr}</p>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 28px;">
-          <h3 style="font-size: 14px; font-weight: 800; color: #047857; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px; letter-spacing: 0.02em;">LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN</h3>
-          <div style="font-size: 13px; line-height: 1.8; color: #334155; text-align: justify; white-space: pre-wrap; font-family: inherit;">
-${narrativeText}
-          </div>
-        </div>
-
-        <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #64748b;">
-          <div>
-            <p style="margin: 0; font-weight: 600; color: #334155;">Dokumen Laporan Resmi EduKonsul</p>
-            <p style="margin: 2px 0 0 0;">Sekolah Alam Al-Karim • Diterbitkan pada ${dateStr}</p>
-          </div>
-          <div style="text-align: center; width: 200px;">
-            <p style="margin: 0 0 45px 0; font-weight: 700; color: #047857;">Tim Konsultan Pendidikan</p>
-            <p style="margin: 0; font-weight: 800; color: #0f172a; border-top: 1px solid #94a3b8; padding-top: 4px;">Sekolah Alam Al-Karim</p>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(tempDiv);
-
-      const opt = {
-        margin: 0.5,
-        filename: `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
-      };
-
-      await html2pdf().set(opt).from(tempDiv).save();
-      document.body.removeChild(tempDiv);
-      toast.success("Laporan PDF berhasil diunduh!");
-    } catch (err: any) {
-      console.error("PDF Download error:", err);
-      toast.error("Gagal mendownload PDF: " + err.message);
     }
   }
 
@@ -702,12 +623,30 @@ ${narrativeText}
                           </button>
 
                           <button
-                            onClick={() => handleDownloadPdfForConsultation(row)}
-                            className="inline-flex items-center gap-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-emerald-100"
+                            onClick={() => {
+                              if (!downloadingPdfId) {
+                                handleDownloadPdfForConsultation(
+                                  row,
+                                  () => setDownloadingPdfId(row.id),
+                                  () => setDownloadingPdfId(null)
+                                );
+                              }
+                            }}
+                            disabled={downloadingPdfId === row.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-emerald-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                             title="Download Laporan PDF Resmi"
                           >
-                            <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                            Download PDF
+                            {downloadingPdfId === row.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-600 shrink-0" />
+                                <span>Membuat PDF...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                <span>Download PDF</span>
+                              </>
+                            )}
                           </button>
 
                           <button
@@ -769,6 +708,7 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
   const [regenerating, setRegenerating] = useState(false);
   const [editingAnalysis, setEditingAnalysis] = useState(false);
   const [savingAnalysis, setSavingAnalysis] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // Edit fields
   const [editForm, setEditForm] = useState({
@@ -910,8 +850,12 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
   };
   
   const handleDownloadPDF = () => {
-    if (data) {
-      handleDownloadPdfForConsultation(data);
+    if (data && !downloadingPdf) {
+      handleDownloadPdfForConsultation(
+        data,
+        () => setDownloadingPdf(true),
+        () => setDownloadingPdf(false)
+      );
     }
   };
 
@@ -1191,8 +1135,22 @@ ${analysis?.education_recommendation || "-"}
                 <button onClick={handlePrint} className="flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium hover:bg-muted">
                   <Printer className="h-4 w-4" /> Cetak PDF
                 </button>
-                <button onClick={handleDownloadPDF} className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90">
-                  <Download className="h-4 w-4" /> Download PDF
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloadingPdf}
+                  className="flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                >
+                  {downloadingPdf ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                      <span>Membuat PDF...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 shrink-0" />
+                      <span>Download PDF</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
