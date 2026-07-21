@@ -22,7 +22,7 @@ const menuItems = [
   { name: "Dashboard", to: "/admin", icon: LayoutGrid },
   { name: "Data Konsultasi", to: "/admin/konsultasi", icon: MessageSquareText },
   { name: "Database Orang Tua", to: "/admin/konsultasi", icon: Database },
-  { name: "Alur Sistem & Integrasi", to: "/admin/pengaturan", icon: Workflow },
+  { name: "Alur Sistem & Integrasi", to: "/admin/alur-sistem", icon: Workflow },
   { name: "Kelola Pertanyaan", to: "/admin/pertanyaan", icon: ListCheck },
   { name: "Prompt AI", to: "/admin/prompt", icon: Sparkles },
   { name: "Pengaturan", to: "/admin/pengaturan", icon: Settings },

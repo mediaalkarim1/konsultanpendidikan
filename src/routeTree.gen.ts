@@ -21,6 +21,7 @@ import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
 import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
 import { Route as AdminLogAktivitasRouteImport } from './routes/admin/log-aktivitas'
 import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
+import { Route as AdminAlurSistemRouteImport } from './routes/admin/alur-sistem'
 
 const SuksesRoute = SuksesRouteImport.update({
   id: '/sukses',
@@ -82,6 +83,11 @@ const AdminKonsultasiRoute = AdminKonsultasiRouteImport.update({
   path: '/konsultasi',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminAlurSistemRoute = AdminAlurSistemRouteImport.update({
+  id: '/alur-sistem',
+  path: '/alur-sistem',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/prompt': typeof AdminPromptRoute
   '/admin/testing': typeof AdminTestingRoute
+  '/admin/alur-sistem': typeof AdminAlurSistemRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/admin/pertanyaan': typeof AdminPertanyaanRoute
   '/admin/prompt': typeof AdminPromptRoute
   '/admin/testing': typeof AdminTestingRoute
+  '/admin/alur-sistem': typeof AdminAlurSistemRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -263,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKonsultasiRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/alur-sistem': {
+      id: '/admin/alur-sistem'
+      path: '/alur-sistem'
+      fullPath: '/admin/alur-sistem'
+      preLoaderRoute: typeof AdminAlurSistemRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
@@ -273,6 +288,7 @@ interface AdminRouteRouteChildren {
   AdminPertanyaanRoute: typeof AdminPertanyaanRoute
   AdminPromptRoute: typeof AdminPromptRoute
   AdminTestingRoute: typeof AdminTestingRoute
+  AdminAlurSistemRoute: typeof AdminAlurSistemRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -283,6 +299,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminPertanyaanRoute: AdminPertanyaanRoute,
   AdminPromptRoute: AdminPromptRoute,
   AdminTestingRoute: AdminTestingRoute,
+  AdminAlurSistemRoute: AdminAlurSistemRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
