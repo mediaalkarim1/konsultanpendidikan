@@ -24,7 +24,9 @@ import {
   getWaTemplatesAction,
   saveWaTemplatesAction,
   getAiWorkflowConfigAction,
-  saveAiWorkflowConfigAction
+  saveAiWorkflowConfigAction,
+  getWaProviderConfigAction,
+  saveWaProviderConfigAction
 } from "@/actions/admin-actions";
 import { submitConsultationAction } from "@/actions/process-consultation";
 import { simulateWaSend } from "@/actions/simulate-wa";
@@ -70,6 +72,15 @@ export function AlurSistemPage() {
   const [providers, setProviders] = useState<any[]>(DEFAULT_AI_PROVIDERS);
   const [selectedProvider, setSelectedProvider] = useState<any | null>(DEFAULT_AI_PROVIDERS[0]);
 
+  // WhatsApp Gateway Provider State
+  const [waGateway, setWaGateway] = useState({
+    provider: "fonnte",
+    api_url: "https://api.fonnte.com/send",
+    api_key: "",
+    sender_phone: ""
+  });
+  const [savingWaGateway, setSavingWaGateway] = useState(false);
+
   // 3. WA Templates State
   const [waAdminTemplate, setWaAdminTemplate] = useState(DEFAULT_ADMIN_WA_TEMPLATE);
   const [waParticipantTemplate, setWaParticipantTemplate] = useState(DEFAULT_PARTICIPANT_WA_TEMPLATE);
@@ -93,12 +104,16 @@ export function AlurSistemPage() {
       const wf = await getAiWorkflowConfigAction();
       if (wf) setWfConfig(wf);
 
-      // Load Providers
+      // Load AI Providers
       const provs = await getAiProvidersAction();
       if (provs && provs.length > 0) {
         setProviders(provs);
         setSelectedProvider(provs.find((p: any) => p.is_default) || provs[0]);
       }
+
+      // Load WA Gateway Provider Config
+      const waProv = await getWaProviderConfigAction();
+      if (waProv) setWaGateway((prev) => ({ ...prev, ...waProv }));
 
       // Load WA Templates
       const templates = await getWaTemplatesAction();
@@ -115,6 +130,22 @@ export function AlurSistemPage() {
       setLoading(false);
     }
   }
+
+  // Save WA Gateway Provider Config
+  const handleSaveWaGateway = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingWaGateway(true);
+    try {
+      const res = await saveWaProviderConfigAction({
+        data: { config: waGateway, email: userEmail || "admin" }
+      });
+      if (res.success) toast.success("Konfigurasi WhatsApp Gateway Provider berhasil disimpan");
+    } catch (e: any) {
+      toast.error("Gagal menyimpan Provider WhatsApp: " + e.message);
+    } finally {
+      setSavingWaGateway(false);
+    }
+  };
 
   // Save Workflow Config
   const handleSaveWorkflow = async () => {
@@ -375,10 +406,11 @@ export function AlurSistemPage() {
         </div>
       )}
 
-      {/* TAB 2: PROVIDER & MODEL AI */}
+      {/* TAB 2: PROVIDER & MODEL AI & WHATSAPP */}
       {activeTab === "ai" && (
-        <form onSubmit={handleSaveProvider} className="space-y-6">
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+        <div className="space-y-6">
+          {/* Card 1: Provider AI & Model */}
+          <form onSubmit={handleSaveProvider} className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
             <h2 className="text-base font-bold text-brand border-b pb-2 flex items-center gap-2">
               <Sparkles className="h-5 w-5" /> Pengaturan Provider & Model AI Gemini
             </h2>
@@ -407,7 +439,7 @@ export function AlurSistemPage() {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    API Key Provider
+                    API Key Provider AI
                   </label>
                   <input
                     type="password"
@@ -445,8 +477,97 @@ export function AlurSistemPage() {
                 Simpan Provider & Model AI
               </button>
             </div>
-          </div>
-        </form>
+          </form>
+
+          {/* Card 2: Provider WhatsApp Gateway */}
+          <form onSubmit={handleSaveWaGateway} className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <h2 className="text-base font-bold text-brand border-b pb-2 flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" /> Pengaturan Provider WhatsApp Gateway
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                  Pilih Provider WhatsApp Gateway
+                </label>
+                <select
+                  value={waGateway.provider}
+                  onChange={(e) => {
+                    const p = e.target.value;
+                    let defaultUrl = waGateway.api_url;
+                    if (p === "fonnte") defaultUrl = "https://api.fonnte.com/send";
+                    if (p === "wablas") defaultUrl = "https://solo.wablas.com/api/send-message";
+                    setWaGateway({ ...waGateway, provider: p, api_url: defaultUrl });
+                  }}
+                  className="w-full rounded-lg border p-2.5 text-sm font-medium"
+                >
+                  <option value="fonnte">Fonnte (Rekomendasi Indonesia - api.fonnte.com)</option>
+                  <option value="wablas">Wablas (wablas.com)</option>
+                  <option value="woowa">WooWA Gateway</option>
+                  <option value="starsender">StarSender Gateway</option>
+                  <option value="whacenter">WhaCenter Gateway</option>
+                  <option value="mock">Mode Simulasi / Mock WhatsApp (Pengujian Internal Tanpa API Key)</option>
+                </select>
+              </div>
+
+              {waGateway.provider !== "mock" && (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                      API Token / Key WhatsApp
+                    </label>
+                    <input
+                      type="password"
+                      value={waGateway.api_key}
+                      onChange={(e) => setWaGateway({ ...waGateway, api_key: e.target.value })}
+                      className="w-full rounded-lg border p-2.5 text-sm font-mono"
+                      placeholder="Masukkan Token / Key WhatsApp..."
+                      required={waGateway.provider !== "mock"}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                      API Endpoint URL
+                    </label>
+                    <input
+                      type="text"
+                      value={waGateway.api_url}
+                      onChange={(e) => setWaGateway({ ...waGateway, api_url: e.target.value })}
+                      className="w-full rounded-lg border p-2.5 text-sm font-mono"
+                      placeholder="https://api.fonnte.com/send"
+                      required={waGateway.provider !== "mock"}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                      Nomor Pengirim / Device ID (Opsional)
+                    </label>
+                    <input
+                      type="text"
+                      value={waGateway.sender_phone || ""}
+                      onChange={(e) => setWaGateway({ ...waGateway, sender_phone: e.target.value })}
+                      className="w-full rounded-lg border p-2.5 text-sm"
+                      placeholder="Contoh: 628123456789"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                type="submit"
+                disabled={savingWaGateway}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-2.5 text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+              >
+                {savingWaGateway ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Simpan Provider WhatsApp
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* TAB 3: TEMPLATE WHATSAPP */}

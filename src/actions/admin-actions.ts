@@ -352,4 +352,54 @@ export const saveAiWorkflowConfigAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+// --- WhatsApp Provider Configuration ---
+export const getWaProviderConfigAction = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { data } = await supabaseAdmin
+        .from("settings")
+        .select("value")
+        .eq("key", "wa.provider_config")
+        .maybeSingle();
+
+      return data?.value || {
+        provider: "mock",
+        api_url: "https://api.fonnte.com/send",
+        api_key: "",
+        sender_phone: ""
+      };
+    } catch (e) {
+      console.error(e);
+      return {
+        provider: "mock",
+        api_url: "https://api.fonnte.com/send",
+        api_key: "",
+        sender_phone: ""
+      };
+    }
+  });
+
+export const saveWaProviderConfigAction = createServerFn({ method: "POST" })
+  .validator((payload: { config: any; email: string }) => payload)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    const { config, email } = ctx.data;
+
+    const { error } = await supabaseAdmin.from("settings").upsert({
+      key: "wa.provider_config",
+      value: config as any,
+      is_public: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "key" });
+
+    if (error) {
+      console.error("Save WA Provider config error:", error);
+      return { success: false, error: error.message };
+    }
+
+    await logActivityInternal(email, "SAVE_WA_PROVIDER_CONFIG", { provider: config.provider });
+    return { success: true };
+  });
+
 
