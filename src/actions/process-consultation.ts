@@ -44,7 +44,11 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
 
     try {
       // 1. SIMPAN DATA KONSULTASI KE DATABASE
-      const { data: consultation, error: cErr } = await supabaseAdmin
+      let consultation: any = null;
+      let cErr: any = null;
+
+      // Primary attempt: Insert with child_name column
+      const res1 = await supabaseAdmin
         .from("consultations")
         .insert({
           parent_name: parent_name.trim(),
@@ -56,6 +60,33 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         })
         .select("*")
         .single();
+
+      consultation = res1.data;
+      cErr = res1.error;
+
+      // Schema Cache Fallback: If 'child_name' column does not exist in live Supabase DB table
+      if (cErr && (cErr.message?.includes("child_name") || cErr.code === "PGRST204" || cErr.details?.includes("child_name"))) {
+        console.warn("[Submit DB Warning]: 'child_name' column missing in Supabase schema cache, performing safe fallback insert...");
+        
+        const fallbackParentName = child_name.trim() 
+          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
+          : parent_name.trim();
+
+        const res2 = await supabaseAdmin
+          .from("consultations")
+          .insert({
+            parent_name: fallbackParentName,
+            whatsapp_number: whatsapp_number.trim(),
+            level,
+            status: "Menunggu Analisis AI",
+            error_message: null
+          })
+          .select("*")
+          .single();
+
+        consultation = res2.data;
+        cErr = res2.error;
+      }
 
       if (cErr || !consultation) {
         console.error("[Submit DB Error]: Failed to insert consultation", cErr);
@@ -206,12 +237,16 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           }, { onConflict: "consultation_id" });
         }
 
-        // Update Status to Analisis AI Selesai
-        await supabaseAdmin.from("consultations").update({
-          status: "Analisis AI Selesai",
-          ai_result: analysisData.analysis,
-          error_message: null
-        }).eq("id", consultation.id);
+      // Update Status to Analisis AI Selesai
+        try {
+          await supabaseAdmin.from("consultations").update({
+            status: "Analisis AI Selesai",
+            ai_result: analysisData.analysis,
+            error_message: null
+          }).eq("id", consultation.id);
+        } catch (_) {
+          await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", consultation.id);
+        }
       }
 
       // 5 & 6. NOTIFIKASI WHATSAPP ADMIN & ORANG TUA
@@ -237,15 +272,17 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       const parentMsg = renderWaTemplate(participantTplContent, templateData);
 
       const logNotification = async (type: string, target: string, message: string, result: any) => {
-        await supabaseAdmin.from("notification_logs").insert({
-          consultation_id: consultation.id,
-          type,
-          target_number: target,
-          message,
-          status: result.success ? "success" : "failed",
-          response_payload: result.responsePayload,
-          error_message: result.errorMessage
-        });
+        try {
+          await supabaseAdmin.from("notification_logs").insert({
+            consultation_id: consultation.id,
+            type,
+            target_number: target,
+            message,
+            status: result.success ? "success" : "failed",
+            response_payload: result.responsePayload,
+            error_message: result.errorMessage
+          });
+        } catch (_) {}
         return result.success;
       };
 
@@ -272,10 +309,12 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         }
       }
 
-      await supabaseAdmin.from("consultations").update({
-        notification_admin_status: adminWaStatus,
-        notification_parent_status: parentWaStatus
-      }).eq("id", consultation.id);
+      try {
+        await supabaseAdmin.from("consultations").update({
+          notification_admin_status: adminWaStatus,
+          notification_parent_status: parentWaStatus
+        }).eq("id", consultation.id);
+      } catch (_) {}
 
       return { success: true, consultationId: consultation.id };
 
