@@ -56,32 +56,36 @@ export async function runAiEngineAnalysis(parentName: string, level: string, wha
   }
 
   // 2. Fetch active prompts
-  let { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).single();
+  let { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
 
-  const systemPrompt = prompt?.system_prompt || "Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak Senior.";
-  const analysisPrompt = (prompt?.analysis_prompt || "Lakukan analisis terhadap jawaban berikut:\n{{jawaban_lengkap}}")
-    .replace("{{nama_orang_tua}}", parentName)
-    .replace("{{jenjang}}", level)
-    .replace("{{jawaban_lengkap}}", formattedAnswers);
+  const defaultUnifiedPrompt = `Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak Senior.
 
-  const summaryPrompt = (prompt?.summary_prompt || "Rangkum kondisi anak.").replace("{{jenjang}}", level);
-  const recommendationPrompt = (prompt?.recommendation_prompt || "Berikan rekomendasi pendidikan.").replace("{{jenjang}}", level);
+Analisis dan susunlah resume lengkap berdasarkan data jawaban konsultasi pendidikan berikut:
+
+1. ANALISIS: Lakukan analisis mendalam mengenai karakteristik, gaya belajar, kelebihan, tantangan, serta potensi anak (Nama Orang Tua: {{nama_orang_tua}}, Jenjang: {{jenjang}}).
+2. RESUME: Susun ringkasan (resume) profil anak secara singkat, padat, dan intuitif.
+3. REKOMENDASI PENDIDIKAN: Berikan rekomendasi pendidikan yang konkret meliputi metode pembelajaran yang disarankan, tipe sekolah yang cocok, serta panduan parenting untuk orang tua.
+
+Data Jawaban Konsultasi:
+{{jawaban_lengkap}}`;
+
+  const mainPromptTemplate = prompt?.system_prompt || defaultUnifiedPrompt;
+  const processedPrompt = mainPromptTemplate
+    .replace(/{{nama_orang_tua}}/g, parentName)
+    .replace(/{{jenjang}}/g, level)
+    .replace(/{{jawaban_lengkap}}/g, formattedAnswers);
 
   const fullUserPrompt = `
-=== DATA KONSULTASI ===
+=== INSTRUKSI KONSULTASI AI ===
+${processedPrompt}
+
+=== DATA KONSULTASI KLIEN ===
 Nama Orang Tua: ${parentName}
 Jenjang: ${level}
 Nomor WhatsApp: ${whatsappNumber}
 
-=== JAWABAN TES ===
+=== JAWABAN KUESIONER ===
 ${formattedAnswers}
-
-=== INSTRUKSI ANALISIS ===
-${analysisPrompt}
-
-${summaryPrompt}
-
-${recommendationPrompt}
 
 === TUGAS & FORMAT OUTPUT ===
 Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis berikut tanpa teks tambahan di luar JSON:
@@ -114,7 +118,7 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
           contents: [
             {
               role: "user",
-              parts: [{ text: `${systemPrompt}\n\n${fullUserPrompt}` }]
+              parts: [{ text: fullUserPrompt }]
             }
           ],
           generationConfig: { temperature: temp, maxOutputTokens: maxTokens }
@@ -139,7 +143,7 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
           model,
           max_tokens: maxTokens,
           temperature: temp,
-          system: systemPrompt,
+          system: mainPromptTemplate,
           messages: [{ role: "user", content: fullUserPrompt }]
         })
       });
@@ -156,7 +160,7 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model,
-          prompt: `${systemPrompt}\n\n${fullUserPrompt}`,
+          prompt: fullUserPrompt,
           stream: false
         })
       });
@@ -182,7 +186,7 @@ Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis ber
         body: JSON.stringify({
           model,
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: mainPromptTemplate },
             { role: "user", content: fullUserPrompt }
           ],
           temperature: temp,

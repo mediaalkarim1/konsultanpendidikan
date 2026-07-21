@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Save, Loader2, Info, Sparkles, FileText } from "lucide-react";
+import { Save, Loader2, Info, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { getMultiPromptsAction, saveMultiPromptsAction } from "@/actions/admin-actions";
@@ -9,66 +9,39 @@ export const Route = createFileRoute("/admin/prompt")({
   component: PromptAIPage,
 });
 
-const PROMPT_CONFIGS = [
-  {
-    key: "system_prompt" as const,
-    title: "System Prompt (Peran Utama AI)",
-    description: "Instruksi mengenai peran utama, persona, dan aturan dasar AI Engine.",
-    placeholder: "Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak...",
-    rows: 4,
-  },
-  {
-    key: "analysis_prompt" as const,
-    title: "Prompt Analisis Kondisi & Gaya Belajar",
-    description: "Instruksi mendalam untuk menganalisis gaya belajar, potensi, serta tantangan anak.",
-    placeholder: "Lakukan analisis terhadap jawaban kuesioner berikut...",
-    rows: 6,
-  },
-  {
-    key: "summary_prompt" as const,
-    title: "Prompt Resume Ringkasan",
-    description: "Instruksi untuk menyusun eksekutif summary hasil analisis secara padat dan jelas.",
-    placeholder: "Susun resume singkat...",
-    rows: 4,
-  },
-  {
-    key: "recommendation_prompt" as const,
-    title: "Prompt Rekomendasi Pendidikan & Parenting",
-    description: "Instruksi untuk menghasilkan rekomendasi jenjang/sekolah dan strategi mendidik anak.",
-    placeholder: "Berikan rekomendasi pendidikan meliputi metode belajar...",
-    rows: 5,
-  },
-];
+const DEFAULT_UNIFIED_PROMPT = `Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak Senior.
+
+Analisis dan susunlah resume lengkap berdasarkan data jawaban konsultasi pendidikan berikut:
+
+1. ANALISIS: Lakukan analisis mendalam mengenai karakteristik, gaya belajar, kelebihan, tantangan, serta potensi anak (Nama Orang Tua: {{nama_orang_tua}}, Jenjang: {{jenjang}}).
+2. RESUME: Susun ringkasan (resume) profil anak secara singkat, padat, dan intuitif.
+3. REKOMENDASI PENDIDIKAN: Berikan rekomendasi pendidikan yang konkret meliputi metode pembelajaran yang disarankan, tipe sekolah yang cocok, serta panduan parenting untuk orang tua.
+
+Data Jawaban Konsultasi:
+{{jawaban_lengkap}}`;
 
 export function PromptAIPage() {
   const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [prompts, setPrompts] = useState({
-    id: "",
-    system_prompt: "",
-    analysis_prompt: "",
-    summary_prompt: "",
-    recommendation_prompt: "",
-  });
+  const [promptId, setPromptId] = useState("");
+  const [promptTitle, setPromptTitle] = useState("Prompt Analisis, Resume & Rekomendasi Pendidikan AI Engine");
+  const [systemPrompt, setSystemPrompt] = useState("");
 
   const loadPrompts = async () => {
     try {
       setLoading(true);
       const data = await getMultiPromptsAction();
       if (data) {
-        setPrompts({
-          id: data.id || "",
-          system_prompt: data.system_prompt || "",
-          analysis_prompt: data.analysis_prompt || "",
-          summary_prompt: data.summary_prompt || "",
-          recommendation_prompt: data.recommendation_prompt || "",
-        });
+        setPromptId(data.id || "");
+        setSystemPrompt(data.system_prompt || DEFAULT_UNIFIED_PROMPT);
+      } else {
+        setSystemPrompt(DEFAULT_UNIFIED_PROMPT);
       }
     } catch (e) {
       console.error(e);
-      toast.error("Gagal memuat prompt AI");
+      toast.error("Gagal memuat konfigurasi prompt AI");
     } finally {
       setLoading(false);
     }
@@ -84,7 +57,13 @@ export function PromptAIPage() {
     try {
       await saveMultiPromptsAction({
         data: {
-          prompts,
+          prompts: {
+            id: promptId,
+            system_prompt: systemPrompt,
+            analysis_prompt: systemPrompt,
+            summary_prompt: systemPrompt,
+            recommendation_prompt: systemPrompt,
+          },
           email: userEmail || "admin"
         }
       });
@@ -105,14 +84,14 @@ export function PromptAIPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-brand flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-brand" /> Konfigurasi Prompt AI
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Kelola <strong>Judul Prompt</strong> dan <strong>Instruksi Prompt</strong> untuk System, Analisis, Resume, dan Rekomendasi Pendidikan yang digunakan oleh AI Engine.
+            Satu prompt utama yang digunakan AI Engine untuk menganalisis, meresume jawaban dari semua jenjang (TK, SD, SMP, SMA), serta memberikan rekomendasi pendidikan.
           </p>
         </div>
       </div>
@@ -128,51 +107,51 @@ export function PromptAIPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          {PROMPT_CONFIGS.map((cfg, idx) => (
-            <div key={cfg.key} className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-xs font-bold text-brand">
-                    #{idx + 1}
-                  </span>
-                  <span className="font-semibold text-foreground text-base">{cfg.title}</span>
-                </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-mono text-muted-foreground">
-                  <FileText className="h-3 w-3" /> {cfg.key}
-                </span>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                    Judul Prompt
-                  </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={cfg.title}
-                    className="w-full rounded-lg border border-input bg-muted/40 px-3.5 py-2 text-sm font-medium text-foreground outline-none cursor-default"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
-                    Instruksi Prompt
-                  </label>
-                  <textarea
-                    value={prompts[cfg.key]}
-                    onChange={(e) => setPrompts({ ...prompts, [cfg.key]: e.target.value })}
-                    rows={cfg.rows}
-                    className="w-full rounded-lg border border-input bg-background p-3.5 text-sm font-mono leading-relaxed outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition shadow-xs"
-                    placeholder={cfg.placeholder}
-                    required
-                  />
-                  <p className="mt-1.5 text-xs text-muted-foreground">{cfg.description}</p>
-                </div>
-              </div>
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-xs font-bold text-brand">
+                1
+              </span>
+              <span className="font-semibold text-foreground text-base">Prompt Utama AI Engine</span>
             </div>
-          ))}
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 px-3 py-1 text-xs font-medium border border-emerald-200 dark:border-emerald-800">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Digunakan untuk Semua Jenjang
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                Judul Prompt
+              </label>
+              <input
+                type="text"
+                value={promptTitle}
+                onChange={(e) => setPromptTitle(e.target.value)}
+                className="w-full rounded-lg border border-input bg-background px-3.5 py-2.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition"
+                placeholder="Judul Prompt AI..."
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                Instruksi Prompt
+              </label>
+              <textarea
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                rows={12}
+                className="w-full rounded-lg border border-input bg-background p-4 text-sm font-mono leading-relaxed outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand transition shadow-xs"
+                placeholder="Tulis instruksi prompt AI di sini..."
+                required
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Instruksi ini mencakup tugas analisis jawaban kuesioner, pembuatan resume, serta pemberian rekomendasi pendidikan yang relevan bagi anak.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end pt-4 border-t">
