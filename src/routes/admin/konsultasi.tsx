@@ -412,9 +412,9 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
     const opt = {
       margin: 0.5,
       filename: `Konsultasi_${data?.parent_name.replace(/\s+/g, "_")}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'jpeg' as const, quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
     };
     html2pdf().set(opt).from(element).save();
     toast.success("PDF sedang diunduh...");
