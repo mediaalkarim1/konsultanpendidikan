@@ -64,6 +64,112 @@ const STATUS_OPTIONS = [
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
+export async function handleDownloadPdfForConsultation(item: Consultation) {
+  try {
+    toast.info(`Menyiapkan Dokumen Laporan PDF Resmi untuk ${item.parent_name}...`);
+
+    const { data: answers } = await supabase
+      .from("consultation_answers")
+      .select("*, questions(question_text)")
+      .eq("consultation_id", item.id);
+
+    const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
+    let optionsMap: Record<string, string> = {};
+    if (allOptionIds.length > 0) {
+      const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
+      if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
+    }
+
+    const { data: analysisData } = await (supabase as any)
+      .from("consultation_analysis")
+      .select("*")
+      .eq("consultation_id", item.id)
+      .maybeSingle();
+
+    const mappedAnswers = (answers || []).map(a => ({
+      q: a.questions?.question_text || "Pertanyaan",
+      a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
+    }));
+
+    const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+    const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
+
+    const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
+    const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
+    const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
+
+    const tempDiv = document.createElement("div");
+    tempDiv.style.padding = "32px";
+    tempDiv.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
+    tempDiv.style.color = "#0f172a";
+    tempDiv.style.backgroundColor = "#ffffff";
+    tempDiv.style.width = "750px";
+
+    tempDiv.innerHTML = `
+      <div style="border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="font-size: 20px; font-weight: 800; color: #047857; margin: 0; letter-spacing: -0.02em;">SEKOLAH ALAM AL-KARIM — EDUKONSUL</h1>
+          <p style="font-size: 13px; font-weight: 500; color: #475569; margin: 4px 0 0 0;">Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak</p>
+        </div>
+        <div style="text-align: right;">
+          <span style="display: inline-block; background-color: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; border: 1px solid #a7f3d0;">JENJANG ${levelLabel}</span>
+          <p style="font-size: 11px; color: #64748b; margin: 6px 0 0 0; font-weight: 600;">Ref ID: #${item.id.substring(0, 8)}</p>
+        </div>
+      </div>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;">
+        <div>
+          <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ORANG TUA</span>
+          <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Orang Tua:</p>
+          <p style="margin: 0; font-weight: 700; color: #0f172a; font-size: 14px;">${item.parent_name}</p>
+          <p style="margin: 6px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">WhatsApp: ${item.whatsapp_number}</p>
+        </div>
+        <div>
+          <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ANAK & EVALUASI</span>
+          <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Anak:</p>
+          <p style="margin: 0; font-weight: 700; color: #047857; font-size: 14px;">${item.child_name || "-"}</p>
+          <p style="margin: 6px 0 0 0; font-size: 12px; color: #475569;">Tanggal: ${dateStr}</p>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 28px;">
+        <h3 style="font-size: 14px; font-weight: 800; color: #047857; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px; letter-spacing: 0.02em;">LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN</h3>
+        <div style="font-size: 13px; line-height: 1.8; color: #334155; text-align: justify; white-space: pre-wrap; font-family: inherit;">
+${narrativeText}
+        </div>
+      </div>
+
+      <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #64748b;">
+        <div>
+          <p style="margin: 0; font-weight: 600; color: #334155;">Dokumen Laporan Resmi EduKonsul</p>
+          <p style="margin: 2px 0 0 0;">Sekolah Alam Al-Karim • Diterbitkan pada ${dateStr}</p>
+        </div>
+        <div style="text-align: center; width: 200px;">
+          <p style="margin: 0 0 45px 0; font-weight: 700; color: #047857;">Tim Konsultan Pendidikan</p>
+          <p style="margin: 0; font-weight: 800; color: #0f172a; border-top: 1px solid #94a3b8; padding-top: 4px;">Sekolah Alam Al-Karim</p>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(tempDiv);
+
+    const opt = {
+      margin: 0.5,
+      filename: `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
+    };
+
+    await html2pdf().set(opt).from(tempDiv).save();
+    document.body.removeChild(tempDiv);
+    toast.success("Laporan PDF berhasil diunduh!");
+  } catch (err: any) {
+    console.error("PDF Download error:", err);
+    toast.error("Gagal mendownload PDF: " + err.message);
+  }
+}
+
 function KonsultasiPage() {
   const { userEmail } = useAuth();
   const [data, setData] = useState<Consultation[]>([]);
@@ -277,56 +383,109 @@ function KonsultasiPage() {
     }
   }
 
-  async function handleDownloadAiSingle(item: Consultation) {
+  async function handleDownloadPdfForConsultation(item: Consultation) {
     try {
+      toast.info(`Menyiapkan Dokumen Laporan PDF Resmi untuk ${item.parent_name}...`);
+
+      const { data: answers } = await supabase
+        .from("consultation_answers")
+        .select("*, questions(question_text)")
+        .eq("consultation_id", item.id);
+
+      const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
+      let optionsMap: Record<string, string> = {};
+      if (allOptionIds.length > 0) {
+        const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
+        if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
+      }
+
       const { data: analysisData } = await (supabase as any)
         .from("consultation_analysis")
         .select("*")
         .eq("consultation_id", item.id)
         .maybeSingle();
 
-      const summaryText = `=== HASIL ANALISIS AI EDUKONSUL ===
-ID Konsultasi: #${item.id.substring(0, 8)}
-Nama Orang Tua: ${item.parent_name}
-Nama Anak: ${item.child_name || "-"}
-Nomor WhatsApp: ${item.whatsapp_number}
-Jenjang: ${LEVEL_LABELS[item.level] || item.level}
-Tanggal Submit: ${format(new Date(item.created_at), "dd MMMM yyyy HH:mm", { locale: id })}
-Status Konsultasi: ${item.status}
+      const mappedAnswers = (answers || []).map(a => ({
+        q: a.questions?.question_text || "Pertanyaan",
+        a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
+      }));
 
-1. RESUME KONDISI ANAK:
-${analysisData?.summary || "-"}
+      const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+      const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
 
-2. ANALISIS KARAKTER & KONDISI:
-${analysisData?.analysis || item.ai_result || "-"}
+      const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
+      const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
+      const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
 
-3. KEKUATAN UTAMA:
-${analysisData?.strengths || "-"}
+      const tempDiv = document.createElement("div");
+      tempDiv.style.padding = "32px";
+      tempDiv.style.fontFamily = "'Inter', 'Segoe UI', sans-serif";
+      tempDiv.style.color = "#0f172a";
+      tempDiv.style.backgroundColor = "#ffffff";
+      tempDiv.style.width = "750px";
 
-4. AREA PENGEMBANGAN (KELEMAHAN):
-${analysisData?.weaknesses || "-"}
+      tempDiv.innerHTML = `
+        <div style="border-bottom: 2px solid #059669; padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h1 style="font-size: 20px; font-weight: 800; color: #047857; margin: 0; letter-spacing: -0.02em;">SEKOLAH ALAM AL-KARIM — EDUKONSUL</h1>
+            <p style="font-size: 13px; font-weight: 500; color: #475569; margin: 4px 0 0 0;">Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak</p>
+          </div>
+          <div style="text-align: right;">
+            <span style="display: inline-block; background-color: #ecfdf5; color: #047857; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 9999px; border: 1px solid #a7f3d0;">JENJANG ${levelLabel}</span>
+            <p style="font-size: 11px; color: #64748b; margin: 6px 0 0 0; font-weight: 600;">Ref ID: #${item.id.substring(0, 8)}</p>
+          </div>
+        </div>
 
-5. POTENSI BAKAT:
-${analysisData?.potential || "-"}
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13px;">
+          <div>
+            <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ORANG TUA</span>
+            <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Orang Tua:</p>
+            <p style="margin: 0; font-weight: 700; color: #0f172a; font-size: 14px;">${item.parent_name}</p>
+            <p style="margin: 6px 0 0 0; font-size: 12px; color: #059669; font-weight: 600;">WhatsApp: ${item.whatsapp_number}</p>
+          </div>
+          <div>
+            <span style="color: #047857; font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">DATA ANAK & EVALUASI</span>
+            <p style="margin: 6px 0 3px 0; color: #64748b; font-size: 11px;">Nama Anak:</p>
+            <p style="margin: 0; font-weight: 700; color: #047857; font-size: 14px;">${item.child_name || "-"}</p>
+            <p style="margin: 6px 0 0 0; font-size: 12px; color: #475569;">Tanggal: ${dateStr}</p>
+          </div>
+        </div>
 
-6. RISIKO / TANTANGAN:
-${analysisData?.risk || "-"}
+        <div style="margin-bottom: 28px;">
+          <h3 style="font-size: 14px; font-weight: 800; color: #047857; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 16px; letter-spacing: 0.02em;">LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN</h3>
+          <div style="font-size: 13px; line-height: 1.8; color: #334155; text-align: justify; white-space: pre-wrap; font-family: inherit;">
+${narrativeText}
+          </div>
+        </div>
 
-7. REKOMENDASI PENDIDIKAN & PARENTING:
-${analysisData?.education_recommendation || "-"}
-`;
+        <div style="margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; color: #64748b;">
+          <div>
+            <p style="margin: 0; font-weight: 600; color: #334155;">Dokumen Laporan Resmi EduKonsul</p>
+            <p style="margin: 2px 0 0 0;">Sekolah Alam Al-Karim • Diterbitkan pada ${dateStr}</p>
+          </div>
+          <div style="text-align: center; width: 200px;">
+            <p style="margin: 0 0 45px 0; font-weight: 700; color: #047857;">Tim Konsultan Pendidikan</p>
+            <p style="margin: 0; font-weight: 800; color: #0f172a; border-top: 1px solid #94a3b8; padding-top: 4px;">Sekolah Alam Al-Karim</p>
+          </div>
+        </div>
+      `;
 
-      const blob = new Blob([summaryText], { type: "text/plain;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Hasil_AI_${(item.parent_name || "Konsultasi").replace(/\s+/g, "_")}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Hasil AI berhasil diunduh");
-    } catch (e: any) {
-      toast.error("Gagal mengunduh hasil AI");
+      document.body.appendChild(tempDiv);
+
+      const opt = {
+        margin: 0.5,
+        filename: `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
+      };
+
+      await html2pdf().set(opt).from(tempDiv).save();
+      document.body.removeChild(tempDiv);
+      toast.success("Laporan PDF berhasil diunduh!");
+    } catch (err: any) {
+      console.error("PDF Download error:", err);
+      toast.error("Gagal mendownload PDF: " + err.message);
     }
   }
 
@@ -481,7 +640,6 @@ ${analysisData?.education_recommendation || "-"}
                 <th className="px-4 py-3 font-medium text-muted-foreground">Nama Orang Tua</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Nama Anak</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Jenjang</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Hasil Analisis AI</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Status Konsultasi</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground text-right">Aksi</th>
               </tr>
@@ -489,14 +647,14 @@ ${analysisData?.education_recommendation || "-"}
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                     <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-brand" />
                     Memuat data konsultasi...
                   </td>
                 </tr>
               ) : data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Tidak ada data konsultasi ditemukan.</td>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Tidak ada data konsultasi ditemukan.</td>
                 </tr>
               ) : (
                 data.map((row) => {
@@ -521,22 +679,6 @@ ${analysisData?.education_recommendation || "-"}
                           {LEVEL_LABELS[row.level] || row.level}
                         </span>
                       </td>
-                      <td className="px-4 py-3 max-w-xs">
-                        {(row as any).summary || row.ai_result ? (
-                          <div className="space-y-1">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-semibold border border-emerald-200">
-                              <Sparkles className="h-3 w-3" /> Analisis Tersedia
-                            </span>
-                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                              {(row as any).summary || row.ai_result}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-medium border border-amber-200">
-                            <Clock className="h-3 w-3" /> Menunggu AI
-                          </span>
-                        )}
-                      </td>
                       <td className="px-4 py-3">
                         <select
                           value={row.status}
@@ -552,7 +694,7 @@ ${analysisData?.education_recommendation || "-"}
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => { setSelectedId(row.id); setDetailOpen(true); }}
-                            className="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 px-2.5 py-1.5 text-xs font-semibold hover:bg-blue-100"
+                            className="inline-flex items-center gap-1 rounded-md bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1.5 text-xs font-semibold hover:bg-blue-100"
                             title="Lihat Detail Lengkap"
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -560,16 +702,17 @@ ${analysisData?.education_recommendation || "-"}
                           </button>
 
                           <button
-                            onClick={() => handleDownloadAiSingle(row)}
-                            className="rounded-md border p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-                            title="Download Hasil AI (.txt)"
+                            onClick={() => handleDownloadPdfForConsultation(row)}
+                            className="inline-flex items-center gap-1 rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-emerald-100"
+                            title="Download Laporan PDF Resmi"
                           >
-                            <Download className="h-3.5 w-3.5" />
+                            <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                            Download PDF
                           </button>
 
                           <button
                             onClick={() => handleDelete(row.id)}
-                            className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50"
+                            className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                             title="Hapus Data"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -767,17 +910,9 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
   };
   
   const handleDownloadPDF = () => {
-    const element = document.getElementById("pdf-content");
-    if (!element) return;
-    const opt = {
-      margin: 0.5,
-      filename: `Konsultasi_${data?.parent_name.replace(/\s+/g, "_")}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
-    };
-    html2pdf().set(opt).from(element).save();
-    toast.success("PDF sedang diunduh...");
+    if (data) {
+      handleDownloadPdfForConsultation(data);
+    }
   };
 
   const handleCopy = () => {
