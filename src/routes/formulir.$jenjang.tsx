@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { processConsultation } from "@/actions/process-consultation";
 import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS, isNewTKSDQuestions } from "@/actions/seed-tksd";
 import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actions/seed-smp";
+import { seedSMAAction, DEFAULT_SMA_QUESTIONS, isNewSMAQuestions } from "@/actions/seed-sma";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -86,6 +87,9 @@ function FormulirPage() {
       } else if (jenjang === "smp" && !isNewSMPQuestions(mapped)) {
         mapped = DEFAULT_SMP_QUESTIONS;
         seedSMPAction().catch((err) => console.warn("Auto-seed SMP error:", err));
+      } else if (jenjang === "sma" && !isNewSMAQuestions(mapped)) {
+        mapped = DEFAULT_SMA_QUESTIONS;
+        seedSMAAction().catch((err) => console.warn("Auto-seed SMA error:", err));
       }
 
       setQuestions(mapped);
@@ -262,14 +266,14 @@ function FormulirPage() {
                     ? "Analisis Kebutuhan Perkembangan Anak"
                     : jenjang === "smp"
                     ? "Analisis Potensi & Perkembangan Remaja"
-                    : "Tes Potensi & Kesiapan Masa Depan Anak"}
+                    : "Analisis Potensi, Minat & Arah Masa Depan"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
                   {jenjang === "tksd"
                     ? "Setiap anak memiliki cara belajar dan tumbuh yang berbeda. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis kebutuhan perkembangan anak beserta rekomendasi pendidikan yang sesuai."
                     : jenjang === "smp"
                     ? "Setiap remaja memiliki potensi yang unik. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis mengenai kebutuhan belajar, karakter, dan pengembangan potensi anak, beserta rekomendasi pendidikan yang sesuai."
-                    : "Jawab pertanyaan berikut sejujurnya untuk hasil rekomendasi terbaik."}
+                    : "Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis pemetaan potensi, minat karier, dan kesiapan masa depan anak beserta rekomendasi pendidikan yang sesuai."}
                 </p>
                 <ol className="mt-6 space-y-6">
                   {questions.map((q, idx) => (
