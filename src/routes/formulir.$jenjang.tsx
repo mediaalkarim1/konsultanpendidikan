@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate, notFound } from "@tanstack/react-ro
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { processConsultation } from "@/actions/process-consultation";
+import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS } from "@/actions/seed-tksd";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
@@ -55,10 +56,10 @@ function FormulirPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const { data: qs, error } = await supabase
+      let { data: qs, error } = await supabase
         .from("questions")
         .select("id, question_text, question_type, order_index, is_required, question_options(id, option_text, order_index)")
-        .eq("level", jenjang)
+        .eq("level", jenjang as "tksd" | "smp" | "sma")
         .eq("is_active", true)
         .order("order_index", { ascending: true });
 
@@ -68,7 +69,24 @@ function FormulirPage() {
         setLoading(false);
         return;
       }
-      const mapped: Question[] = (qs ?? []).map((q: any) => ({
+
+      // Auto-seed TK & SD questions if empty or missing default questions
+      if (jenjang === "tksd" && (!qs || qs.length === 0)) {
+        try {
+          await seedTKSDAction();
+          const { data: retryQs } = await supabase
+            .from("questions")
+            .select("id, question_text, question_type, order_index, is_required, question_options(id, option_text, order_index)")
+            .eq("level", jenjang as "tksd" | "smp" | "sma")
+            .eq("is_active", true)
+            .order("order_index", { ascending: true });
+          if (retryQs) qs = retryQs;
+        } catch (e) {
+          console.error("Auto-seed TKSD error:", e);
+        }
+      }
+
+      let mapped: Question[] = (qs ?? []).map((q: any) => ({
         id: q.id,
         question_text: q.question_text,
         question_type: q.question_type,
@@ -76,6 +94,11 @@ function FormulirPage() {
         is_required: q.is_required,
         options: (q.question_options ?? []).sort((a: any, b: any) => a.order_index - b.order_index),
       }));
+
+      if (jenjang === "tksd" && mapped.length === 0) {
+        mapped = DEFAULT_TKSD_QUESTIONS;
+      }
+
       setQuestions(mapped);
       setLoading(false);
     })();
@@ -248,10 +271,12 @@ function FormulirPage() {
             ) : (
               <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                 <h2 className="text-lg font-bold text-foreground">
-                  Tes Potensi & Kesiapan Masa Depan Anak
+                  {jenjang === "tksd" ? "Analisis Kebutuhan Perkembangan Anak" : "Tes Potensi & Kesiapan Masa Depan Anak"}
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Jawab pertanyaan berikut sejujurnya untuk hasil rekomendasi terbaik.
+                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                  {jenjang === "tksd"
+                    ? "Setiap anak memiliki cara belajar dan tumbuh yang berbeda. Jawablah beberapa pertanyaan berikut untuk mendapatkan analisis kebutuhan perkembangan anak beserta rekomendasi pendidikan yang sesuai."
+                    : "Jawab pertanyaan berikut sejujurnya untuk hasil rekomendasi terbaik."}
                 </p>
                 <ol className="mt-6 space-y-6">
                   {questions.map((q, idx) => (
@@ -380,6 +405,9 @@ function QuestionInput({
   }
   // multi_choice
   const selected = Array.isArray(value) ? value : [];
+  const maxMatch = q.question_text.match(/maksimal\s+(\d+)/i) || q.question_text.match(/max\s+(\d+)/i);
+  const maxAllowed = maxMatch ? parseInt(maxMatch[1], 10) : null;
+
   return (
     <div className="space-y-2">
       {q.options.map((o) => {
@@ -397,6 +425,10 @@ function QuestionInput({
               type="checkbox"
               checked={checked}
               onChange={() => {
+                if (!checked && maxAllowed !== null && selected.length >= maxAllowed) {
+                  toast.error(`Maksimal memilih ${maxAllowed} pilihan`);
+                  return;
+                }
                 const next = checked ? selected.filter((x) => x !== o.id) : [...selected, o.id];
                 onChange(next);
               }}

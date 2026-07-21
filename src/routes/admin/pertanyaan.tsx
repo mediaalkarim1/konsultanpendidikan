@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { GripVertical, Plus, Trash2, Edit2, Save, X } from "lucide-react";
+import { GripVertical, Plus, Trash2, Edit2, Save, X, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { logActivity } from "@/actions/admin-actions";
+import { seedTKSDAction, DEFAULT_TKSD_QUESTIONS } from "@/actions/seed-tksd";
 
 export const Route = createFileRoute("/admin/pertanyaan")({
   component: KelolaPertanyaanPage,
@@ -48,10 +49,16 @@ function KelolaPertanyaanPage() {
     if (error) {
       toast.error("Gagal memuat pertanyaan");
     } else {
-      const formatted = (data || []).map((q: any) => ({
+      let formatted = (data || []).map((q: any) => ({
         ...q,
         options: (q.question_options || []).sort((a: any, b: any) => a.order_index - b.order_index)
       }));
+      if (level === "tksd" && formatted.length === 0) {
+        formatted = DEFAULT_TKSD_QUESTIONS.map(q => ({
+          ...q,
+          is_active: true
+        })) as any;
+      }
       setQuestions(formatted);
     }
     setLoading(false);
@@ -140,6 +147,27 @@ function KelolaPertanyaanPage() {
           <option value="sma">SMA</option>
         </select>
         
+        {level === "tksd" && (
+          <button
+            onClick={async () => {
+              if (!confirm("Reset semua pertanyaan TK & SD ke default terbaru?")) return;
+              setLoading(true);
+              try {
+                await seedTKSDAction();
+                toast.success("Pertanyaan TK & SD berhasil di-reset ke default!");
+                await fetchQuestions();
+              } catch (e: any) {
+                toast.error("Gagal mereset pertanyaan: " + (e.message || e));
+                setLoading(false);
+              }
+            }}
+            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+            title="Reset ke pertanyaan standar TK & SD"
+          >
+            <RotateCcw className="h-4 w-4" /> Reset Default TK & SD
+          </button>
+        )}
+
         <button
           onClick={addQuestion}
           className="ml-auto flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-foreground hover:opacity-90"

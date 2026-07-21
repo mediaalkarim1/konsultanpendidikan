@@ -59,7 +59,7 @@ export const processConsultation = createServerFn({ method: "POST" })
 
         formattedAnswers = answers.map(a => {
           const qText = questionsMap[a.question_id] || "Pertanyaan";
-          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid]).filter(Boolean);
+          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).filter(Boolean);
           const aText = a.answer_text || (optTexts.length > 0 ? optTexts.join(", ") : "-");
           return `P: ${qText}\nJ: ${aText}`;
         }).join("\n\n");
