@@ -35,18 +35,18 @@ function LogAktivitasPage() {
     const to = from + itemsPerPage - 1;
 
     // Get total count
-    const { count } = await supabase.from("activity_logs").select("*", { count: "exact", head: true });
+    const { count } = await (supabase as any).from("activity_logs").select("*", { count: "exact", head: true });
     setTotal(count || 0);
 
     // Get paginated data
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("activity_logs")
       .select("*")
       .order("created_at", { ascending: false })
       .range(from, to);
     
     if (!error && data) {
-      setLogs(data);
+      setLogs(data as ActivityLog[]);
     }
     setLoading(false);
   }
