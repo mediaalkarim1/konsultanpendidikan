@@ -22,7 +22,7 @@ import {
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { handleDownloadPdfForConsultation } from "./admin/konsultasi";
+import { handleDownloadPdfForConsultation } from "@/lib/pdf-generator";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";

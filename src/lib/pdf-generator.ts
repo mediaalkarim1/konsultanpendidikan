@@ -1,0 +1,210 @@
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+import { toast } from "sonner";
+import { generateFallbackAnalysisResult } from "@/actions/ai-engine";
+
+export type Consultation = {
+  id: string;
+  created_at: string;
+  parent_name: string;
+  child_name?: string | null;
+  whatsapp_number: string;
+  level: string;
+  status: string;
+  error_message?: string;
+  ai_result?: string | null;
+};
+
+const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
+
+export async function handleDownloadPdfForConsultation(
+  item: Consultation,
+  onStart?: () => void,
+  onFinish?: () => void
+) {
+  try {
+    if (onStart) onStart();
+    toast.info(`Menyiapkan Laporan PDF Resmi untuk ${item.parent_name}...`);
+
+    // Dynamic import jsPDF for SSR safety
+    const { jsPDF } = await import("jspdf");
+
+    // Yield to main UI thread so spinner renders immediately
+    await new Promise((r) => setTimeout(r, 60));
+
+    // Fetch answers
+    const { data: answers } = await supabase
+      .from("consultation_answers")
+      .select("*, questions(question_text)")
+      .eq("consultation_id", item.id);
+
+    const allOptionIds = answers?.flatMap((a) => a.selected_option_ids || []) || [];
+    let optionsMap: Record<string, string> = {};
+    if (allOptionIds.length > 0) {
+      const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
+      if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
+    }
+
+    const { data: analysisData } = await (supabase as any)
+      .from("consultation_analysis")
+      .select("*")
+      .eq("consultation_id", item.id)
+      .maybeSingle();
+
+    const mappedAnswers = (answers || []).map((a) => ({
+      q: a.questions?.question_text || "Pertanyaan",
+      a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
+    }));
+
+    const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+    const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
+
+    const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
+    const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
+    const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
+
+    // Native jsPDF document creation
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth(); // 210 mm
+    const pageHeight = doc.internal.pageSize.getHeight(); // 297 mm
+    const margin = 15;
+    const maxTextWidth = pageWidth - margin * 2; // 180 mm
+
+    // 1. Top Green Decorative Bar
+    doc.setFillColor(4, 120, 87); // Emerald 700 (#047857)
+    doc.rect(0, 0, pageWidth, 5, "F");
+
+    // Kop Surat Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(4, 120, 87);
+    doc.text("SEKOLAH ALAM AL-KARIM — EDUKONSUL", margin, 17);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text("Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak", margin, 23);
+
+    // Right Side Metadata
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(6, 95, 70);
+    doc.text(`JENJANG: ${levelLabel}`, pageWidth - margin - 40, 17);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Ref ID: #${item.id.substring(0, 8)}`, pageWidth - margin - 40, 23);
+
+    // Divider Line
+    doc.setDrawColor(5, 150, 105);
+    doc.setLineWidth(0.4);
+    doc.line(margin, 27, pageWidth - margin, 27);
+
+    // 2. Data Card Section
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(margin, 31, maxTextWidth, 24, 2, 2, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(4, 120, 87);
+    doc.text("DATA ORANG TUA", margin + 5, 37);
+    doc.text("DATA ANAK & EVALUASI", margin + 95, 37);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Nama Orang Tua : ${item.parent_name}`, margin + 5, 44);
+    doc.text(`Nomor WhatsApp : ${item.whatsapp_number}`, margin + 5, 50);
+
+    doc.text(`Nama Anak          : ${item.child_name || "-"}`, margin + 95, 44);
+    doc.text(`Tanggal Evaluasi : ${dateStr}`, margin + 95, 50);
+
+    // 3. Section Title
+    let yPos = 63;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(4, 120, 87);
+    doc.text("LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN", margin, yPos);
+    yPos += 3;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 7;
+
+    // 4. Narrative Paragraphs
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(51, 65, 85);
+
+    const paragraphs = narrativeText.split("\n\n");
+
+    for (const para of paragraphs) {
+      if (!para.trim()) continue;
+      const lines = doc.splitTextToSize(para.trim(), maxTextWidth);
+      const neededHeight = lines.length * 5;
+
+      // Auto page break check
+      if (yPos + neededHeight > pageHeight - 28) {
+        doc.addPage();
+        yPos = 20;
+
+        // Header line on new page
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Laporan Evaluasi Ananda ${item.child_name || item.parent_name} (Sambungan)`, margin, yPos - 5);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        doc.setTextColor(51, 65, 85);
+      }
+
+      doc.text(lines, margin, yPos, { lineHeightFactor: 1.4 });
+      yPos += lines.length * 5.2 + 4;
+    }
+
+    // 5. Footer Signature Block
+    if (yPos + 35 > pageHeight - 15) {
+      doc.addPage();
+      yPos = 20;
+    } else {
+      yPos += 8;
+    }
+
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text("Dokumen Laporan Resmi EduKonsul — Sekolah Alam Al-Karim", margin, yPos + 4);
+    doc.text(`Diterbitkan pada: ${dateStr}`, margin, yPos + 9);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(4, 120, 87);
+    doc.text("Tim Konsultan Pendidikan", pageWidth - margin - 45, yPos + 4);
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(15, 23, 42);
+    doc.text("Sekolah Alam Al-Karim", pageWidth - margin - 45, yPos + 22);
+    doc.line(pageWidth - margin - 45, yPos + 23, pageWidth - margin, yPos + 23);
+
+    // Save File
+    const fileName = `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`;
+    doc.save(fileName);
+    toast.success("Dokumen PDF berhasil diunduh!");
+
+  } catch (err: any) {
+    console.error("Native jsPDF error:", err);
+    toast.error("Gagal membuat PDF. Silakan coba lagi.");
+  } finally {
+    if (onFinish) onFinish();
+  }
+}
