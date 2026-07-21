@@ -7,7 +7,7 @@ import { seedSMPAction, DEFAULT_SMP_QUESTIONS, isNewSMPQuestions } from "@/actio
 import { seedSMAAction, DEFAULT_SMA_QUESTIONS, isNewSMAQuestions } from "@/actions/seed-sma";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Send, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Loader2, Send, Sparkles } from "lucide-react";
 
 const LEVEL_LABELS: Record<string, string> = {
   tksd: "TK & SD",
@@ -68,6 +68,7 @@ function FormulirPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentStep, setCurrentStep] = useState(0); // 0 = Identity, 1..N = Questions
   const [parentName, setParentName] = useState("");
   const [childName, setChildName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -121,20 +122,56 @@ function FormulirPage() {
   }, [jenjang]);
 
   const totalSteps = questions.length + 1; // +1 for identity
-  const answeredCount = useMemo(() => {
-    let n = 0;
-    if (parentName.trim() && childName.trim() && whatsapp.trim()) n = 1;
-    for (const q of questions) {
-      const v = answers[q.id];
-      if (Array.isArray(v) ? v.length > 0 : (v ?? "").trim() !== "") n++;
-    }
-    return n;
-  }, [answers, questions, parentName, childName, whatsapp]);
-  const progress = Math.round((answeredCount / totalSteps) * 100);
+  const progress = Math.round(((currentStep + 1) / totalSteps) * 100);
 
   function setAnswer(qid: string, v: string | string[]) {
     setAnswers((prev) => ({ ...prev, [qid]: v }));
     if (errors[qid]) setErrors((e) => ({ ...e, [qid]: "" }));
+  }
+
+  function handleNext() {
+    if (currentStep === 0) {
+      const idParse = identitySchema.safeParse({ parent_name: parentName, child_name: childName, whatsapp_number: whatsapp });
+      const newErrors: Record<string, string> = {};
+      if (!idParse.success) {
+        for (const issue of idParse.error.issues) {
+          newErrors[issue.path[0] as string] = issue.message;
+        }
+      }
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) {
+        toast.error("Mohon lengkapi identitas yang wajib diisi");
+        return;
+      }
+      setCurrentStep(1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const currentQ = questions[currentStep - 1];
+    if (currentQ && currentQ.is_required) {
+      const v = answers[currentQ.id];
+      const empty = Array.isArray(v) ? v.length === 0 : !v || !v.trim();
+      if (empty) {
+        setErrors((prev) => ({ ...prev, [currentQ.id]: "Wajib diisi" }));
+        toast.error("Mohon jawab pertanyaan ini terlebih dahulu");
+        return;
+      }
+    }
+
+    if (currentStep < questions.length) {
+      setCurrentStep((prev) => prev + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  function handlePrev() {
+    if (currentStep > 0) {
+      setCurrentStep((prev) => prev - 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate({ to: "/" });
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -208,19 +245,26 @@ function FormulirPage() {
     }
   }
 
+  const currentQ = currentStep > 0 ? questions[currentStep - 1] : null;
+
   return (
     <div className="min-h-screen bg-background font-sans">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/90 backdrop-blur">
         <div className="mx-auto flex h-[60px] max-w-3xl items-center gap-3 px-4 sm:px-6">
-          <Link
-            to="/"
+          <button
+            type="button"
+            onClick={handlePrev}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:border-brand hover:text-brand"
             aria-label="Kembali"
           >
             <ArrowLeft className="h-4 w-4" />
-          </Link>
+          </button>
           <div className="flex-1">
-            <p className="text-xs text-muted-foreground">Formulir Konsultasi</p>
+            <p className="text-xs text-muted-foreground">
+              {currentStep === 0
+                ? "Langkah 1 dari " + totalSteps + ": Identitas"
+                : "Pertanyaan " + currentStep + " dari " + questions.length}
+            </p>
             <p className="text-sm font-semibold">Jenjang {label}</p>
           </div>
         </div>
@@ -239,132 +283,158 @@ function FormulirPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Jenjang Opening Banner Card */}
-            {JENJANG_OPENING_SENTENCES[jenjang] && (
-              <section className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft/80 via-background to-brand-soft/30 p-5 shadow-sm sm:p-6">
-                <div className="flex items-start gap-3.5">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground font-bold shadow-xs">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
-                      {JENJANG_OPENING_SENTENCES[jenjang].badge}
-                    </span>
-                    <h1 className="text-lg font-bold text-foreground sm:text-xl">
-                      {JENJANG_OPENING_SENTENCES[jenjang].title}
-                    </h1>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-medium">
-                      {JENJANG_OPENING_SENTENCES[jenjang].greeting}
-                    </p>
-                  </div>
-                </div>
-              </section>
-            )}
+            {currentStep === 0 ? (
+              <>
+                {/* Jenjang Opening Banner Card */}
+                {JENJANG_OPENING_SENTENCES[jenjang] && (
+                  <section className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft/80 via-background to-brand-soft/30 p-5 shadow-sm sm:p-6">
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground font-bold shadow-xs">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-semibold text-brand">
+                          {JENJANG_OPENING_SENTENCES[jenjang].badge}
+                        </span>
+                        <h1 className="text-lg font-bold text-foreground sm:text-xl">
+                          {JENJANG_OPENING_SENTENCES[jenjang].title}
+                        </h1>
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground font-medium">
+                          {JENJANG_OPENING_SENTENCES[jenjang].greeting}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                )}
 
-            {/* Identity card */}
-            <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-foreground">Identitas Orang Tua & Anak</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Data ini akan digunakan oleh Tim Konsultan untuk menghubungi Anda dan menyusun laporan potensi anak.
-              </p>
-              <div className="mt-5 space-y-4">
-                <Field label="Nama Orang Tua" required error={errors.parent_name}>
-                  <input
-                    type="text"
-                    value={parentName}
-                    onChange={(e) => setParentName(e.target.value)}
-                    placeholder="Contoh: Budi Santoso"
-                    className={inputClass(!!errors.parent_name)}
-                    autoComplete="name"
-                  />
-                </Field>
-                <Field label="Nama Anak (Calon Siswa)" required error={errors.child_name}>
-                  <input
-                    type="text"
-                    value={childName}
-                    onChange={(e) => setChildName(e.target.value)}
-                    placeholder="Contoh: Ananda Ali"
-                    className={inputClass(!!errors.child_name)}
-                    autoComplete="off"
-                  />
-                </Field>
-                <Field label="Nomor WhatsApp" required error={errors.whatsapp_number}>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value.replace(/[^\d+]/g, ""))}
-                    placeholder="Contoh: 081234567890"
-                    className={inputClass(!!errors.whatsapp_number)}
-                    autoComplete="tel"
-                    maxLength={15}
-                  />
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    Pastikan nomor WhatsApp yang Anda masukkan benar dan aktif, karena Tim Konsultan
-                    Sekolah Alam Al-Karim akan menghubungi Anda melalui nomor tersebut.
+                {/* Identity card */}
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                  <h2 className="text-lg font-bold text-foreground">Identitas Orang Tua & Anak</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Data ini akan digunakan oleh Tim Konsultan untuk menghubungi Anda dan menyusun laporan potensi anak.
                   </p>
-                </Field>
-              </div>
-            </section>
+                  <div className="mt-5 space-y-4">
+                    <Field label="Nama Orang Tua" required error={errors.parent_name}>
+                      <input
+                        type="text"
+                        value={parentName}
+                        onChange={(e) => setParentName(e.target.value)}
+                        placeholder="Contoh: Budi Santoso"
+                        className={inputClass(!!errors.parent_name)}
+                        autoComplete="name"
+                      />
+                    </Field>
+                    <Field label="Nama Anak" required error={errors.child_name}>
+                      <input
+                        type="text"
+                        value={childName}
+                        onChange={(e) => setChildName(e.target.value)}
+                        placeholder="Contoh: Ananda Ali"
+                        className={inputClass(!!errors.child_name)}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field label="Nomor WhatsApp" required error={errors.whatsapp_number}>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={whatsapp}
+                        onChange={(e) => setWhatsapp(e.target.value.replace(/[^\d+]/g, ""))}
+                        placeholder="Contoh: 081234567890"
+                        className={inputClass(!!errors.whatsapp_number)}
+                        autoComplete="tel"
+                        maxLength={15}
+                      />
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        Pastikan nomor WhatsApp yang Anda masukkan benar dan aktif, karena Tim Konsultan
+                        Sekolah Alam Al-Karim akan menghubungi Anda melalui nomor tersebut.
+                      </p>
+                    </Field>
+                  </div>
+                </section>
 
-            {/* Dynamic questions */}
-            {questions.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-                Belum ada pertanyaan untuk jenjang ini.
-              </div>
-            ) : (
-              <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                <h2 className="text-lg font-bold text-foreground">
-                  {jenjang === "tksd"
-                    ? "Analisis Kebutuhan Perkembangan Anak (TK & SD)"
-                    : jenjang === "smp"
-                    ? "Analisis Potensi & Perkembangan Remaja (SMP)"
-                    : "Analisis Potensi, Minat & Arah Masa Depan (SMA)"}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  {jenjang === "tksd"
-                    ? "Selamat datang di Kuesioner Konsultasi Jenjang TK & SD. Setiap anak memiliki cara belajar dan tumbuh yang unik. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh analisis mendalam mengenai kebutuhan perkembangan anak beserta rekomendasi pendidikan yang paling tepat."
-                    : jenjang === "smp"
-                    ? "Selamat datang di Kuesioner Konsultasi Jenjang SMP. Masa remaja adalah tahap penting pembentukan potensi dan karakter anak. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh analisis pengembangan bakat, gaya belajar, dan rekomendasi sekolah yang sesuai."
-                    : "Selamat datang di Kuesioner Konsultasi Jenjang SMA. Persiapan di tingkat SMA menjadi jembatan menuju perkuliahan dan karier masa depan anak. Silakan jawab beberapa pertanyaan di bawah ini untuk memperoleh pemetaan potensi, rekomendasi jurusan, dan kesiapan masa depan anak."}
-                </p>
-                <ol className="mt-6 space-y-6">
-                  {questions.map((q, idx) => (
-                    <li key={q.id}>
-                      <Field
-                        label={`${idx + 1}. ${q.question_text}`}
-                        required={q.is_required}
-                        error={errors[q.id]}
-                      >
-                        <QuestionInput
-                          q={q}
-                          value={answers[q.id]}
-                          onChange={(v) => setAnswer(q.id, v)}
-                        />
-                      </Field>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            )}
+                <div className="flex gap-3 pt-2">
+                  <Link
+                    to="/"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-foreground transition hover:bg-muted"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Kembali
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+                  >
+                    Lanjut ke Pertanyaan
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </>
+            ) : currentQ ? (
+              <>
+                <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6 space-y-5">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-brand/10 px-3 py-1 text-xs font-semibold text-brand">
+                      <Sparkles className="h-3.5 w-3.5" /> Pertanyaan {currentStep} dari {questions.length}
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Jenjang {label}
+                    </span>
+                  </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95 disabled:opacity-60 sm:h-14 sm:text-base"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Mengirim...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Kirim Konsultasi
-                </>
-              )}
-            </button>
+                  <Field
+                    label={`${currentStep}. ${currentQ.question_text}`}
+                    required={currentQ.is_required}
+                    error={errors[currentQ.id]}
+                  >
+                    <QuestionInput
+                      q={currentQ}
+                      value={answers[currentQ.id]}
+                      onChange={(v) => setAnswer(currentQ.id, v)}
+                    />
+                  </Field>
+                </section>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handlePrev}
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-foreground transition hover:bg-muted"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Kembali
+                  </button>
+
+                  {currentStep < questions.length ? (
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95"
+                    >
+                      Selanjutnya
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-brand text-sm font-semibold text-brand-foreground shadow-sm transition hover:opacity-95 disabled:opacity-60"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Mengirim...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Kirim Konsultasi
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : null}
           </form>
         )}
       </main>
