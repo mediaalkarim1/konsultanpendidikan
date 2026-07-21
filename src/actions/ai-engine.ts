@@ -127,18 +127,75 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
     }
   }
 
-  const defaultUnifiedPrompt = `Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak Senior.
+  const defaultUnifiedPrompt = `# ROLE
+Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA. Anda bertugas membantu orang tua memahami kondisi anak berdasarkan jawaban yang diberikan pada formulir konsultasi.
 
-Analisis dan susunlah resume lengkap berdasarkan data jawaban konsultasi pendidikan berikut dengan bahasa yang hangat, profesional, dan empatik.
+Gunakan bahasa Indonesia yang hangat, sopan, mudah dipahami, dan tidak menghakimi. Berikan analisis yang membangun, realistis, dan berorientasi pada solusi.
 
-Instruksi Kalimat Pembuka:
-- Awali setiap bagian laporan (Analisis, Resume, dan Rekomendasi) dengan kalimat pembuka yang ramah dan apresiatif sesuai dengan jenjang {{jenjang}}.
-- Pada bagian ANALISIS, awali dengan kalimat pembuka yang menyapa {{nama_orang_tua}} (orang tua dari {{nama_anak}}) serta mengapresiasi perhatian orang tua terhadap tumbuh kembang anak.
-- Pada bagian RESUME & REKOMENDASI PENDIDIKAN, sertakan pula kalimat pembuka yang memberikan pengantar positif bagi orang tua.
+---
 
-1. ANALISIS: Lakukan analisis mendalam mengenai karakteristik, gaya belajar, kelebihan, tantangan, serta potensi anak (Nama Orang Tua: {{nama_orang_tua}}, Nama Anak: {{nama_anak}}, Jenjang: {{jenjang}}).
-2. RESUME: Susun ringkasan (resume) profil anak secara singkat, padat, dan intuitif.
-3. REKOMENDASI PENDIDIKAN: Berikan rekomendasi pendidikan yang konkret meliputi metode pembelajaran yang disarankan, tipe sekolah yang cocok, serta panduan parenting untuk orang tua.
+# TUGAS
+Analisis seluruh jawaban dari orang tua secara menyeluruh.
+
+Jangan hanya menjelaskan setiap jawaban satu per satu, tetapi hubungkan seluruh informasi menjadi sebuah cerita yang utuh sehingga orang tua merasa sedang membaca hasil konsultasi dari seorang konsultan pendidikan.
+
+Tulislah dalam bentuk narasi yang mengalir, bukan poin-poin.
+
+Nama Orang Tua: {{nama_orang_tua}}
+Nama Anak: {{nama_anak}}
+Jenjang Pendidikan: {{jenjang}}
+
+---
+
+# FORMAT HASIL
+Awali dengan sapaan kepada orang tua (Ibu/Bapak {{nama_orang_tua}} / Ayah Bunda).
+
+Contoh:
+"Ayah Bunda {{nama_orang_tua}}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda {{nama_anak}}."
+
+Selanjutnya buat narasi yang membahas:
+• Gambaran umum kondisi anak.
+• Potensi yang sudah terlihat.
+• Hal-hal yang masih perlu mendapatkan perhatian.
+• Analisis hubungan antar jawaban yang diberikan.
+• Faktor yang kemungkinan memengaruhi kondisi anak.
+• Dampak apabila kondisi tersebut tidak mendapatkan pendampingan yang tepat.
+• Harapan perkembangan anak apabila mendapatkan stimulasi yang sesuai.
+
+Kemudian tutup dengan narasi rekomendasi yang hangat.
+
+Contoh:
+"Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda {{nama_anak}} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran."
+
+---
+
+# GAYA PENULISAN
+- Gunakan paragraf yang mengalir.
+- Hindari bullet point.
+- Hindari angka atau penilaian skor.
+- Hindari kalimat yang terlalu teknis.
+- Hindari bahasa yang menghakimi.
+- Hindari menyimpulkan diagnosis.
+- Gunakan bahasa yang empatik.
+- Berikan penjelasan yang mudah dipahami oleh orang tua.
+
+---
+
+# PANJANG ANALISIS
+Minimal 500 kata.
+Maksimal 900 kata.
+
+---
+
+# OUTPUT
+Hasil akhir harus berupa narasi konsultasi profesional yang terasa seperti ditulis langsung oleh seorang konsultan pendidikan, bukan oleh AI.
+
+Jangan menggunakan format markdown.
+Jangan menggunakan tabel.
+Jangan menggunakan bullet point.
+Jangan menggunakan heading.
+
+Hasil hanya berupa narasi utuh dari awal hingga akhir.
 
 Data Jawaban Konsultasi:
 {{jawaban_lengkap}}`;
@@ -151,7 +208,7 @@ Data Jawaban Konsultasi:
     .replace(/{{jawaban_lengkap}}/g, formattedAnswers);
 
   const fullUserPrompt = `
-=== INSTRUKSI KONSULTASI AI ===
+=== INSTRUKSI PROMPT ADMIN ===
 ${processedPrompt}
 
 === DATA KONSULTASI KLIEN ===
@@ -163,16 +220,16 @@ Nomor WhatsApp: ${whatsappNumber}
 === JAWABAN KUESIONER ===
 ${formattedAnswers}
 
-=== TUGAS & FORMAT OUTPUT ===
-Anda WAJIB memberikan jawaban dalam bentuk JSON valid dengan struktur persis berikut tanpa teks tambahan di luar JSON:
+=== PETUNJUK OUTPUT ===
+Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
 {
-  "summary": "Ringkasan profil dan kondisi anak (1-2 paragraf)",
-  "analysis": "Penjelasan analisis mendalam mengenai gaya belajar dan karakter anak",
-  "strengths": "Kekuatan utama & poin positif anak",
-  "weaknesses": "Area yang perlu dikembangkan atau membutuhkan stimulasi lebih",
-  "potential": "Potensi minat & bakat anak di masa depan",
-  "risk": "Risiko atau tantangan yang mungkin dihadapi bila tidak didampingi dengan tepat",
-  "education_recommendation": "Rekomendasi metode belajar, pendekatan parenting, aktivitas rumah, serta lingkungan sekolah untuk jenjang ${level}"
+  "summary": "Tuliskan narasi paragraf sapaan hangat pembuka dan gambaran umum kondisi anak (150-200 kata)",
+  "analysis": "Tuliskan narasi analisis mengalir utuh yang menghubungkan seluruh observasi kuesioner, faktor yang mempengaruhi, serta dampak & harapan perkembangan (300-500 kata)",
+  "strengths": "Narasi mengalir mengenai potensi & kekuatan utama anak tanpa bullet point",
+  "weaknesses": "Narasi mengalir mengenai hal-hal yang memerlukan perhatian & stimulasi tanpa bullet point",
+  "potential": "Narasi mengalir proyeksi minat, bakat, dan arah perkembangan anak tanpa bullet point",
+  "risk": "Narasi mengalir tantangan & dampak bila kurang pendampingan tanpa bullet point",
+  "education_recommendation": "Narasi penutup rekomendasi hangat meliputi metode belajar, lingkungan sekolah, dan parenting tanpa bullet point"
 }
 `;
 
@@ -305,56 +362,39 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
   const parentDisplay = parentName || "Orang Tua";
 
-  let parsedAnswersNarrative = "";
+  let parsedAnswersText = "";
   if (formattedAnswers && formattedAnswers.trim()) {
     const items = formattedAnswers.split("\n\n").map(item => {
       const lines = item.split("\n");
       const q = lines[0]?.replace(/^P:\s*/, "") || "";
       const a = lines[1]?.replace(/^J:\s*/, "") || "";
-      return `• ${q}: ${a}`;
+      return `mengenai ${q.toLowerCase()}, orang tua menyampaikan bahwa ${a.toLowerCase()}`;
     });
-    parsedAnswersNarrative = items.join("\n");
+    parsedAnswersText = items.join(", serta ");
   }
 
-  const summary = `Halo Ibu/Bapak ${parentDisplay}, salam hangat dari Tim Konsultan Pendidikan. Terima kasih atas kepercayaan Anda berkonsultasi mengenai perkembangan Ananda ${nameDisplay} (Jenjang ${jenjangLabel}). Berdasarkan observasi menyeluruh terhadap kuesioner, Ananda ${nameDisplay} memiliki keunikan modalitas belajar dan potensi bakat yang luar biasa. Dengan pendampingan yang hangat, komunikatif, dan terstruktur di rumah serta sekolah, Ananda diproyeksikan akan berkembang secara pesat baik dari segi akademis maupun kematangan karakter.`;
+  const p1_sapaan = `Ayah Bunda ${parentDisplay}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda ${nameDisplay} pada jenjang ${jenjangLabel}. Sebagaimana kita ketahui bersama, setiap anak berkembang dengan ritme keunikannya sendiri, dan perhatian hangat yang Ayah Bunda berikan merupakan fondasi awal yang sangat berharga bagi tumbuh kembang Ananda secara menyeluruh.`;
 
-  const analysis = `Analisis Karakteristik & Gaya Belajar Ananda ${nameDisplay}:\n\n` +
-    `1. Modalitas Belajar Utama:\n` +
-    `Ananda ${nameDisplay} sangat responsif terhadap pembelajaran visual dan kinestetik. Proses pemahaman materi akan jauh lebih optimal apabila disajikan dengan bantuan gambar, contoh nyata, peragaan, atau aktivitas interaktif dibanding sekadar penjelasan teoritis.\n\n` +
-    `2. Karakteristik & Kebutuhan Emosional:\n` +
-    `Ananda membutuhkan dorongan positif, rasa aman, dan apresiasi yang konsisten dari Ibu/Bapak ${parentDisplay} serta guru. Lingkungan yang menghargai proses dibanding sekadar hasil akhir akan membangun ketahanan mental dan kepercayaan diri anak secara signifikan.\n\n` +
-    `Rincian Observasi Kuesioner:\n` + (parsedAnswersNarrative || "Data kuesioner teranalisis dengan baik.");
+  const p2_gambaran_potensi = `Secara umum, Ananda ${nameDisplay} menunjukkan profil anak yang memiliki rasa ingin tahu yang besar dan antusiasme tinggi ketika dihadapkan pada hal-hal baru yang menarik perhatiannya. Potensi yang sudah sangat terlihat adalah daya tangkapnya yang responsif terhadap stimulasi visual serta pembelajaran berbasis pengalaman praktis. Ketika diberikan ruang untuk berinteraksi langsung dan mengeksplorasi ide-idenya, Ananda mampu menunjukkan fokus yang baik dan mengekspresikan pemahamannya dengan penuh percaya diri.`;
 
-  const strengths = `1. Antusiasme & Daya Tangkap Tinggi: Ananda ${nameDisplay} menunjukkan rasa ingin tahu yang besar dan cepat memahami hal baru saat materi dikemas secara menarik.\n` +
-    `2. Keterbukaan Komunikasi: Mampu menyampaikan dorongan emosional dan pikirannya apabila berada dalam atmosfer belajar yang nyaman.\n` +
-    `3. Kemampuan Praktis & Kreativitas: Sangat bersemangat pada aktivitas langsung, manipulasi media, serta eksperimen interaktif.`;
+  const p3_perhatian_dan_hubungan = `Meskipun demikian, ada beberapa hal yang masih memerlukan perhatian dan pendampingan yang sabar di rumah maupun di sekolah. Berdasarkan analisis keterkaitan antara jawaban yang disampaikan, tampak bahwa ${parsedAnswersText || "kondisi keseharian anak menunjukkan perlunya penyelarasan ritme belajar dan pengelolaan fokus"}. Terlihat hubungan yang erat antara suasana lingkungan belajar dengan tingkat daya tahan konsentrasi Ananda. Ketika suasana belajar dirasakan kurang bervariasi atau terlalu menuntut hafalan kaku, energi dan fokus Ananda cenderung lebih cepat teralih. Hal ini merupakan dinamika yang sangat wajar bagi anak usia berkembang dan bukan menunjukkan suatu kendala permanen.`;
 
-  const weaknesses = `1. Fokus yang Mudah Terdistraksi: Memerlukan suasana belajar yang tenang dan variasi metode agar perhatiannya tidak cepat berpindah.\n` +
-    `2. Manajemen Waktu & Organisasi Tugas: Masih membutuhkan arahan visual dan rutinitas harian yang terstruktur dari orang tua.\n` +
-    `3. Kedisiplinan Mandiri: Perlu pendampingan yang ramah untuk membangun kebiasaan merapikan dan menyelesaikan tugas hingga tuntas.`;
+  const p4_faktor_dampak = `Faktor utama yang kemungkinan mempengaruhi kondisi Ananda ${nameDisplay} saat ini adalah kebutuhan akan variasi metode belajar yang dinamis serta ritme pendampingan emosional yang konsisten. Apabila kondisi ini tidak mendapatkan pendampingan yang tepat sejak dini, anak berisiko merasa kurang dipahami, mengalami penurunan motivasi mandiri, atau cepat merasa jenuh saat menghadapi tantangan akademis yang lebih kompleks. Namun sebaliknya, apabila diberikan pendekatan yang sesuai dengan tipe belajarnya, Ananda akan tumbuh menjadi pembelajar yang tangguh, kreatif, dan mandiri.`;
 
-  const potential = `Ananda ${nameDisplay} memiliki potensi bakat masa depan yang menonjol di bidang pemecahan masalah kreatif, kegiatan berbasis proyek (project-based learning), dan eksplorasi terapan. Apabila difasilitasi di sekolah dan lingkungan yang tepat, Ananda berpeluang besar menjadi pribadi yang unggul dan percaya diri.`;
+  const p5_harapan_dan_rekomendasi = `Harapan perkembangan Ananda ${nameDisplay} ke depan sangatlah cerah apabila mendapatkan stimulasi yang mendukung. Kami merekomendasikan agar orang tua dan sekolah bekerja sama menciptakan lingkungan belajar yang kaya akan eksplorasi interaktif, memanfaatkan media visual, serta memberikan dorongan positif atas setiap usaha kecil yang ditunjukkan anak. Pembiasaan jadwal harian yang fleksibel namun konsisten di rumah juga akan membantu Ananda melatih kedisiplinan diri tanpa merasa tertekan.`;
 
-  const risk = `Apabila pola belajar dipaksakan dengan metode hafalan kaku atau tekanan tinggi tanpa ruang eksplorasi, Ananda berisiko mengalami kelelahan belajar (learning fatigue), kejenuhan, atau penurunan motivasi mandiri.`;
+  const p6_penutup = `Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda ${nameDisplay} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran.`;
 
-  const education_recommendation = `Rekomendasi Strategis Pendidikan & Parenting (Jenjang ${jenjangLabel}):\n\n` +
-    `1. Rekomendasi Lingkungan Sekolah:\n` +
-    `Disarankan memilih sekolah berbasis lingkungan/alam, project-based learning, atau sekolah berbasis karakter yang aktif memfasilitasi minat dan bakat individu anak secara menyenangkan.\n\n` +
-    `2. Rekomendasi Pembelajaran di Rumah:\n` +
-    `• Berikan jeda istirahat singkat di antara sesi belajar (pomodoro method untuk anak).\n` +
-    `• Gunakan peta konsep visual, gambar berwarna, dan eksperimen fisik sederhana saat mendampingi anak.\n\n` +
-    `3. Rekomendasi Parenting & Komunikasi Orang Tua:\n` +
-    `• Berikan pujian spesifik terhadap usaha dan proses yang dilakukan Ananda ${nameDisplay}.\n` +
-    `• Sediakan waktu dialog santai setiap hari untuk mendengarkan cerita dan perasaan anak.`;
+  const fullNarrative = `${p1_sapaan}\n\n${p2_gambaran_potensi}\n\n${p3_perhatian_dan_hubungan}\n\n${p4_faktor_dampak}\n\n${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`;
 
   return {
-    summary,
-    analysis,
-    strengths,
-    weaknesses,
-    potential,
-    risk,
-    education_recommendation
+    summary: p1_sapaan,
+    analysis: fullNarrative,
+    strengths: p2_gambaran_potensi,
+    weaknesses: p3_perhatian_dan_hubungan,
+    potential: p4_faktor_dampak,
+    risk: p4_faktor_dampak,
+    education_recommendation: `${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`
   };
 }
 
