@@ -84,7 +84,7 @@ function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full rounded-lg border border-input bg-background px-4 py-2.5 outline-none transition focus:border-brand focus:ring-1 focus:ring-brand"
-              placeholder="mediaalkarim"
+              placeholder="Masukkan username atau email"
               required
             />
           </div>
@@ -109,11 +109,6 @@ function LoginPage() {
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Masuk"}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-xs text-muted-foreground border-t pt-4">
-          Default Username: <code className="font-semibold text-foreground">mediaalkarim</code> <br/>
-          Default Password: <code className="font-semibold text-foreground">mediaalkarim</code>
-        </div>
       </div>
     </div>
   );
