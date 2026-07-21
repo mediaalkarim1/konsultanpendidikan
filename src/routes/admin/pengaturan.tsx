@@ -857,6 +857,114 @@ function PengaturanPage() {
                 </button>
               </div>
             </form>
+
+            <div className="space-y-5 rounded-xl border bg-card p-6 shadow-sm animate-in fade-in duration-200">
+              <div className="border-b pb-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2 text-brand">
+                  <Play className="h-5 w-5" /> Simulasi Pengiriman Formulir & Notifikasi WhatsApp
+                </h2>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Tes skenario saat orang tua selesai mengisi dan men-submit formulir konsultasi. Pesan otomatis
+                  dirender dari template di atas dan tetap dapat diedit sebelum dikirim.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nama Orang Tua</label>
+                  <input
+                    type="text"
+                    value={simName}
+                    onChange={(e) => setSimName(e.target.value)}
+                    placeholder="Contoh: Budi Santoso"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Jenjang</label>
+                  <select
+                    value={simJenjang}
+                    onChange={(e) => setSimJenjang(e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  >
+                    <option>TK & SD</option>
+                    <option>SMP</option>
+                    <option>SMA</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Admin</label>
+                  <input
+                    type="tel"
+                    value={simAdminNum}
+                    onChange={(e) => setSimAdminNum(e.target.value.replace(/[^\d+]/g, ""))}
+                    placeholder="Contoh: 08123456789"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan notifikasi admin akan dikirim ke nomor ini.</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium">Nomor WA Target (Orang Tua)</label>
+                  <input
+                    type="tel"
+                    value={simTargetNum}
+                    onChange={(e) => setSimTargetNum(e.target.value.replace(/[^\d+]/g, ""))}
+                    placeholder="Contoh: 08987654321"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-brand"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">Pesan konfirmasi peserta akan dikirim ke nomor ini.</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Admin (otomatis, bisa diedit)</label>
+                  <textarea
+                    value={simAdminMsg}
+                    onChange={(e) => { setSimAdminMsg(e.target.value); setSimEdited(true); }}
+                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Pesan untuk Orang Tua (otomatis, bisa diedit)</label>
+                  <textarea
+                    value={simParentMsg}
+                    onChange={(e) => { setSimParentMsg(e.target.value); setSimEdited(true); }}
+                    className="min-h-[160px] w-full rounded-lg border border-input bg-background p-3 text-sm font-mono outline-none focus:ring-1 focus:ring-brand"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+                <button
+                  type="button"
+                  onClick={handleSimulateWa}
+                  disabled={simSending}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {simSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  Kirim Simulasi WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={resetSimEdits}
+                  className="flex items-center gap-2 rounded-lg border border-input px-4 py-2.5 text-sm hover:bg-muted"
+                >
+                  <RotateCcw className="h-4 w-4" /> Muat Ulang dari Template
+                </button>
+                <span className="text-[11px] text-muted-foreground">
+                  Provider aktif diambil dari tab <b>WhatsApp Provider</b>. Jika provider = <code>mock</code>, pesan hanya dicatat (tidak benar-benar dikirim).
+                </span>
+              </div>
+
+              {simResultWa && (
+                <div className="grid gap-3 md:grid-cols-2 pt-2">
+                  <SimResultCard title="Admin" target={simResultWa.admin.target} result={simResultWa.admin} />
+                  <SimResultCard title="Orang Tua" target={simResultWa.parent.target} result={simResultWa.parent} />
+                </div>
+              )}
+            </div>
+            </div>
           ) : (
             <form onSubmit={handleSaveSettings} className="rounded-xl border bg-card p-6 shadow-sm">
               {activeTab === "umum" && (
