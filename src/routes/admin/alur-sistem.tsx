@@ -88,6 +88,7 @@ export function AlurSistemPage() {
   // 4. Form Simulation State
   const [simName, setSimName] = useState("Budi Santoso");
   const [simPhone, setSimPhone] = useState("081234567890");
+  const [simAdminPhone, setSimAdminPhone] = useState("081234567890");
   const [simChild, setSimChild] = useState("Ananda Rizky");
   const [simLevel, setSimLevel] = useState("tksd");
   const [simulating, setSimulating] = useState(false);
@@ -233,18 +234,18 @@ export function AlurSistemPage() {
         addLog("✨ Hasil analisis AI & resume berhasil disimpan ke database!");
 
         // Step 2: Trigger WA Notifications Simulation
-        addLog("📱 Mengirim Notifikasi WhatsApp ke Admin & Orang Tua...");
+        addLog(`📱 Mengirim Notifikasi WhatsApp ke Admin (${simAdminPhone}) & Orang Tua (${simPhone})...`);
         const waRes = await simulateWaSend({
           data: {
-            targetAdmin: "081234567890",
+            targetAdmin: simAdminPhone,
             targetParent: simPhone,
-            adminMessage: `[SIMULASI ADMIN] Ada konsultasi baru masuk!\nNama: ${simName}\nAnak: ${simChild}\nJenjang: ${simLevel.toUpperCase()}`,
-            parentMessage: `[SIMULASI ORANG TUA] Halo ${simName}, konsultasi untuk ${simChild} telah kami terima!`
+            adminMessage: `[SIMULASI ADMIN] Ada konsultasi baru masuk!\nNama Orang Tua: ${simName}\nNama Anak: ${simChild}\nJenjang: ${simLevel.toUpperCase()}\nNomor WhatsApp: ${simPhone}`,
+            parentMessage: `[SIMULASI ORANG TUA] Halo ${simName}, konsultasi pendidikan untuk Ananda ${simChild} telah kami terima!`
           }
         });
 
-        if (waRes.admin.success) addLog("✅ Notifikasi WhatsApp Admin Terkirim!");
-        if (waRes.parent.success) addLog("✅ Notifikasi WhatsApp Orang Tua Terkirim!");
+        if (waRes.admin.success) addLog(`✅ Notifikasi WhatsApp Admin Terkirim ke ${simAdminPhone}!`);
+        if (waRes.parent.success) addLog(`✅ Notifikasi WhatsApp Orang Tua Terkirim ke ${simPhone}!`);
 
         addLog("🎉 SIMULASI SELESAI! Seluruh alur end-to-end berjalan 100% SUKSES.");
         toast.success("Simulasi formulir & notifikasi WA berhasil dijalankan!");
@@ -641,15 +642,31 @@ export function AlurSistemPage() {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Nomor WhatsApp
+                    Nomor WhatsApp Orang Tua / Peserta
                   </label>
                   <input
                     type="text"
                     value={simPhone}
                     onChange={(e) => setSimPhone(e.target.value)}
-                    className="w-full rounded-lg border p-2.5 text-sm"
+                    className="w-full rounded-lg border p-2.5 text-sm font-medium"
+                    placeholder="081234567890"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider font-semibold text-emerald-600 mb-1">
+                    Nomor WhatsApp Admin (Penerima Notifikasi Admin)
+                  </label>
+                  <input
+                    type="text"
+                    value={simAdminPhone}
+                    onChange={(e) => setSimAdminPhone(e.target.value)}
+                    className="w-full rounded-lg border border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/20 p-2.5 text-sm font-medium text-emerald-950 dark:text-emerald-200"
+                    placeholder="081234567890"
+                    required
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">Nomor WhatsApp Admin yang menerima notifikasi pesanan/konsultasi baru.</p>
                 </div>
 
                 <div>
@@ -660,7 +677,7 @@ export function AlurSistemPage() {
                     type="text"
                     value={simChild}
                     onChange={(e) => setSimChild(e.target.value)}
-                    className="w-full rounded-lg border p-2.5 text-sm"
+                    className="w-full rounded-lg border p-2.5 text-sm font-medium"
                     required
                   />
                 </div>
