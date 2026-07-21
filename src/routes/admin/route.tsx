@@ -21,7 +21,7 @@ export const Route = createFileRoute("/admin")({
 const menuItems = [
   { name: "Dashboard", to: "/admin", icon: LayoutGrid },
   { name: "Data Konsultasi", to: "/admin/konsultasi", icon: MessageSquareText },
-  { name: "Database Orang Tua", to: "/admin/konsultasi", icon: Database },
+  { name: "Database Orang Tua", to: "/admin/database-orangtua", icon: Database },
   { name: "Alur Sistem & Integrasi", to: "/admin/alur-sistem", icon: Workflow },
   { name: "Kelola Pertanyaan", to: "/admin/pertanyaan", icon: ListCheck },
   { name: "Prompt AI", to: "/admin/prompt", icon: Sparkles },

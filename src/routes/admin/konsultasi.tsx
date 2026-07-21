@@ -18,8 +18,9 @@ import {
   CheckCircle2,
   FileSpreadsheet,
   Calendar,
-  Users,
+  Sparkles,
   Clock,
+  Users,
   CheckSquare,
   MessageSquare
 } from "lucide-react";
@@ -476,9 +477,9 @@ ${analysisData?.education_recommendation || "-"}
                 <th className="px-4 py-3 font-medium text-muted-foreground">ID Konsultasi</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Tanggal</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Nama Orang Tua</th>
-                <th className="px-4 py-3 font-medium text-muted-foreground">Nomor WhatsApp</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Nama Anak</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Jenjang</th>
+                <th className="px-4 py-3 font-medium text-muted-foreground">Hasil Analisis AI</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground">Status Konsultasi</th>
                 <th className="px-4 py-3 font-medium text-muted-foreground text-right">Aksi</th>
               </tr>
@@ -498,8 +499,6 @@ ${analysisData?.education_recommendation || "-"}
               ) : (
                 data.map((row) => {
                   const statusInfo = STATUS_OPTIONS.find((s) => s.value === row.status) || STATUS_OPTIONS[0];
-                  const cleanWa = row.whatsapp_number.replace(/[^0-9]/g, "");
-                  const waUrl = `https://wa.me/${cleanWa.startsWith("0") ? "62" + cleanWa.slice(1) : cleanWa}`;
 
                   return (
                     <tr key={row.id} className="transition-colors hover:bg-muted/50">
@@ -509,19 +508,8 @@ ${analysisData?.education_recommendation || "-"}
                       <td className="whitespace-nowrap px-4 py-3 text-xs">
                         {format(new Date(row.created_at), "dd MMM yyyy, HH:mm", { locale: id })}
                       </td>
-                      <td className="px-4 py-3 font-medium text-foreground">
+                      <td className="px-4 py-3 font-semibold text-foreground">
                         {row.parent_name}
-                      </td>
-                      <td className="px-4 py-3">
-                        <a
-                          href={waUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 font-medium text-emerald-600 hover:underline"
-                        >
-                          <Send className="h-3 w-3" />
-                          {row.whatsapp_number}
-                        </a>
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground">
                         {row.child_name || "-"}
@@ -530,6 +518,22 @@ ${analysisData?.education_recommendation || "-"}
                         <span className="inline-block rounded-full bg-brand/10 text-brand font-semibold px-2.5 py-0.5 text-xs">
                           {LEVEL_LABELS[row.level] || row.level}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 max-w-xs">
+                        {(row as any).summary || row.ai_result ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-semibold border border-emerald-200">
+                              <Sparkles className="h-3 w-3" /> Analisis Tersedia
+                            </span>
+                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                              {(row as any).summary || row.ai_result}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-medium border border-amber-200">
+                            <Clock className="h-3 w-3" /> Menunggu AI
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <select

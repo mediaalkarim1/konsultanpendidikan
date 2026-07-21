@@ -22,6 +22,7 @@ import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
 import { Route as AdminLogAktivitasRouteImport } from './routes/admin/log-aktivitas'
 import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
 import { Route as AdminAlurSistemRouteImport } from './routes/admin/alur-sistem'
+import { Route as AdminDatabaseOrangtuaRouteImport } from './routes/admin/database-orangtua'
 
 const SuksesRoute = SuksesRouteImport.update({
   id: '/sukses',
@@ -88,6 +89,11 @@ const AdminAlurSistemRoute = AdminAlurSistemRouteImport.update({
   path: '/alur-sistem',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminDatabaseOrangtuaRoute = AdminDatabaseOrangtuaRouteImport.update({
+  id: '/database-orangtua',
+  path: '/database-orangtua',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/admin/prompt': typeof AdminPromptRoute
   '/admin/testing': typeof AdminTestingRoute
   '/admin/alur-sistem': typeof AdminAlurSistemRoute
+  '/admin/database-orangtua': typeof AdminDatabaseOrangtuaRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/admin/prompt': typeof AdminPromptRoute
   '/admin/testing': typeof AdminTestingRoute
   '/admin/alur-sistem': typeof AdminAlurSistemRoute
+  '/admin/database-orangtua': typeof AdminDatabaseOrangtuaRoute
   '/formulir/$jenjang': typeof FormulirJenjangRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -278,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAlurSistemRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/database-orangtua': {
+      id: '/admin/database-orangtua'
+      path: '/database-orangtua'
+      fullPath: '/admin/database-orangtua'
+      preLoaderRoute: typeof AdminDatabaseOrangtuaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
   }
 }
 
@@ -289,6 +304,7 @@ interface AdminRouteRouteChildren {
   AdminPromptRoute: typeof AdminPromptRoute
   AdminTestingRoute: typeof AdminTestingRoute
   AdminAlurSistemRoute: typeof AdminAlurSistemRoute
+  AdminDatabaseOrangtuaRoute: typeof AdminDatabaseOrangtuaRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
@@ -300,6 +316,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminPromptRoute: AdminPromptRoute,
   AdminTestingRoute: AdminTestingRoute,
   AdminAlurSistemRoute: AdminAlurSistemRoute,
+  AdminDatabaseOrangtuaRoute: AdminDatabaseOrangtuaRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
