@@ -56,7 +56,21 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   }
 
   // 2. Fetch active prompts
-  let { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+  let systemPromptFromDb = "";
+  const { data: promptSetting } = await supabaseAdmin
+    .from("settings")
+    .select("value")
+    .eq("key", "ai.unified_prompt")
+    .maybeSingle();
+
+  if (promptSetting && (promptSetting.value as any)?.system_prompt) {
+    systemPromptFromDb = (promptSetting.value as any).system_prompt;
+  } else {
+    let { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+    if (prompt?.system_prompt) {
+      systemPromptFromDb = prompt.system_prompt;
+    }
+  }
 
   const defaultUnifiedPrompt = `Anda adalah Pakar Analis Potensi & Konsultan Pendidikan Anak Senior.
 
@@ -74,7 +88,7 @@ Instruksi Kalimat Pembuka:
 Data Jawaban Konsultasi:
 {{jawaban_lengkap}}`;
 
-  const mainPromptTemplate = prompt?.system_prompt || defaultUnifiedPrompt;
+  const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
   const processedPrompt = mainPromptTemplate
     .replace(/{{nama_orang_tua}}/g, parentName)
     .replace(/{{nama_anak}}/g, childName || "-")

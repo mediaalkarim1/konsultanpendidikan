@@ -125,6 +125,26 @@ export const getMultiPromptsAction = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
+
+      // 1. Try fetching from settings table first (guaranteed key-value table)
+      const { data: settingRow } = await supabaseAdmin
+        .from("settings")
+        .select("*")
+        .eq("key", "ai.unified_prompt")
+        .maybeSingle();
+
+      if (settingRow && settingRow.value) {
+        const val = settingRow.value as any;
+        return {
+          id: val.id || "setting-prompt",
+          system_prompt: val.system_prompt || val.prompt || "",
+          analysis_prompt: val.analysis_prompt || val.prompt || "",
+          summary_prompt: val.summary_prompt || val.prompt || "",
+          recommendation_prompt: val.recommendation_prompt || val.prompt || ""
+        };
+      }
+
+      // 2. Fallback: Try fetching from ai_prompts table if available
       const { data } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
       return data || null;
     } catch (e) {
@@ -139,23 +159,57 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
     const supabaseAdmin = getAdminSupabase();
     const { prompts, email } = ctx.data;
 
-    if (prompts.id) {
-      const { error } = await supabaseAdmin.from("ai_prompts").update({
-        system_prompt: prompts.system_prompt,
-        analysis_prompt: prompts.analysis_prompt,
-        summary_prompt: prompts.summary_prompt,
-        recommendation_prompt: prompts.recommendation_prompt,
-        updated_at: new Date().toISOString()
-      }).eq("id", prompts.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabaseAdmin.from("ai_prompts").insert({
-        system_prompt: prompts.system_prompt,
-        analysis_prompt: prompts.analysis_prompt,
-        summary_prompt: prompts.summary_prompt,
-        recommendation_prompt: prompts.recommendation_prompt
-      });
-      if (error) throw error;
+    const settingPayload = {
+      id: prompts.id || "unified-prompt",
+      system_prompt: prompts.system_prompt,
+      analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
+      summary_prompt: prompts.summary_prompt || prompts.system_prompt,
+      recommendation_prompt: prompts.recommendation_prompt || prompts.system_prompt,
+      updated_at: new Date().toISOString()
+    };
+
+    // 1. Save to settings table (key: "ai.unified_prompt")
+    const { error: setErr } = await supabaseAdmin.from("settings").upsert({
+      key: "ai.unified_prompt",
+      value: settingPayload as any,
+      is_public: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "key" });
+
+    if (setErr) {
+      console.error("Save prompt to settings error:", setErr);
+    }
+
+    // 2. Try saving to ai_prompts table if it exists
+    try {
+      if (prompts.id && !prompts.id.startsWith("setting-") && !prompts.id.startsWith("unified-")) {
+        await supabaseAdmin.from("ai_prompts").update({
+          system_prompt: prompts.system_prompt,
+          analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
+          summary_prompt: prompts.summary_prompt || prompts.system_prompt,
+          recommendation_prompt: prompts.recommendation_prompt || prompts.system_prompt,
+          updated_at: new Date().toISOString()
+        }).eq("id", prompts.id);
+      } else {
+        const { data: inserted } = await supabaseAdmin.from("ai_prompts").insert({
+          system_prompt: prompts.system_prompt,
+          analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
+          summary_prompt: prompts.summary_prompt || prompts.system_prompt,
+          recommendation_prompt: prompts.recommendation_prompt || prompts.system_prompt
+        }).select().single();
+
+        if (inserted && inserted.id) {
+          settingPayload.id = inserted.id;
+          await supabaseAdmin.from("settings").upsert({
+            key: "ai.unified_prompt",
+            value: settingPayload as any,
+            is_public: false,
+            updated_at: new Date().toISOString()
+          }, { onConflict: "key" });
+        }
+      }
+    } catch (dbErr) {
+      console.warn("ai_prompts table save notice:", dbErr);
     }
 
     await logActivityInternal(email, "SAVE_AI_PROMPTS", {});

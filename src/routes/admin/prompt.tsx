@@ -60,7 +60,7 @@ export function PromptAIPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await saveMultiPromptsAction({
+      const res = await saveMultiPromptsAction({
         data: {
           prompts: {
             id: promptId,
@@ -72,8 +72,14 @@ export function PromptAIPage() {
           email: userEmail || "admin"
         }
       });
-      toast.success("Konfigurasi Prompt AI berhasil disimpan");
+      if (res && res.success) {
+        toast.success("Konfigurasi Prompt AI berhasil disimpan");
+        await loadPrompts();
+      } else {
+        toast.error("Gagal menyimpan prompt AI");
+      }
     } catch (e: any) {
+      console.error(e);
       toast.error("Gagal menyimpan prompt: " + (e.message || "Error database"));
     } finally {
       setSaving(false);
