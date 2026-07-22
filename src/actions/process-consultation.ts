@@ -269,7 +269,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       }
 
       const waConfig: WaProviderConfig = (settingsData || []).find((s: any) => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
-      const adminContact = (settingsData || []).find((s: any) => s.key === "site.contact")?.value?.whatsapp;
+      const adminContact = (settingsData || []).find((s: any) => s.key === "site.contact")?.value?.whatsapp || "081234567890";
       const wfConfig = (settingsData || []).find((s: any) => s.key === "ai.workflow_config")?.value || {
         enable_wa_admin_notif: true,
         enable_wa_parent_notif: true,
