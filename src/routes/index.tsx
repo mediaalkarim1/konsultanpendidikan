@@ -488,7 +488,7 @@ export function Home() {
                 </div>
 
                 {/* Title */}
-                <h1 className="text-3.5xl font-black leading-[1.15] tracking-tight text-slate-900 sm:text-5xl lg:text-5.5xl">
+                <h1 className="text-4xl sm:text-6xl lg:text-6.5xl xl:text-7xl font-black leading-[1.08] tracking-tight text-slate-900">
                   {config.heroTitle?.includes("Untuk Anak") ? (
                     <>
                       Konsultasi & Rekomendasi <br />
@@ -598,33 +598,30 @@ export function Home() {
               </p>
             </div>
 
-            {/* Mobile: Vertical List | Desktop: 3 Column Grid */}
-            <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
+            {/* List Poin Utama Keunggulan (Tanpa Deskripsi) */}
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
               {config.advantages?.map((adv: any, idx: number) => {
                 const theme = ADVANTAGE_THEMES[idx % ADVANTAGE_THEMES.length];
                 return (
                   <div
                     key={idx}
-                    className={`group relative flex items-start gap-4 sm:flex-col sm:items-start rounded-2xl sm:rounded-3xl border ${theme.border} p-4 sm:p-7 bg-white text-left transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-1.5 hover:shadow-lg sm:hover:shadow-xl ${theme.ring}`}
+                    className={`group flex items-center gap-4 rounded-2xl border ${theme.border} p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${theme.ring}`}
                     style={{ backgroundColor: config.colors?.card }}
                   >
-                    {/* Top/Left Icon with Gradient Background */}
-                    <div className={`grid h-11 w-11 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}>
-                      <DynamicIcon name={adv.icon} className="h-5.5 w-5.5 sm:h-7 sm:w-7" />
+                    {/* Icon Box */}
+                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-xs transition-transform duration-300 group-hover:scale-105`}>
+                      <DynamicIcon name={adv.icon} className="h-6 w-6" />
                     </div>
 
-                    <div className="flex-1 space-y-1 sm:space-y-0">
-                      <h3 className="text-sm sm:text-lg font-bold text-slate-900 tracking-tight sm:mt-5">
+                    {/* Main Point Title Only */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-emerald-700 transition">
                         {adv.title}
                       </h3>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed sm:mt-2.5">
-                        {adv.desc}
-                      </p>
+                    </div>
 
-                      <div className="hidden sm:flex mt-6 pt-4 border-t border-slate-100 items-center justify-between text-xs font-bold text-slate-400 group-hover:text-emerald-600 transition">
-                        <span>Standard Al-Karim</span>
-                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                      </div>
+                    <div className="shrink-0 text-emerald-500">
+                      <CheckCircle2 className="h-5 w-5" />
                     </div>
                   </div>
                 );
