@@ -28,7 +28,8 @@ import {
   Award,
   Users,
   ShieldCheck,
-  MessageSquare
+  MessageSquare,
+  EyeOff
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { toast } from "sonner";
@@ -83,6 +84,15 @@ export function PengaturanPage() {
         setHomeForm({
           ...DEFAULT_HOMEPAGE_CONFIG,
           ...val,
+          showHeader: val.showHeader !== undefined ? val.showHeader : DEFAULT_HOMEPAGE_CONFIG.showHeader,
+          showHero: val.showHero !== undefined ? val.showHero : DEFAULT_HOMEPAGE_CONFIG.showHero,
+          showHeroStats: val.showHeroStats !== undefined ? val.showHeroStats : DEFAULT_HOMEPAGE_CONFIG.showHeroStats,
+          showAdvantages: val.showAdvantages !== undefined ? val.showAdvantages : DEFAULT_HOMEPAGE_CONFIG.showAdvantages,
+          showLevels: val.showLevels !== undefined ? val.showLevels : DEFAULT_HOMEPAGE_CONFIG.showLevels,
+          showHowItWorks: val.showHowItWorks !== undefined ? val.showHowItWorks : DEFAULT_HOMEPAGE_CONFIG.showHowItWorks,
+          showFaq: val.showFaq !== undefined ? val.showFaq : DEFAULT_HOMEPAGE_CONFIG.showFaq,
+          showCta: val.showCta !== undefined ? val.showCta : DEFAULT_HOMEPAGE_CONFIG.showCta,
+          showFooter: val.showFooter !== undefined ? val.showFooter : DEFAULT_HOMEPAGE_CONFIG.showFooter,
           navItems: Array.isArray(val.navItems) && val.navItems.length > 0 ? val.navItems : DEFAULT_HOMEPAGE_CONFIG.navItems,
           heroStats: Array.isArray(val.heroStats) && val.heroStats.length > 0 ? val.heroStats : DEFAULT_HOMEPAGE_CONFIG.heroStats,
           advantages: Array.isArray(val.advantages) && val.advantages.length > 0 ? val.advantages : DEFAULT_HOMEPAGE_CONFIG.advantages,
@@ -142,6 +152,48 @@ export function PengaturanPage() {
     }));
   };
 
+  // Toggle Visibility Helper Component
+  const VisibilityToggleBanner = ({ 
+    flagKey, 
+    label 
+  }: { 
+    flagKey: keyof typeof DEFAULT_HOMEPAGE_CONFIG; 
+    label: string 
+  }) => {
+    const isVisible = homeForm[flagKey] !== false;
+    return (
+      <div className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${isVisible ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900' : 'bg-slate-100/80 border-slate-200 text-slate-600'}`}>
+        <div className="flex items-center gap-2.5">
+          {isVisible ? (
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-600 text-white shadow-xs">
+              <Eye className="h-4 w-4" />
+            </div>
+          ) : (
+            <div className="grid h-7 w-7 place-items-center rounded-lg bg-slate-400 text-white">
+              <EyeOff className="h-4 w-4" />
+            </div>
+          )}
+          <div>
+            <p className="text-xs font-bold">{label}</p>
+            <p className="text-[11px] opacity-80">
+              {isVisible ? "Status: TAMPIL di Homepage" : "Status: DISEMBUYIKAN (Tidak tampil di Homepage)"}
+            </p>
+          </div>
+        </div>
+
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isVisible}
+            onChange={(e) => setHomeForm({ ...homeForm, [flagKey]: e.target.checked })}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
+        </label>
+      </div>
+    );
+  };
+
   // Save changes
   const handleSaveHomepage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -183,7 +235,7 @@ export function PengaturanPage() {
             <Layout className="h-6 w-6 text-brand" /> Pengaturan CMS Homepage
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Kelola seluruh konten banner, navigasi, keunggulan, pilihan jenjang, cara kerja, FAQ, warna branding, dan footer homepage.
+            Kelola konten, susunan menu, warna branding, serta status tampil/sembunyi setiap section homepage.
           </p>
         </div>
 
@@ -248,10 +300,32 @@ export function PengaturanPage() {
         {activeTab === "header-footer" && (
           <div className="space-y-6">
             
+            {/* Master Kontrol Visibilitas 9 Section Homepage */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+                <Layout className="h-5 w-5" /> 1. Kontrol Visibilitas Seluruh Section Homepage
+              </h2>
+              <p className="text-xs text-slate-500">
+                Aktifkan atau nonaktifkan tampilan bagian mana saja yang ingin dimunculkan di halaman utama (Homepage).
+              </p>
+              
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <VisibilityToggleBanner flagKey="showHeader" label="1. Header Navigasi Top Bar" />
+                <VisibilityToggleBanner flagKey="showHero" label="2. Banner Hero Utama" />
+                <VisibilityToggleBanner flagKey="showHeroStats" label="3. Strip Metrik / Stat Hero" />
+                <VisibilityToggleBanner flagKey="showAdvantages" label="4. Section Keunggulan" />
+                <VisibilityToggleBanner flagKey="showLevels" label="5. Section Pilihan Jenjang" />
+                <VisibilityToggleBanner flagKey="showHowItWorks" label="6. Section Cara Kerja (4 Steps)" />
+                <VisibilityToggleBanner flagKey="showFaq" label="7. Section FAQ (Pertanyaan)" />
+                <VisibilityToggleBanner flagKey="showCta" label="8. Banner Call To Action (CTA)" />
+                <VisibilityToggleBanner flagKey="showFooter" label="9. Footer & Kontak" />
+              </div>
+            </div>
+
             {/* Tema Warna */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Palette className="h-5 w-5" /> 1. Skema & Tema Warna Website
+                <Palette className="h-5 w-5" /> 2. Skema & Tema Warna Website
               </h2>
               <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 <div>
@@ -364,92 +438,14 @@ export function PengaturanPage() {
               </div>
             </div>
 
-            {/* Kontrol Visibilitas Section Homepage */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Layout className="h-5 w-5" /> 2. Kontrol Visibilitas Section Homepage
-              </h2>
-              <p className="text-xs text-slate-500">
-                Tampilkan atau sembunyikan bagian-bagian homepage tertentu sesuai kebutuhan.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showHero !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showHero: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Hero Banner</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showAdvantages !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showAdvantages: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Section Keunggulan</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showLevels !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showLevels: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Pilihan Jenjang</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showHowItWorks !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showHowItWorks: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Cara Kerja (4 Steps)</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showFaq !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showFaq: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Section FAQ</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showCta !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showCta: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">CTA Banner</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
-                  <input
-                    type="checkbox"
-                    checked={homeForm.showFooter !== false}
-                    onChange={(e) => setHomeForm({ ...homeForm, showFooter: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
-                  />
-                  <span className="text-xs font-bold text-slate-700">Footer</span>
-                </label>
-              </div>
-            </div>
-
             {/* Header CMS & Menu Links */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Globe className="h-5 w-5" /> 3. Tampilan Header & Menu Navigasi
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <Globe className="h-5 w-5" /> 3. Tampilan Header & Menu Navigasi
+                </h2>
+                <VisibilityToggleBanner flagKey="showHeader" label="Header Navigasi" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -574,9 +570,12 @@ export function PengaturanPage() {
 
             {/* Footer & Social Media CMS */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <FileText className="h-5 w-5" /> 4. Tampilan Footer, Kontak & Sosial Media
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <FileText className="h-5 w-5" /> 4. Tampilan Footer, Kontak & Sosial Media
+                </h2>
+                <VisibilityToggleBanner flagKey="showFooter" label="Footer & Kontak" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -726,9 +725,12 @@ export function PengaturanPage() {
             
             {/* Hero Section */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Sparkles className="h-5 w-5" /> 1. Hero Banner Utama
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" /> 1. Hero Banner Utama
+                </h2>
+                <VisibilityToggleBanner flagKey="showHero" label="Banner Hero" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -851,20 +853,10 @@ export function PengaturanPage() {
               <div className="pt-4 border-t space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-brand">Item Statistik di Bawah Hero Banner</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = [...(homeForm.heroStats || [])];
-                      updated.push({ value: "100%", label: "Metrik Baru", icon: "CheckCircle2" });
-                      setHomeForm({ ...homeForm, heroStats: updated });
-                    }}
-                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Tambah Stat Metrik
-                  </button>
+                  <VisibilityToggleBanner flagKey="showHeroStats" label="Strip Metrik Hero" />
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 pt-2">
                   {homeForm.heroStats?.map((stat: any, idx: number) => (
                     <div key={idx} className="flex items-center gap-2 border p-2.5 rounded-lg bg-slate-50">
                       <select
@@ -922,9 +914,12 @@ export function PengaturanPage() {
 
             {/* Call To Action */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Megaphone className="h-5 w-5" /> 2. Call To Action (Banner Bawah)
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <Megaphone className="h-5 w-5" /> 2. Call To Action (Banner Bawah)
+                </h2>
+                <VisibilityToggleBanner flagKey="showCta" label="Banner CTA" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -1007,9 +1002,12 @@ export function PengaturanPage() {
         {activeTab === "advantages" && (
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Target className="h-5 w-5" /> Kelola Keunggulan Konsultasi
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <Target className="h-5 w-5" /> Kelola Keunggulan Konsultasi
+                </h2>
+                <VisibilityToggleBanner flagKey="showAdvantages" label="Section Keunggulan" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1154,9 +1152,12 @@ export function PengaturanPage() {
         {activeTab === "levels" && (
           <div className="space-y-6">
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <School className="h-5 w-5" /> Kelola Pilihan Jenjang Pendidikan
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <School className="h-5 w-5" /> Kelola Pilihan Jenjang Pendidikan
+                </h2>
+                <VisibilityToggleBanner flagKey="showLevels" label="Section Jenjang" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1370,9 +1371,12 @@ export function PengaturanPage() {
             
             {/* Cara Kerja CMS */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Zap className="h-5 w-5" /> 1. Section Cara Kerja (4 Steps Pipeline)
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <Zap className="h-5 w-5" /> 1. Section Cara Kerja (4 Steps Pipeline)
+                </h2>
+                <VisibilityToggleBanner flagKey="showHowItWorks" label="Section Cara Kerja" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1525,9 +1529,12 @@ export function PengaturanPage() {
 
             {/* FAQ CMS */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <HelpCircle className="h-5 w-5" /> 2. Section FAQ (Pertanyaan Umum)
-              </h2>
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-base font-bold text-brand flex items-center gap-2">
+                  <HelpCircle className="h-5 w-5" /> 2. Section FAQ (Pertanyaan Umum)
+                </h2>
+                <VisibilityToggleBanner flagKey="showFaq" label="Section FAQ" />
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
@@ -1672,21 +1679,23 @@ export function PengaturanPage() {
               <div className="bg-white rounded-xl shadow-inner overflow-hidden border max-w-4xl mx-auto pb-12 font-sans" style={{ backgroundColor: homeForm.colors?.background }}>
                 
                 {/* Header Preview */}
-                <header className="border-b border-slate-100 bg-white/95 px-6 py-3 flex items-center justify-between" style={{ backgroundColor: homeForm.colors?.header }}>
-                  <div className="flex items-center gap-2">
-                    {homeForm.logoImg ? (
-                      <img src={homeForm.logoImg} alt="logo" className="h-8 w-auto" />
-                    ) : (
-                      <div className="h-8 w-8 rounded-lg bg-emerald-700 text-white font-bold grid place-items-center text-sm" style={{ backgroundColor: homeForm.colors?.button }}>
-                        {homeForm.logoText?.charAt(0)}
-                      </div>
-                    )}
-                    <span className="font-bold text-sm text-slate-800">{homeForm.logoText}</span>
-                  </div>
-                  <button className="rounded-full border border-slate-200 px-3.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-1">
-                    <LogIn className="h-3 w-3" /> Login Admin
-                  </button>
-                </header>
+                {homeForm.showHeader !== false && (
+                  <header className="border-b border-slate-100 bg-white/95 px-6 py-3 flex items-center justify-between" style={{ backgroundColor: homeForm.colors?.header }}>
+                    <div className="flex items-center gap-2">
+                      {homeForm.logoImg ? (
+                        <img src={homeForm.logoImg} alt="logo" className="h-8 w-auto" />
+                      ) : (
+                        <div className="h-8 w-8 rounded-lg bg-emerald-700 text-white font-bold grid place-items-center text-sm" style={{ backgroundColor: homeForm.colors?.button }}>
+                          {homeForm.logoText?.charAt(0)}
+                        </div>
+                      )}
+                      <span className="font-bold text-sm text-slate-800">{homeForm.logoText}</span>
+                    </div>
+                    <button className="rounded-full border border-slate-200 px-3.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                      <LogIn className="h-3 w-3" /> Login Admin
+                    </button>
+                  </header>
+                )}
 
                 {/* Hero Preview */}
                 {homeForm.showHero !== false && (
@@ -1708,6 +1717,18 @@ export function PengaturanPage() {
                         {homeForm.heroBtn2}
                       </button>
                     </div>
+
+                    {/* Hero Stats Preview */}
+                    {homeForm.showHeroStats !== false && (
+                      <div className="pt-6 grid grid-cols-4 gap-2 border-t border-slate-100">
+                        {homeForm.heroStats?.map((s, i) => (
+                          <div key={i} className="text-center">
+                            <p className="font-bold text-xs text-slate-900">{s.value}</p>
+                            <p className="text-[9px] text-slate-400">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </section>
                 )}
 
@@ -1765,6 +1786,20 @@ export function PengaturanPage() {
                           <span className="text-[9px] font-bold text-emerald-700">STEP {s.step}</span>
                           <h5 className="font-bold text-xs text-slate-800 mt-1">{s.title}</h5>
                           <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{s.desc}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* FAQ Preview */}
+                {homeForm.showFaq !== false && (
+                  <section className="px-6 py-8 space-y-3 text-center bg-slate-50">
+                    <h3 className="font-bold text-slate-900 text-sm">{homeForm.faqTitle}</h3>
+                    <div className="space-y-1.5 text-left max-w-xl mx-auto">
+                      {homeForm.faqs?.map((f, i) => (
+                        <div key={i} className="border rounded-lg p-2.5 bg-white text-xs font-semibold text-slate-700">
+                          ❓ {f.question}
                         </div>
                       ))}
                     </div>

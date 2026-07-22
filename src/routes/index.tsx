@@ -86,8 +86,10 @@ export const DEFAULT_HOMEPAGE_CONFIG = {
     { label: "FAQ", link: "#faq" }
   ],
   
-  // Section Visibility flags
+  // Section Visibility flags for EVERY section
+  showHeader: true,
   showHero: true,
+  showHeroStats: true,
   showAdvantages: true,
   showLevels: true,
   showHowItWorks: true,
@@ -364,110 +366,112 @@ export function Home() {
       <div className="pointer-events-none absolute top-2/3 -right-20 h-96 w-96 rounded-full bg-teal-400/15 blur-[120px]" />
 
       {/* 1. STICKY HEADER */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-md transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-3 group">
-            {config.logoImg ? (
-              <img src={config.logoImg} alt={config.siteName} className="h-10 w-auto rounded-xl shadow-xs transition group-hover:scale-105" />
-            ) : (
-              <div className="grid h-11 w-11 place-items-center rounded-2xl btn-theme-primary font-black shadow-md text-xl transition group-hover:scale-105">
-                {config.logoText ? config.logoText.charAt(0) : "E"}
-              </div>
-            )}
-            <div className="flex flex-col text-left">
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-emerald-700 transition">
-                  {config.logoText}
+      {config.showHeader !== false && (
+        <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-md transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
+          <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <Link to="/" className="flex items-center gap-3 group">
+              {config.logoImg ? (
+                <img src={config.logoImg} alt={config.siteName} className="h-10 w-auto rounded-xl shadow-xs transition group-hover:scale-105" />
+              ) : (
+                <div className="grid h-11 w-11 place-items-center rounded-2xl btn-theme-primary font-black shadow-md text-xl transition group-hover:scale-105">
+                  {config.logoText ? config.logoText.charAt(0) : "E"}
+                </div>
+              )}
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-emerald-700 transition">
+                    {config.logoText}
+                  </span>
+                  <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <span className="text-[11px] text-emerald-800 font-semibold tracking-wide">
+                  {config.siteName}
                 </span>
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
-              <span className="text-[11px] text-emerald-800 font-semibold tracking-wide">
-                {config.siteName}
-              </span>
+            </Link>
+
+            {/* Desktop Nav */}
+            <nav className="hidden items-center gap-7 md:flex">
+              {config.navItems?.map((item: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (item.link?.startsWith("#")) {
+                      handleScroll(item.link);
+                    } else if (item.link) {
+                      window.location.href = item.link;
+                    }
+                  }}
+                  className="text-sm font-semibold text-slate-600 transition hover:text-emerald-700 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-emerald-600 after:transition-all hover:after:w-full"
+                >
+                  {item.label}
+                </button>
+              ))}
+              <button
+                onClick={handleOpenHistoryModal}
+                className="text-sm font-semibold text-slate-700 hover:text-emerald-700 transition flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 border border-slate-200/80 hover:bg-emerald-50 hover:border-emerald-200"
+              >
+                <History className="h-4 w-4 text-emerald-600" /> 
+                <span>Cek Riwayat</span>
+              </button>
+            </nav>
+
+            <div className="flex items-center gap-3">
+              <Link
+                to="/login"
+                className="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-xs transition hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 md:inline-flex"
+              >
+                <LogIn className="h-4 w-4 text-emerald-600" />
+                <span>{config.btnLoginText}</span>
+              </Link>
+
+              {/* Mobile Hamburger Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 md:hidden active:scale-95 transition shadow-xs"
+                aria-label="Menu Mobile"
+              >
+                {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
             </div>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden items-center gap-7 md:flex">
-            {config.navItems?.map((item: any, idx: number) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  if (item.link?.startsWith("#")) {
-                    handleScroll(item.link);
-                  } else if (item.link) {
-                    window.location.href = item.link;
-                  }
-                }}
-                className="text-sm font-semibold text-slate-600 transition hover:text-emerald-700 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-emerald-600 after:transition-all hover:after:w-full"
-              >
-                {item.label}
-              </button>
-            ))}
-            <button
-              onClick={handleOpenHistoryModal}
-              className="text-sm font-semibold text-slate-700 hover:text-emerald-700 transition flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 border border-slate-200/80 hover:bg-emerald-50 hover:border-emerald-200"
-            >
-              <History className="h-4 w-4 text-emerald-600" /> 
-              <span>Cek Riwayat</span>
-            </button>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-xs transition hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 md:inline-flex"
-            >
-              <LogIn className="h-4 w-4 text-emerald-600" />
-              <span>{config.btnLoginText}</span>
-            </Link>
-
-            {/* Mobile Hamburger Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 md:hidden active:scale-95 transition shadow-xs"
-              aria-label="Menu Mobile"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
           </div>
-        </div>
 
-        {/* Mobile Navigation Drawer */}
-        {mobileMenuOpen && (
-          <div className="border-t border-slate-200 bg-white p-5 space-y-3.5 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
-            {config.navItems?.map((item: any, idx: number) => (
+          {/* Mobile Navigation Drawer */}
+          {mobileMenuOpen && (
+            <div className="border-t border-slate-200 bg-white p-5 space-y-3.5 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
+              {config.navItems?.map((item: any, idx: number) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    if (item.link?.startsWith("#")) {
+                      handleScroll(item.link);
+                    } else if (item.link) {
+                      window.location.href = item.link;
+                    }
+                  }}
+                  className="block w-full text-left py-2 text-sm font-bold text-slate-700 hover:text-emerald-700 border-b border-slate-100"
+                >
+                  {item.label}
+                </button>
+              ))}
               <button
-                key={idx}
-                onClick={() => {
-                  if (item.link?.startsWith("#")) {
-                    handleScroll(item.link);
-                  } else if (item.link) {
-                    window.location.href = item.link;
-                  }
-                }}
-                className="block w-full text-left py-2 text-sm font-bold text-slate-700 hover:text-emerald-700 border-b border-slate-100"
+                onClick={handleOpenHistoryModal}
+                className="w-full text-left py-2.5 text-sm font-bold text-emerald-800 bg-emerald-50 rounded-xl px-3 flex items-center gap-2"
               >
-                {item.label}
+                <History className="h-4.5 w-4.5 text-emerald-600" /> Riwayat Konsultasi
               </button>
-            ))}
-            <button
-              onClick={handleOpenHistoryModal}
-              className="w-full text-left py-2.5 text-sm font-bold text-emerald-800 bg-emerald-50 rounded-xl px-3 flex items-center gap-2"
-            >
-              <History className="h-4.5 w-4.5 text-emerald-600" /> Riwayat Konsultasi
-            </button>
-            <Link
-              to="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
-            >
-              <LogIn className="h-4.5 w-4.5 text-emerald-600" />
-              <span>{config.btnLoginText}</span>
-            </Link>
-          </div>
-        )}
-      </header>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+              >
+                <LogIn className="h-4.5 w-4.5 text-emerald-600" />
+                <span>{config.btnLoginText}</span>
+              </Link>
+            </div>
+          )}
+        </header>
+      )}
 
       {/* 2. HERO SECTION */}
       {config.showHero !== false && (
@@ -521,19 +525,21 @@ export function Home() {
                 </div>
 
                 {/* Trust Metrics Bar */}
-                <div className="pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  {config.heroStats?.map((stat: any, idx: number) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 font-bold">
-                        <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
+                {config.showHeroStats !== false && (
+                  <div className="pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {config.heroStats?.map((stat: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 font-bold">
+                          <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-black text-slate-900 leading-none">{stat.value}</p>
+                          <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-lg font-black text-slate-900 leading-none">{stat.value}</p>
-                        <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
               </div>
 
