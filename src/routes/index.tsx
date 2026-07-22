@@ -344,18 +344,29 @@ export function Home() {
           --card: ${config.colors?.card || '#ffffff'};
         }
         .hero-gradient-bg {
-          background: linear-gradient(135deg, #2563EB 0%, #3B82F6 45%, #60A5FA 100%);
+          background: 
+            radial-gradient(circle at top left, #7C3AED 0%, transparent 35%),
+            radial-gradient(circle at bottom right, #3B82F6 0%, transparent 40%),
+            radial-gradient(circle at center, #06B6D4 0%, transparent 25%),
+            linear-gradient(135deg, #020617, #0F172A, #111827);
         }
         .btn-hero-primary {
           background-color: #ffffff;
-          color: #2563eb;
+          color: #020617;
           font-weight: 800;
-          transition: all 0.2s ease-in-out;
+          transition: all 0.25s ease-in-out;
+          border: 1px solid rgba(255, 255, 255, 0.8);
         }
         .btn-hero-primary:hover {
-          background-color: #eff6ff;
-          color: #1d4ed8;
-          box-shadow: 0 10px 25px -5px rgba(255,255,255,0.4);
+          background-color: #f8fafc;
+          color: #2563eb;
+          box-shadow: 0 10px 30px -5px rgba(6, 182, 212, 0.35);
+          transform: translateY(-2px);
+        }
+        .gradient-text-ai {
+          background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #38bdf8 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
         .btn-theme-primary {
           background-color: #2563eb;
@@ -378,10 +389,6 @@ export function Home() {
           color: #1d4ed8;
         }
       `}</style>
-
-      {/* Decorative Ambient Background Lights - Subtle Soft Blue */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-blue-100/60 via-sky-50/40 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-1/3 -left-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-slate-100/80 via-blue-50/30 to-transparent blur-[140px]" />
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
@@ -491,13 +498,13 @@ export function Home() {
         </header>
       )}
 
-      {/* 2. HERO SECTION - SECTION 1 (Hero Gradient with Abstract Circle Decorations & White Text) */}
+      {/* 2. HERO SECTION - SECTION 1 (AI Startup Style Radial & Linear Gradient with Ambient Glows) */}
       {config.showHero !== false && (
-        <section id="tentang" className="relative pt-12 pb-20 md:pt-20 md:pb-28 hero-gradient-bg text-white overflow-hidden shadow-sm">
-          {/* Abstract Circle / Blob Background Decorations (5-10% Opacity) */}
-          <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
-          <div className="pointer-events-none absolute top-1/2 -left-24 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
-          <div className="pointer-events-none absolute bottom-0 right-1/3 h-64 w-64 rounded-full bg-white/5 blur-xl" />
+        <section id="tentang" className="relative pt-14 pb-20 md:pt-24 md:pb-32 hero-gradient-bg text-white overflow-hidden shadow-2xl">
+          {/* Soft Glow Effects & Abstract Blobs */}
+          <div className="pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-purple-600/20 blur-[130px]" />
+          <div className="pointer-events-none absolute top-1/2 -right-32 h-[450px] w-[450px] rounded-full bg-cyan-500/20 blur-[130px]" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-[350px] w-[350px] rounded-full bg-blue-600/15 blur-[120px]" />
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
@@ -506,9 +513,9 @@ export function Home() {
               <div className="text-left lg:col-span-7 space-y-6">
                 
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white shadow-xs">
-                  <span className="flex h-2 w-2 rounded-full bg-white animate-ping" />
-                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:border-white/40 transition">
+                  <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
+                  <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
                   <span>{config.heroBadge}</span>
                 </div>
 
@@ -517,7 +524,7 @@ export function Home() {
                   {config.heroTitle?.includes("Untuk Anak") ? (
                     <>
                       Konsultasi & Rekomendasi <br />
-                      <span className="text-blue-100 underline decoration-white/30 underline-offset-8">Pendidikan Terbaik Anak</span>
+                      <span className="gradient-text-ai">Pendidikan Terbaik Anak</span>
                     </>
                   ) : (
                     config.heroTitle
@@ -525,7 +532,7 @@ export function Home() {
                 </h1>
 
                 {/* Description */}
-                <p className="text-base leading-relaxed text-white/90 sm:text-lg max-w-2xl font-medium">
+                <p className="text-base leading-relaxed text-slate-300 sm:text-lg max-w-2xl font-medium">
                   {config.heroDesc}
                 </p>
 
@@ -542,15 +549,15 @@ export function Home() {
 
                 {/* Trust Metrics Bar */}
                 {config.showHeroStats !== false && (
-                  <div className="pt-8 border-t border-white/20 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="pt-8 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {config.heroStats?.map((stat: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-3 bg-white/15 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 text-white shadow-xs">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white font-bold">
+                      <div key={idx} className="flex items-center gap-3 bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-white/15 text-white shadow-xl hover:border-cyan-400/40 transition">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-400/30">
                           <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="text-lg font-black text-white leading-none">{stat.value}</p>
-                          <p className="text-[11px] font-medium text-blue-50/90">{stat.label}</p>
+                          <p className="text-[11px] font-medium text-slate-300">{stat.label}</p>
                         </div>
                       </div>
                     ))}
@@ -561,14 +568,14 @@ export function Home() {
 
               {/* Right Column: Hero Graphic */}
               <div className="relative lg:col-span-5 flex justify-center">
-                <div className="absolute -inset-2 bg-white/20 rounded-3xl blur-2xl opacity-60 -z-10" />
+                <div className="absolute -inset-2 bg-gradient-to-r from-purple-500/30 via-cyan-400/30 to-blue-500/30 rounded-3xl blur-2xl opacity-60 -z-10" />
                 
                 <div className="relative w-full max-w-[460px]">
                   {/* Hero Main Image */}
                   <img
                     src={config.heroImg}
                     alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
-                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-4 border-white/90"
+                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-2 border-white/20 backdrop-blur-md"
                   />
                 </div>
               </div>
@@ -578,9 +585,9 @@ export function Home() {
         </section>
       )}
 
-      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Very Light Blue Background #EFF6FF) */}
+      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Soft Slate Light #F8FAFC) */}
       {config.showAdvantages !== false && (
-        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-blue-100 bg-[#eff6ff] relative">
+        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-slate-200/80 bg-[#f8fafc] relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
@@ -715,7 +722,7 @@ export function Home() {
         </section>
       )}
 
-      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Soft Blue-Gray Background #F8FAFC) */}
+      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Light Slate #F8FAFC) */}
       {config.showHowItWorks !== false && (
         <section id="carakerja" className="py-16 md:py-24 bg-[#f8fafc] border-t border-b border-slate-200/80 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -764,13 +771,13 @@ export function Home() {
         </section>
       )}
 
-      {/* 6. FAQ SECTION - SECTION 5 (Very Light Blue Background #EFF6FF) */}
+      {/* 6. FAQ SECTION - SECTION 5 (Pure White Background #FFFFFF) */}
       {config.showFaq !== false && (
-        <section id="faq" className="py-16 md:py-24 bg-[#eff6ff] border-t border-b border-blue-100 relative">
+        <section id="faq" className="py-16 md:py-24 bg-white border-b border-slate-200/80 relative">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             
             <div className="text-center space-y-4 mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#eff6ff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
                 <HelpCircle className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>PERTANYAAN POPULER</span>
               </div>
@@ -801,20 +808,20 @@ export function Home() {
         </section>
       )}
 
-      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Navy Gradient Background) */}
+      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Dark Slate AI Gradient Background) */}
       {config.showCta !== false && (
         <section className="mx-auto max-w-6xl px-4 py-12 md:py-20">
           <div
-            className="rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-xl bg-gradient-to-r from-[#1e3a5f] to-[#2563eb]"
+            className="rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl bg-gradient-to-r from-[#020617] via-[#0F172A] to-[#1E1B4B] border border-white/10"
             style={{ backgroundColor: config.ctaBg || undefined }}
           >
             {/* Background Decorative Rings */}
-            <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-xl" />
-            <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-blue-400/20 blur-xl" />
+            <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-purple-500/20 blur-2xl" />
+            <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-cyan-400/20 blur-2xl" />
 
             <div className="relative z-10 space-y-6 max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-blue-100 border border-white/20">
-                <Sparkles className="h-4 w-4 text-blue-200" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-cyan-200 border border-white/15">
+                <Sparkles className="h-4 w-4 text-cyan-300" />
                 <span>MULAI LANGKAH AWAL SEKARANG</span>
               </div>
 
@@ -822,14 +829,14 @@ export function Home() {
                 {config.ctaTitle}
               </h2>
 
-              <p className="text-base md:text-lg text-blue-100/90 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
                 {config.ctaDesc}
               </p>
 
               <div className="pt-4">
                 <button
                   onClick={() => handleScroll(config.ctaBtnLink || "#jenjang")}
-                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-[#2563eb] shadow-lg transition-all hover:scale-105 active:scale-95 hover:bg-blue-50"
+                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-slate-950 shadow-xl transition-all hover:scale-105 active:scale-95 hover:bg-slate-100 hover:shadow-purple-500/30"
                 >
                   <span>{config.ctaBtn}</span>
                   <ArrowRight className="h-5 w-5 text-[#2563eb]" />
@@ -840,9 +847,9 @@ export function Home() {
         </section>
       )}
 
-      {/* 8. FOOTER - SECTION 7 (Navy #1E3A5F Background & White Text & #BFDBFE Links) */}
+      {/* 8. FOOTER - SECTION 7 (Dark Slate AI Footer #020617 & Cyan Links #38BDF8) */}
       {config.showFooter !== false && (
-        <footer className="border-t border-slate-700 bg-[#1e3a5f] text-white py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
+        <footer className="border-t border-slate-800 bg-[#020617] text-slate-300 py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-12">
               
@@ -854,10 +861,10 @@ export function Home() {
                   </div>
                   <div className="flex flex-col text-left">
                     <span className="text-xl font-black text-white leading-tight">{config.logoText}</span>
-                    <span className="text-xs text-[#bfdbfe] font-semibold">{config.footerSchool}</span>
+                    <span className="text-xs text-cyan-400 font-semibold">{config.footerSchool}</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-blue-100/90 max-w-md">
+                <p className="text-xs leading-relaxed text-slate-400 max-w-md font-medium">
                   Membimbing langkah anak menuju masa depan gemilang dengan pemahaman utuh karakter, minat, dan potensi tumbuh kembang alami.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
@@ -867,7 +874,7 @@ export function Home() {
                       href={soc.url} 
                       target="_blank" 
                       rel="noreferrer" 
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-[#bfdbfe] border border-white/15 hover:bg-[#2563eb] hover:text-white transition"
+                      className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-cyan-300 border border-white/15 hover:bg-[#2563eb] hover:text-white transition"
                       aria-label={soc.platform}
                     >
                       <Globe className="h-4 w-4" />
@@ -881,18 +888,18 @@ export function Home() {
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">Hubungi Kami</h4>
                 <ul className="space-y-3 text-xs">
                   <li className="flex items-start gap-2.5">
-                    <MapPin className="h-4 w-4 text-[#bfdbfe] shrink-0 mt-0.5" />
-                    <span className="text-blue-100/90">{config.footerAddress}</span>
+                    <MapPin className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <span className="text-slate-300">{config.footerAddress}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Phone className="h-4 w-4 text-[#bfdbfe] shrink-0" />
-                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-[#bfdbfe] hover:text-white transition font-medium">
+                    <Phone className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-white transition font-medium">
                       {config.footerWa}
                     </a>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Mail className="h-4 w-4 text-[#bfdbfe] shrink-0" />
-                    <a href={`mailto:${config.footerEmail}`} className="text-[#bfdbfe] hover:text-white transition font-medium">
+                    <Mail className="h-4 w-4 text-cyan-400 shrink-0" />
+                    <a href={`mailto:${config.footerEmail}`} className="text-cyan-300 hover:text-white transition font-medium">
                       {config.footerEmail}
                     </a>
                   </li>
@@ -910,14 +917,14 @@ export function Home() {
                           if (nav.link?.startsWith("#")) handleScroll(nav.link);
                           else if (nav.link) window.location.href = nav.link;
                         }}
-                        className="text-blue-100/80 hover:text-white transition"
+                        className="text-slate-300 hover:text-white transition"
                       >
                         {nav.label}
                       </button>
                     </li>
                   ))}
                   <li>
-                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-[#bfdbfe] hover:underline flex items-center gap-1.5 mt-1">
+                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center gap-1.5 mt-1 font-semibold">
                       <Globe className="h-3.5 w-3.5" />
                       <span>Website Resmi Sekolah</span>
                     </a>
@@ -927,9 +934,9 @@ export function Home() {
 
             </div>
 
-            <div className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-blue-200/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mt-12 border-t border-slate-800/80 pt-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p>{config.footerCopyright}</p>
-              <p className="text-[11px] text-blue-200/50">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
+              <p className="text-[11px] text-slate-500 font-medium">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
             </div>
           </div>
         </footer>
