@@ -428,16 +428,16 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#0F766E] hover:bg-[#ECFEFF] px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-xs sm:text-sm font-extrabold text-[#083344] hover:text-[#0F766E] hover:bg-[#ECFEFF] px-4 py-2 rounded-xl transition-all duration-200"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="text-xs font-bold border border-[#0F766E] text-[#0F766E] hover:bg-[#ECFEFF] transition flex items-center gap-1.5 rounded-2xl px-3.5 py-2 shadow-xs hover:scale-105 active:scale-95 ml-2"
+                className="text-xs font-extrabold bg-[#ECFEFF] border border-cyan-300 text-[#0F766E] hover:bg-[#0F766E] hover:text-white transition-all duration-300 flex items-center gap-2 rounded-2xl px-4 py-2 shadow-xs hover:shadow-md hover:scale-105 active:scale-95 ml-2"
               >
-                <History className="h-4 w-4 text-[#0F766E]" /> 
+                <History className="h-4 w-4" /> 
                 <span>Cek Riwayat</span>
               </button>
             </nav>
@@ -445,7 +445,7 @@ export function Home() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden h-11 items-center gap-2 rounded-2xl btn-gradient-aqua px-6 text-xs sm:text-sm font-extrabold shadow-md transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
+                className="hidden h-11 items-center gap-2.5 rounded-2xl btn-gradient-aqua px-6 text-xs sm:text-sm font-extrabold shadow-md hover:shadow-cyan-500/30 transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
               >
                 <LogIn className="h-4 w-4 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -454,7 +454,7 @@ export function Home() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#ECFEFF] border border-cyan-200 text-[#0F766E] md:hidden active:scale-95 transition shadow-xs hover:bg-cyan-100"
+                className="grid h-10 w-10 place-items-center rounded-2xl bg-[#ECFEFF] border border-cyan-300 text-[#0F766E] md:hidden active:scale-95 transition-all shadow-xs hover:bg-cyan-100"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -464,7 +464,7 @@ export function Home() {
 
           {/* Mobile Navigation Drawer */}
           {mobileMenuOpen && (
-            <div className="border-t border-slate-200 bg-white p-5 space-y-3 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
+            <div className="border-t border-cyan-100 bg-white p-5 space-y-3 md:hidden shadow-2xl animate-in slide-in-from-top duration-200">
               {config.navItems?.map((item: any, idx: number) => (
                 <button
                   key={idx}
@@ -475,21 +475,21 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#0F766E] hover:bg-[#ECFEFF] rounded-xl transition"
+                  className="block w-full text-left py-3 px-4 text-sm font-extrabold text-[#083344] hover:text-[#0F766E] hover:bg-[#ECFEFF] rounded-2xl transition-all"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="w-full text-left py-2.5 px-3 text-sm font-bold border border-[#0F766E] text-[#0F766E] rounded-xl flex items-center gap-2"
+                className="w-full text-left py-3 px-4 text-sm font-extrabold bg-[#ECFEFF] border border-cyan-300 text-[#0F766E] hover:bg-[#0F766E] hover:text-white rounded-2xl flex items-center gap-2.5 transition-all shadow-xs"
               >
-                <History className="h-4.5 w-4.5 text-[#0F766E]" /> Riwayat Konsultasi
+                <History className="h-4.5 w-4.5" /> Riwayat Konsultasi
               </button>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-gradient-aqua py-3 text-sm font-bold shadow-md text-white"
+                className="flex w-full items-center justify-center gap-2.5 rounded-2xl btn-gradient-aqua py-3.5 text-sm font-extrabold shadow-md text-white hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <LogIn className="h-4.5 w-4.5 text-white" />
                 <span>{config.btnLoginText}</span>
