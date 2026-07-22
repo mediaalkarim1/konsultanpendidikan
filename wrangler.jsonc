@@ -1,13 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "konsultanpendidikan",
-  "main": "./dist/_worker.js/index.js",
+  "main": ".output/server/index.mjs",
   "compatibility_date": "2026-07-22",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "assets": {
-    "directory": "./dist"
+    "directory": ".output/public"
   },
   "build": {
     "command": "npm run build"
