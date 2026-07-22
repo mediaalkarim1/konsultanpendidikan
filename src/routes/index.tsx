@@ -534,7 +534,7 @@ export function Home() {
 
               </div>
 
-              {/* Right Column: Hero Graphic with Badges */}
+              {/* Right Column: Hero Graphic */}
               <div className="relative lg:col-span-5 flex justify-center">
                 <div className="absolute -inset-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 rounded-3xl blur-2xl opacity-30 animate-pulse -z-10" />
                 
@@ -545,32 +545,6 @@ export function Home() {
                     alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
                     className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-4 border-white"
                   />
-
-                  {/* Floating Glass Overlay Card 1 (Top Right) */}
-                  <div className="absolute -top-4 -right-4 sm:-top-6 sm:-right-6 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-500 text-white font-black">
-                      <Star className="h-5 w-5 fill-current" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-black text-slate-900">4.9 / 5.0</span>
-                        <span className="text-[10px] text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.5 rounded-full">Sangat Puas</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 font-medium">Ulasan Orang Tua Murid</p>
-                    </div>
-                  </div>
-
-                  {/* Floating Glass Overlay Card 2 (Bottom Left) */}
-                  <div className="absolute -bottom-5 -left-4 sm:-bottom-6 sm:-left-6 bg-white/95 backdrop-blur-md p-3.5 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 max-w-[240px]">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-600 text-white">
-                      <CheckCircle2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900 leading-tight">Analisis Gaya Belajar & Karakter</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">Rekomendasi Terpersonalisasi</p>
-                    </div>
-                  </div>
-
                 </div>
               </div>
 
