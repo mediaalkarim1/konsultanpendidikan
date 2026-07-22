@@ -336,80 +336,81 @@ export function Home() {
       {/* Inject Dynamic Colors & CSS Custom Utility Rules */}
       <style>{`
         :root {
-          --primary: ${config.colors?.primary || '#2563eb'};
-          --brand: ${config.colors?.primary || '#2563eb'};
-          --brand-soft: #eff6ff;
-          --secondary: ${config.colors?.secondary || '#1e3a5f'};
+          --primary: ${config.colors?.primary || '#0F766E'};
+          --brand: ${config.colors?.primary || '#0F766E'};
+          --brand-soft: #ecfeff;
+          --secondary: ${config.colors?.secondary || '#083344'};
           --background: ${config.colors?.background || '#ffffff'};
           --card: ${config.colors?.card || '#ffffff'};
         }
-        .hero-gradient-bg {
-          background: 
-            radial-gradient(circle at top left, #7C3AED 0%, transparent 35%),
-            radial-gradient(circle at bottom right, #3B82F6 0%, transparent 40%),
-            radial-gradient(circle at center, #06B6D4 0%, transparent 25%),
-            linear-gradient(135deg, #020617, #0F172A, #111827);
+        .hero-deep-ocean-bg {
+          background: linear-gradient(135deg, #083344 0%, #0F4C81 40%, #0F766E 75%, #38BDF8 100%);
         }
-        .btn-hero-primary {
-          background-color: #ffffff;
-          color: #020617;
+        .btn-gradient-aqua {
+          background: linear-gradient(135deg, #0F766E 0%, #38BDF8 100%);
+          color: #ffffff;
           font-weight: 800;
-          transition: all 0.25s ease-in-out;
-          border: 1px solid rgba(255, 255, 255, 0.8);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 15px -2px rgba(15, 118, 110, 0.4);
         }
-        .btn-hero-primary:hover {
-          background-color: #f8fafc;
-          color: #2563eb;
-          box-shadow: 0 10px 30px -5px rgba(6, 182, 212, 0.35);
+        .btn-gradient-aqua:hover {
+          background: linear-gradient(135deg, #115E59 0%, #0284C7 100%);
+          box-shadow: 0 10px 25px -4px rgba(56, 189, 248, 0.5);
           transform: translateY(-2px);
         }
-        .gradient-text-ai {
-          background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 50%, #38bdf8 100%);
+        .btn-hero-gradient {
+          background: linear-gradient(135deg, #0F766E 0%, #38BDF8 100%);
+          color: #ffffff;
+          font-weight: 800;
+          transition: all 0.3s ease-in-out;
+          box-shadow: 0 10px 30px -5px rgba(56, 189, 248, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-hero-gradient:hover {
+          background: linear-gradient(135deg, #38BDF8 0%, #60A5FA 100%);
+          color: #083344;
+          box-shadow: 0 15px 35px -5px rgba(255, 255, 255, 0.5);
+          transform: translateY(-2px);
+        }
+        .gradient-text-wave {
+          background: linear-gradient(135deg, #ffffff 0%, #dff6f8 50%, #38bdf8 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
-        .btn-theme-primary {
-          background-color: #2563eb;
-          color: #ffffff;
-          transition: all 0.2s ease-in-out;
-        }
-        .btn-theme-primary:hover {
-          background-color: #1d4ed8;
-          box-shadow: 0 8px 20px -4px rgba(37,99,235,0.35);
-        }
-        .btn-theme-secondary {
+        .card-saas-premium {
+          border-radius: 20px;
+          border: 1px solid rgba(226, 232, 240, 0.8);
           background-color: #ffffff;
-          border: 1px solid #2563eb;
-          color: #2563eb;
-          transition: all 0.2s ease-in-out;
+          transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
         }
-        .btn-theme-secondary:hover {
-          background-color: #eff6ff;
-          border-color: #1d4ed8;
-          color: #1d4ed8;
+        .card-saas-premium:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 30px -10px rgba(15, 118, 110, 0.15);
+          border-color: rgba(56, 189, 248, 0.5);
         }
       `}</style>
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
-        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
-          <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 border-b border-cyan-100 bg-white/90 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
+          <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <Link to="/" className="flex items-center gap-3 group">
               {config.logoImg ? (
                 <img src={config.logoImg} alt={config.siteName} className="h-10 w-auto rounded-xl shadow-xs transition group-hover:scale-105" />
               ) : (
-                <div className="grid h-11 w-11 place-items-center rounded-2xl btn-theme-primary font-black shadow-md text-xl transition group-hover:scale-105 text-white">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-[#083344] to-[#0F766E] font-black shadow-md text-xl transition group-hover:scale-105 text-white">
                   {config.logoText ? config.logoText.charAt(0) : "E"}
                 </div>
               )}
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-black tracking-tight text-[#1e293b] group-hover:text-[#2563eb] transition">
+                  <span className="text-lg font-black tracking-tight text-[#083344] group-hover:text-[#0F766E] transition">
                     {config.logoText}
                   </span>
-                  <span className="inline-block h-2 w-2 rounded-full bg-[#2563eb] animate-pulse" />
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#38BDF8] animate-pulse" />
                 </div>
-                <span className="text-[11px] text-[#475569] font-bold tracking-wide">
+                <span className="text-[11px] text-[#0F766E] font-bold tracking-wide">
                   {config.siteName}
                 </span>
               </div>
@@ -427,16 +428,16 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#0F766E] hover:bg-[#ECFEFF] px-3.5 py-1.5 rounded-xl transition-all"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="text-xs font-bold btn-theme-secondary transition flex items-center gap-1.5 rounded-2xl px-3.5 py-2 shadow-xs hover:scale-105 active:scale-95 ml-2"
+                className="text-xs font-bold border border-[#0F766E] text-[#0F766E] hover:bg-[#ECFEFF] transition flex items-center gap-1.5 rounded-2xl px-3.5 py-2 shadow-xs hover:scale-105 active:scale-95 ml-2"
               >
-                <History className="h-4 w-4 text-[#2563eb]" /> 
+                <History className="h-4 w-4 text-[#0F766E]" /> 
                 <span>Cek Riwayat</span>
               </button>
             </nav>
@@ -444,7 +445,7 @@ export function Home() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
+                className="hidden h-11 items-center gap-2 rounded-2xl btn-gradient-aqua px-6 text-xs sm:text-sm font-extrabold shadow-md transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
               >
                 <LogIn className="h-4 w-4 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -453,7 +454,7 @@ export function Home() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#eff6ff] border border-blue-200 text-[#2563eb] md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-[#ECFEFF] border border-cyan-200 text-[#0F766E] md:hidden active:scale-95 transition shadow-xs hover:bg-cyan-100"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -474,21 +475,21 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] rounded-xl transition"
+                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#0F766E] hover:bg-[#ECFEFF] rounded-xl transition"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="w-full text-left py-2.5 px-3 text-sm font-bold btn-theme-secondary rounded-xl flex items-center gap-2"
+                className="w-full text-left py-2.5 px-3 text-sm font-bold border border-[#0F766E] text-[#0F766E] rounded-xl flex items-center gap-2"
               >
-                <History className="h-4.5 w-4.5 text-[#2563eb]" /> Riwayat Konsultasi
+                <History className="h-4.5 w-4.5 text-[#0F766E]" /> Riwayat Konsultasi
               </button>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-md text-white"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-gradient-aqua py-3 text-sm font-bold shadow-md text-white"
               >
                 <LogIn className="h-4.5 w-4.5 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -498,13 +499,13 @@ export function Home() {
         </header>
       )}
 
-      {/* 2. HERO SECTION - SECTION 1 (AI Startup Style Radial & Linear Gradient with Ambient Glows) */}
+      {/* 2. HERO SECTION - SECTION 1 (Full Width Deep Ocean / Deep Aqua Gradient with Wave Dividers & SaaS AI Illustrations) */}
       {config.showHero !== false && (
-        <section id="tentang" className="relative pt-14 pb-20 md:pt-24 md:pb-32 hero-gradient-bg text-white overflow-hidden shadow-2xl">
-          {/* Soft Glow Effects & Abstract Blobs */}
-          <div className="pointer-events-none absolute -top-32 -left-32 h-[450px] w-[450px] rounded-full bg-purple-600/20 blur-[130px]" />
-          <div className="pointer-events-none absolute top-1/2 -right-32 h-[450px] w-[450px] rounded-full bg-cyan-500/20 blur-[130px]" />
-          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-[350px] w-[350px] rounded-full bg-blue-600/15 blur-[120px]" />
+        <section id="tentang" className="relative pt-14 pb-28 md:pt-24 md:pb-36 hero-deep-ocean-bg text-white overflow-hidden shadow-2xl">
+          {/* Soft Glow Effects & Mesh Gradients */}
+          <div className="pointer-events-none absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-[#38BDF8]/20 blur-[140px]" />
+          <div className="pointer-events-none absolute top-1/2 -right-40 h-[500px] w-[500px] rounded-full bg-[#0F766E]/30 blur-[150px]" />
+          <div className="pointer-events-none absolute -bottom-20 left-1/3 h-[400px] w-[400px] rounded-full bg-[#0F4C81]/40 blur-[130px]" />
 
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
@@ -513,9 +514,9 @@ export function Home() {
               <div className="text-left lg:col-span-7 space-y-6">
                 
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:border-white/40 transition">
-                  <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-                  <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/30 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-cyan-100 shadow-xs hover:border-cyan-300/60 transition">
+                  <span className="flex h-2 w-2 rounded-full bg-[#38BDF8] animate-ping" />
+                  <Sparkles className="h-3.5 w-3.5 text-[#38BDF8]" />
                   <span>{config.heroBadge}</span>
                 </div>
 
@@ -524,7 +525,7 @@ export function Home() {
                   {config.heroTitle?.includes("Untuk Anak") ? (
                     <>
                       Konsultasi & Rekomendasi <br />
-                      <span className="gradient-text-ai">Pendidikan Terbaik Anak</span>
+                      <span className="gradient-text-wave">Pendidikan Terbaik Anak</span>
                     </>
                   ) : (
                     config.heroTitle
@@ -532,7 +533,7 @@ export function Home() {
                 </h1>
 
                 {/* Description */}
-                <p className="text-base leading-relaxed text-slate-300 sm:text-lg max-w-2xl font-medium">
+                <p className="text-base leading-relaxed text-cyan-50/90 sm:text-lg max-w-2xl font-medium">
                   {config.heroDesc}
                 </p>
 
@@ -540,10 +541,10 @@ export function Home() {
                 <div className="flex flex-wrap items-center gap-4 pt-2">
                   <button
                     onClick={() => handleScroll(config.heroBtn1Link || "#jenjang")}
-                    className="inline-flex h-13 items-center justify-center gap-2.5 rounded-2xl btn-hero-primary px-8 text-base font-extrabold shadow-xl transition hover:scale-[1.02] active:scale-[0.98]"
+                    className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl btn-hero-gradient px-9 text-base font-extrabold shadow-2xl transition hover:scale-105 active:scale-95"
                   >
                     <span>{config.heroBtn1}</span>
-                    <ArrowRight className="h-5 w-5 text-[#2563eb]" />
+                    <ArrowRight className="h-5 w-5 text-white" />
                   </button>
                 </div>
 
@@ -551,13 +552,13 @@ export function Home() {
                 {config.showHeroStats !== false && (
                   <div className="pt-8 border-t border-white/15 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {config.heroStats?.map((stat: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-3 bg-slate-900/60 backdrop-blur-xl p-3.5 rounded-2xl border border-white/15 text-white shadow-xl hover:border-cyan-400/40 transition">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-400/30">
+                      <div key={idx} className="flex items-center gap-3 bg-[#083344]/70 backdrop-blur-xl p-3.5 rounded-[20px] border border-cyan-400/20 text-white shadow-xl hover:border-cyan-400/50 transition">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#0F766E] to-[#38BDF8] text-white font-bold shadow-md">
                           <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
                         </div>
                         <div>
                           <p className="text-lg font-black text-white leading-none">{stat.value}</p>
-                          <p className="text-[11px] font-medium text-slate-300">{stat.label}</p>
+                          <p className="text-[11px] font-medium text-cyan-200/90">{stat.label}</p>
                         </div>
                       </div>
                     ))}
@@ -566,67 +567,98 @@ export function Home() {
 
               </div>
 
-              {/* Right Column: Hero Graphic */}
+              {/* Right Column: SaaS AI Vector Illustration Graphic & Image Card */}
               <div className="relative lg:col-span-5 flex justify-center">
-                <div className="absolute -inset-2 bg-gradient-to-r from-purple-500/30 via-cyan-400/30 to-blue-500/30 rounded-3xl blur-2xl opacity-60 -z-10" />
+                <div className="absolute -inset-4 bg-gradient-to-r from-[#0F766E]/40 via-[#38BDF8]/30 to-[#0F4C81]/40 rounded-[30px] blur-3xl opacity-70 -z-10" />
                 
                 <div className="relative w-full max-w-[460px]">
-                  {/* Hero Main Image */}
-                  <img
-                    src={config.heroImg}
-                    alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
-                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-2 border-white/20 backdrop-blur-md"
-                  />
+                  {/* Floating SaaS AI Badge Elements */}
+                  <div className="absolute -top-6 -left-6 z-20 hidden sm:flex items-center gap-3 bg-[#083344]/90 backdrop-blur-xl border border-cyan-300/30 text-white px-4 py-2.5 rounded-2xl shadow-2xl animate-bounce duration-1000">
+                    <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#0F766E] text-cyan-200">
+                      <Brain className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-white">Analisis AI Presisi</p>
+                      <p className="text-[10px] text-cyan-200 font-medium">Pemetaan 100% Objektif</p>
+                    </div>
+                  </div>
+
+                  <div className="absolute -bottom-6 -right-6 z-20 hidden sm:flex items-center gap-3 bg-[#083344]/90 backdrop-blur-xl border border-cyan-300/30 text-white px-4 py-2.5 rounded-2xl shadow-2xl">
+                    <div className="grid h-8 w-8 place-items-center rounded-xl bg-[#38BDF8] text-[#083344]">
+                      <ShieldCheck className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-black text-white">Tim Konsultan Expert</p>
+                      <p className="text-[10px] text-cyan-200 font-medium">Sekolah Alam Al-Karim</p>
+                    </div>
+                  </div>
+
+                  {/* Hero Main Image inside SaaS Frame */}
+                  <div className="rounded-[24px] overflow-hidden border-2 border-cyan-200/30 shadow-2xl bg-[#083344]/40 p-2 backdrop-blur-md">
+                    <img
+                      src={config.heroImg}
+                      alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
+                      className="w-full h-[380px] sm:h-[440px] rounded-[20px] object-cover shadow-xl"
+                    />
+                  </div>
                 </div>
               </div>
 
             </div>
           </div>
+
+          {/* Smooth Wave Bottom Transition Divider */}
+          <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none pointer-events-none">
+            <svg className="relative block w-full h-10 sm:h-14 text-[#ecfeff]" viewBox="0 0 1200 120" preserveAspectRatio="none">
+              <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118.94,130.83,121.3,200,113.8,241.13,109.34,281.82,86.26,321.39,56.44Z" fill="currentColor"></path>
+            </svg>
+          </div>
         </section>
       )}
 
-      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Soft Slate Light #F8FAFC) */}
+      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Light Aqua Background #ECFEFF) */}
       {config.showAdvantages !== false && (
-        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-slate-200/80 bg-[#f8fafc] relative">
+        <section id="keunggulan" className="py-20 md:py-28 bg-[#ecfeff] relative border-b border-cyan-100">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
-                <Target className="h-3.5 w-3.5 text-[#2563eb]" />
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-cyan-200 px-4 py-1.5 text-xs font-extrabold text-[#0F766E] shadow-xs">
+                <Target className="h-4 w-4 text-[#0F766E]" />
                 <span>KEUNGGULAN UTAMA</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
+              <h2 className="text-3xl font-black tracking-tight text-[#083344] sm:text-4.5xl leading-tight">
                 {config.advantagesTitle}
               </h2>
-              <p className="text-sm sm:text-base leading-relaxed text-[#475569]">
+              <p className="text-sm sm:text-base leading-relaxed text-[#475569] font-medium">
                 {config.advantagesSub}
               </p>
             </div>
 
             {/* List Poin Utama Keunggulan */}
-            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
               {config.advantages?.map((adv: any, idx: number) => {
                 return (
                   <div
                     key={idx}
-                    className="group flex items-center gap-4 rounded-2xl border border-[#e5e7eb] p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40 shadow-xs"
+                    className="card-saas-premium p-6 flex items-start gap-4 text-left"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Icon Box */}
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#0F766E] to-[#38BDF8] text-white shadow-md">
                       <DynamicIcon name={adv.icon} className="h-6 w-6" />
                     </div>
 
-                    {/* Main Point Title Only */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-extrabold text-[#1e293b] tracking-tight leading-snug group-hover:text-[#2563eb] transition">
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <h3 className="text-base font-extrabold text-[#083344] tracking-tight leading-snug">
                         {adv.title}
                       </h3>
-                    </div>
-
-                    <div className="shrink-0 text-[#2563eb]">
-                      <CheckCircle2 className="h-5 w-5" />
+                      {adv.desc && (
+                        <p className="text-xs text-[#475569] leading-relaxed line-clamp-3">
+                          {adv.desc}
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
@@ -639,67 +671,67 @@ export function Home() {
 
       {/* 4. PILIHAN JENJANG PENDIDIKAN - SECTION 3 (Pure White Background #FFFFFF) */}
       {config.showLevels !== false && (
-        <section id="jenjang" className="py-16 md:py-24 bg-white border-b border-slate-200/80 relative">
+        <section id="jenjang" className="py-20 md:py-28 bg-white relative border-b border-slate-100">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#eff6ff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
-                <School className="h-3.5 w-3.5 text-[#2563eb]" />
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#ECFEFF] border border-cyan-200 px-4 py-1.5 text-xs font-extrabold text-[#0F766E]">
+                <School className="h-4 w-4 text-[#0F766E]" />
                 <span>KONSULTASI BERDASARKAN JENJANG</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
+              <h2 className="text-3xl font-black tracking-tight text-[#083344] sm:text-4.5xl leading-tight">
                 {config.levelsTitle}
               </h2>
-              <p className="text-sm sm:text-base text-[#475569]">
+              <p className="text-sm sm:text-base text-[#475569] font-medium">
                 {config.levelsSub || "Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi."}
               </p>
             </div>
 
-            {/* Layout 3 Baris Sejajar */}
-            <div className="flex flex-col gap-3.5 sm:space-y-6 max-w-5xl mx-auto">
+            {/* Layout Card Besar */}
+            <div className="flex flex-col gap-6 max-w-5xl mx-auto">
               {config.levels?.filter((l: any) => l.active !== false).map((level: any) => {
                 return (
                   <Link
                     key={level.id}
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
-                    className="group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-[#e5e7eb] bg-white p-4 sm:p-8 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
+                    className="card-saas-premium p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 group"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Left Side: Icon & Details */}
-                    <div className="flex items-center gap-3.5 sm:gap-5 flex-1 min-w-0">
+                    <div className="flex items-start sm:items-center gap-5 flex-1 min-w-0">
                       {/* Icon Box */}
-                      <div className="grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-[#2563eb] text-white shadow-md transition-transform duration-300 group-hover:scale-105">
-                        <DynamicIcon name={level.icon} className="h-6 w-6 sm:h-8 sm:w-8" />
+                      <div className="grid h-14 w-14 sm:h-18 sm:w-18 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#083344] via-[#0F766E] to-[#38BDF8] text-white shadow-lg group-hover:scale-105 transition-transform">
+                        <DynamicIcon name={level.icon} className="h-7 w-7 sm:h-9 sm:w-9" />
                       </div>
 
-                      <div className="space-y-1 sm:space-y-2.5 text-left flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                          <h3 className="text-base sm:text-2xl font-black text-[#1e293b] tracking-tight group-hover:text-[#2563eb] transition">
+                      <div className="space-y-2 text-left flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl sm:text-2.5xl font-black text-[#083344] tracking-tight group-hover:text-[#0F766E] transition">
                             {level.name}
                           </h3>
-                          <span className="rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border bg-[#eff6ff] text-[#2563eb] border-blue-200">
+                          <span className="rounded-full px-3 py-1 text-xs font-bold border bg-[#ECFEFF] text-[#0F766E] border-cyan-200">
                             {level.tag || level.name}
                           </span>
                         </div>
 
-                        <p className="text-xs sm:text-sm text-[#64748b] leading-relaxed line-clamp-2 sm:line-clamp-none">
+                        <p className="text-xs sm:text-sm text-[#475569] leading-relaxed">
                           {level.desc}
                         </p>
 
                         {/* Bullet Highlights */}
-                        <div className="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-[#475569]">
+                        <div className="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-bold text-[#083344]">
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#0F766E] shrink-0" />
                             <span>Pemetaan Gaya Belajar</span>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#0F766E] shrink-0" />
                             <span>Analisis Kebutuhan Anak</span>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#0F766E] shrink-0" />
                             <span>Rekomendasi Sekolah</span>
                           </span>
                         </div>
@@ -708,9 +740,9 @@ export function Home() {
 
                     {/* Right Side: Action Button */}
                     <div className="shrink-0 flex items-center justify-end">
-                      <div className="inline-flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl btn-theme-primary px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-xs transition group-hover:shadow-md">
-                        <span>{level.btnText || "Mulai"}</span>
-                        <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5 transition-transform group-hover:translate-x-1" />
+                      <div className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl btn-gradient-aqua px-7 text-xs sm:text-sm font-extrabold shadow-md group-hover:shadow-lg">
+                        <span>{level.btnText || "Mulai Konsultasi"}</span>
+                        <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                       </div>
                     </div>
                   </Link>
@@ -722,81 +754,145 @@ export function Home() {
         </section>
       )}
 
-      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Light Slate #F8FAFC) */}
+      {/* 5. MENGAPA MEMILIH KAMI - SECTION 4 (Soft Wave Pattern / #F8FAFC) */}
+      <section className="py-20 md:py-28 bg-[#f8fafc] relative border-b border-slate-200/80">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          
+          <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 sm:mb-16">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-4 py-1.5 text-xs font-extrabold text-[#0F4C81] shadow-xs">
+              <Award className="h-4 w-4 text-[#0F4C81]" />
+              <span>MENGAPA MEMILIH KAMI</span>
+            </div>
+            <h2 className="text-3xl font-black tracking-tight text-[#083344] sm:text-4.5xl leading-tight">
+              Solusi Terbaik Pemetaan Pendidikan Anak
+            </h2>
+            <p className="text-sm sm:text-base text-[#475569] font-medium">
+              Memberikan pendampingan menyeluruh yang memadukan keahlian psikologi pendidikan dengan teknologi pemetaan cerdas.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="card-saas-premium p-6 flex flex-col gap-4 text-left">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#0F4C81]/10 text-[#0F4C81] border border-[#0F4C81]/20">
+                <Brain className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-black text-[#083344]">Analisis Cerdas & Objektif</h3>
+              <p className="text-xs text-[#475569] leading-relaxed">
+                Algoritma cerdas mengevaluasi kuesioner dengan teliti untuk memetakan karakter, gaya belajar, dan potensi alami anak.
+              </p>
+            </div>
+
+            <div className="card-saas-premium p-6 flex flex-col gap-4 text-left">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#0F4C81]/10 text-[#0F4C81] border border-[#0F4C81]/20">
+                <UserCheck className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-black text-[#083344]">Tim Konsultan Expert</h3>
+              <p className="text-xs text-[#475569] leading-relaxed">
+                Didampingi langsung oleh praktisi & psikolog Sekolah Alam Al-Karim yang berpengalaman dalam tumbuh kembang anak.
+              </p>
+            </div>
+
+            <div className="card-saas-premium p-6 flex flex-col gap-4 text-left">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#0F4C81]/10 text-[#0F4C81] border border-[#0F4C81]/20">
+                <Sprout className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-black text-[#083344]">Pendekatan Holistik</h3>
+              <p className="text-xs text-[#475569] leading-relaxed">
+                Tidak sekadar nilai akademis, kami memperhatikan perkembangan emosi, sosial, dan bakat unik setiap anak secara seimbang.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 6. PROSES KONSULTASI / 4 LANGKAH - SECTION 5 (Horizontal Timeline Layout) */}
       {config.showHowItWorks !== false && (
-        <section id="carakerja" className="py-16 md:py-24 bg-[#f8fafc] border-t border-b border-slate-200/80 relative">
+        <section id="carakerja" className="py-20 md:py-28 bg-white relative border-b border-slate-100">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
-                <Zap className="h-3.5 w-3.5 text-[#2563eb]" />
-                <span>PROSES SANGAT MUDAH</span>
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-14 sm:mb-20">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#ECFEFF] border border-cyan-200 px-4 py-1.5 text-xs font-extrabold text-[#0F766E]">
+                <Zap className="h-4 w-4 text-[#0F766E]" />
+                <span>ALUR TERSTRUKTUR</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
+              <h2 className="text-3xl font-black tracking-tight text-[#083344] sm:text-4.5xl leading-tight">
                 {config.howItWorksTitle || "4 Langkah Mudah Konsultasi Pendidikan"}
               </h2>
-              <p className="text-sm sm:text-base text-[#475569]">
+              <p className="text-sm sm:text-base text-[#475569] font-medium">
                 {config.howItWorksSub || "Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik."}
               </p>
             </div>
 
-            {/* Grid / List Poin Utama 4 Langkah */}
-            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
-              {config.howItWorksSteps?.map((item: any, idx: number) => {
-                return (
-                  <div 
-                    key={idx} 
-                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-[#e5e7eb] bg-white hover:border-[#2563eb]/40 hover:shadow-md transition-all duration-300 text-left shadow-xs"
-                  >
-                    {/* Icon Box */}
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
-                      <DynamicIcon name={item.icon || "CheckCircle2"} className="h-6 w-6" />
-                    </div>
+            {/* Horizontal Timeline Wrapper */}
+            <div className="relative">
+              {/* Horizontal Connecting Line (Desktop Only) */}
+              <div className="hidden lg:block absolute top-1/2 left-[10%] right-[10%] h-1 bg-gradient-to-r from-[#0F766E] via-[#38BDF8] to-[#0F4C81] -translate-y-6 z-0" />
 
-                    {/* Main Point Title & Step Pill */}
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <span className="inline-block text-[10px] font-black tracking-wider text-[#2563eb] bg-[#eff6ff] border border-blue-200 px-2.5 py-0.5 rounded-full uppercase">
-                        Langkah {item.step || `0${idx+1}`}
-                      </span>
-                      <h3 className="text-sm sm:text-base font-extrabold text-[#1e293b] tracking-tight leading-snug group-hover:text-[#2563eb] transition">
-                        {item.title}
-                      </h3>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 relative z-10">
+                {config.howItWorksSteps?.map((item: any, idx: number) => {
+                  return (
+                    <div 
+                      key={idx} 
+                      className="card-saas-premium p-6 flex flex-col items-start gap-4 text-left relative bg-white"
+                    >
+                      {/* Step Header */}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#0F766E] to-[#38BDF8] text-white shadow-md">
+                          <DynamicIcon name={item.icon || "CheckCircle2"} className="h-6 w-6" />
+                        </div>
+                        <span className="inline-block text-xs font-black tracking-wider text-white bg-gradient-to-r from-[#0F766E] to-[#38BDF8] px-3 py-1 rounded-full uppercase shadow-xs">
+                          Step {item.step || `0${idx+1}`}
+                        </span>
+                      </div>
+
+                      {/* Step Details */}
+                      <div className="space-y-1.5 pt-2">
+                        <h3 className="text-base font-extrabold text-[#083344] tracking-tight">
+                          {item.title}
+                        </h3>
+                        {item.desc && (
+                          <p className="text-xs text-[#475569] leading-relaxed">
+                            {item.desc}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
           </div>
         </section>
       )}
 
-      {/* 6. FAQ SECTION - SECTION 5 (Pure White Background #FFFFFF) */}
+      {/* 7. FAQ SECTION - SECTION 6 (Light Aqua Background #ECFEFF) */}
       {config.showFaq !== false && (
-        <section id="faq" className="py-16 md:py-24 bg-white border-b border-slate-200/80 relative">
+        <section id="faq" className="py-20 md:py-28 bg-[#ecfeff] relative border-b border-cyan-100">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             
-            <div className="text-center space-y-4 mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#eff6ff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
-                <HelpCircle className="h-3.5 w-3.5 text-[#2563eb]" />
+            <div className="text-center space-y-4 mb-12 sm:mb-16">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-cyan-200 px-4 py-1.5 text-xs font-extrabold text-[#0F766E] shadow-xs">
+                <HelpCircle className="h-4 w-4 text-[#0F766E]" />
                 <span>PERTANYAAN POPULER</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
+              <h2 className="text-3xl font-black tracking-tight text-[#083344] sm:text-4.5xl leading-tight">
                 {config.faqTitle || "Sering Ditanyakan Orang Tua"}
               </h2>
-              <p className="text-base text-[#475569]">
+              <p className="text-base text-[#475569] font-medium">
                 {config.faqSub || "Temukan jawaban cepat atas pertanyaan seputar konsultasi pendidikan Sekolah Alam Al-Karim."}
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl border border-[#e5e7eb] p-6 md:p-8 shadow-xs" style={{ backgroundColor: config.colors?.card }}>
-              <Accordion type="single" collapsible className="w-full space-y-3">
+            <div className="bg-white rounded-[24px] border border-cyan-100 p-6 md:p-10 shadow-sm" style={{ backgroundColor: config.colors?.card }}>
+              <Accordion type="single" collapsible className="w-full space-y-4">
                 {config.faqs?.map((faq: any, idx: number) => (
-                  <AccordionItem key={idx} value={`item-${idx}`} className={`border-b border-slate-100 pb-3 ${idx === (config.faqs?.length || 0) - 1 ? 'border-none pb-0' : ''}`}>
-                    <AccordionTrigger className="text-base font-bold text-[#1e293b] hover:text-[#2563eb] text-left">
+                  <AccordionItem key={idx} value={`item-${idx}`} className={`border-b border-slate-100 pb-4 ${idx === (config.faqs?.length || 0) - 1 ? 'border-none pb-0' : ''}`}>
+                    <AccordionTrigger className="text-base font-extrabold text-[#083344] hover:text-[#0F766E] text-left leading-snug">
                       {faq.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-sm text-[#64748b] leading-relaxed pt-2">
+                    <AccordionContent className="text-sm text-[#475569] leading-relaxed pt-2">
                       {faq.answer}
                     </AccordionContent>
                   </AccordionItem>
@@ -808,38 +904,38 @@ export function Home() {
         </section>
       )}
 
-      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Dark Slate AI Gradient Background) */}
+      {/* 8. CALL TO ACTION BANNER - SECTION 7 (Deep Aqua / Ocean SaaS Banner) */}
       {config.showCta !== false && (
-        <section className="mx-auto max-w-6xl px-4 py-12 md:py-20">
+        <section className="mx-auto max-w-6xl px-4 py-14 md:py-24">
           <div
-            className="rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl bg-gradient-to-r from-[#020617] via-[#0F172A] to-[#1E1B4B] border border-white/10"
+            className="rounded-[28px] p-8 sm:p-14 text-center text-white relative overflow-hidden shadow-2xl bg-gradient-to-r from-[#083344] via-[#0F4C81] to-[#0F766E] border border-cyan-400/30"
             style={{ backgroundColor: config.ctaBg || undefined }}
           >
             {/* Background Decorative Rings */}
-            <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-purple-500/20 blur-2xl" />
-            <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-cyan-400/20 blur-2xl" />
+            <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-[#38BDF8]/20 blur-3xl" />
+            <div className="pointer-events-none absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-[#0F766E]/40 blur-3xl" />
 
             <div className="relative z-10 space-y-6 max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-cyan-200 border border-white/15">
-                <Sparkles className="h-4 w-4 text-cyan-300" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-extrabold text-cyan-200 border border-white/20">
+                <Sparkles className="h-4 w-4 text-[#38BDF8]" />
                 <span>MULAI LANGKAH AWAL SEKARANG</span>
               </div>
 
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight text-white">
-                {config.ctaTitle}
+              <h2 className="text-3xl sm:text-4.5xl md:text-5.5xl font-black tracking-tight leading-tight text-white">
+                Siap Mengetahui Potensi Terbaik Anak Anda?
               </h2>
 
-              <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
+              <p className="text-base md:text-lg text-cyan-100/90 max-w-2xl mx-auto leading-relaxed font-medium">
                 {config.ctaDesc}
               </p>
 
               <div className="pt-4">
                 <button
                   onClick={() => handleScroll(config.ctaBtnLink || "#jenjang")}
-                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-slate-950 shadow-xl transition-all hover:scale-105 active:scale-95 hover:bg-slate-100 hover:shadow-purple-500/30"
+                  className="inline-flex h-14 items-center justify-center gap-3 rounded-2xl btn-gradient-aqua px-10 text-base font-extrabold shadow-2xl hover:scale-105 active:scale-95 transition-all"
                 >
                   <span>{config.ctaBtn}</span>
-                  <ArrowRight className="h-5 w-5 text-[#2563eb]" />
+                  <ArrowRight className="h-5 w-5 text-white" />
                 </button>
               </div>
             </div>
@@ -847,24 +943,24 @@ export function Home() {
         </section>
       )}
 
-      {/* 8. FOOTER - SECTION 7 (Dark Slate AI Footer #020617 & Cyan Links #38BDF8) */}
+      {/* 9. FOOTER - SECTION 8 (Deep Ocean Background #083344) */}
       {config.showFooter !== false && (
-        <footer className="border-t border-slate-800 bg-[#020617] text-slate-300 py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
+        <footer className="border-t border-cyan-900/60 bg-[#083344] text-slate-300 py-14 md:py-20 relative" style={{ backgroundColor: config.colors?.footer }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-12">
               
               {/* Brand Info */}
               <div className="space-y-4 md:col-span-5 text-left">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#2563eb] font-black text-white text-xl shadow-md">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-[#0F766E] to-[#38BDF8] font-black text-white text-xl shadow-md">
                     {config.logoText?.charAt(0) || "E"}
                   </div>
                   <div className="flex flex-col text-left">
                     <span className="text-xl font-black text-white leading-tight">{config.logoText}</span>
-                    <span className="text-xs text-cyan-400 font-semibold">{config.footerSchool}</span>
+                    <span className="text-xs text-[#38BDF8] font-semibold">{config.footerSchool}</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-400 max-w-md font-medium">
+                <p className="text-xs leading-relaxed text-slate-300/90 max-w-md font-medium">
                   Membimbing langkah anak menuju masa depan gemilang dengan pemahaman utuh karakter, minat, dan potensi tumbuh kembang alami.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
@@ -874,7 +970,7 @@ export function Home() {
                       href={soc.url} 
                       target="_blank" 
                       rel="noreferrer" 
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-cyan-300 border border-white/15 hover:bg-[#2563eb] hover:text-white transition"
+                      className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-cyan-200 border border-white/15 hover:bg-[#0F766E] hover:text-white transition"
                       aria-label={soc.platform}
                     >
                       <Globe className="h-4 w-4" />
@@ -888,18 +984,18 @@ export function Home() {
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">Hubungi Kami</h4>
                 <ul className="space-y-3 text-xs">
                   <li className="flex items-start gap-2.5">
-                    <MapPin className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <MapPin className="h-4 w-4 text-[#38BDF8] shrink-0 mt-0.5" />
                     <span className="text-slate-300">{config.footerAddress}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Phone className="h-4 w-4 text-cyan-400 shrink-0" />
-                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-cyan-300 hover:text-white transition font-medium">
+                    <Phone className="h-4 w-4 text-[#38BDF8] shrink-0" />
+                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-cyan-200 hover:text-white transition font-medium">
                       {config.footerWa}
                     </a>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Mail className="h-4 w-4 text-cyan-400 shrink-0" />
-                    <a href={`mailto:${config.footerEmail}`} className="text-cyan-300 hover:text-white transition font-medium">
+                    <Mail className="h-4 w-4 text-[#38BDF8] shrink-0" />
+                    <a href={`mailto:${config.footerEmail}`} className="text-cyan-200 hover:text-white transition font-medium">
                       {config.footerEmail}
                     </a>
                   </li>
@@ -917,14 +1013,14 @@ export function Home() {
                           if (nav.link?.startsWith("#")) handleScroll(nav.link);
                           else if (nav.link) window.location.href = nav.link;
                         }}
-                        className="text-slate-300 hover:text-white transition"
+                        className="text-slate-300 hover:text-[#38BDF8] transition"
                       >
                         {nav.label}
                       </button>
                     </li>
                   ))}
                   <li>
-                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline flex items-center gap-1.5 mt-1 font-semibold">
+                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-[#38BDF8] hover:underline flex items-center gap-1.5 mt-1 font-bold">
                       <Globe className="h-3.5 w-3.5" />
                       <span>Website Resmi Sekolah</span>
                     </a>
@@ -934,9 +1030,9 @@ export function Home() {
 
             </div>
 
-            <div className="mt-12 border-t border-slate-800/80 pt-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mt-12 border-t border-cyan-950 pt-6 text-center text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p>{config.footerCopyright}</p>
-              <p className="text-[11px] text-slate-500 font-medium">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
+              <p className="text-[11px] text-slate-400 font-medium">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
             </div>
           </div>
         </footer>
