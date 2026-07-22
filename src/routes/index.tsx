@@ -359,13 +359,13 @@ export function Home() {
       `}</style>
 
       {/* Decorative Ambient Background Lights */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-96 w-96 rounded-full bg-emerald-400/20 blur-[120px]" />
-      <div className="pointer-events-none absolute top-1/3 -left-40 h-96 w-96 rounded-full bg-amber-400/15 blur-[120px]" />
-      <div className="pointer-events-none absolute top-2/3 -right-20 h-96 w-96 rounded-full bg-teal-400/15 blur-[120px]" />
+      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-emerald-400/30 via-teal-400/20 to-transparent blur-[140px]" />
+      <div className="pointer-events-none absolute top-1/3 -left-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-amber-400/25 via-orange-400/15 to-transparent blur-[140px]" />
+      <div className="pointer-events-none absolute top-2/3 -right-20 h-[500px] w-[500px] rounded-full bg-gradient-to-bl from-teal-400/25 via-sky-400/15 to-transparent blur-[140px]" />
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
-        <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-md transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
+        <header className="sticky top-0 z-40 border-b border-emerald-200/60 bg-white/90 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
           <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <Link to="/" className="flex items-center gap-3 group">
               {config.logoImg ? (
@@ -382,14 +382,14 @@ export function Home() {
                   </span>
                   <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 </div>
-                <span className="text-[11px] text-emerald-800 font-semibold tracking-wide">
+                <span className="text-[11px] text-emerald-800 font-bold tracking-wide">
                   {config.siteName}
                 </span>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden items-center gap-7 md:flex">
+            <nav className="hidden items-center gap-2 md:flex">
               {config.navItems?.map((item: any, idx: number) => (
                 <button
                   key={idx}
@@ -400,16 +400,16 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-sm font-semibold text-slate-600 transition hover:text-emerald-700 relative py-1 after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-emerald-600 after:transition-all hover:after:w-full"
+                  className="text-xs sm:text-sm font-bold text-slate-700 hover:text-emerald-800 hover:bg-emerald-100/70 px-3.5 py-1.5 rounded-xl transition-all"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="text-sm font-semibold text-slate-700 hover:text-emerald-700 transition flex items-center gap-1.5 rounded-full bg-slate-100/80 px-3.5 py-1.5 border border-slate-200/80 hover:bg-emerald-50 hover:border-emerald-200"
+                className="text-xs font-bold text-emerald-900 transition flex items-center gap-1.5 rounded-2xl bg-emerald-100/90 px-3.5 py-2 border border-emerald-300/80 hover:bg-emerald-200 hover:border-emerald-400 shadow-xs hover:scale-105 active:scale-95 ml-2"
               >
-                <History className="h-4 w-4 text-emerald-600" /> 
+                <History className="h-4 w-4 text-emerald-700" /> 
                 <span>Cek Riwayat</span>
               </button>
             </nav>
@@ -417,16 +417,16 @@ export function Home() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 shadow-xs transition hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/50 md:inline-flex"
+                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-md shadow-emerald-700/20 transition-all hover:scale-105 active:scale-95 md:inline-flex"
               >
-                <LogIn className="h-4 w-4 text-emerald-600" />
+                <LogIn className="h-4 w-4 text-white" />
                 <span>{config.btnLoginText}</span>
               </Link>
 
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 md:hidden active:scale-95 transition shadow-xs"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 md:hidden active:scale-95 transition shadow-xs hover:bg-emerald-100"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -436,7 +436,7 @@ export function Home() {
 
           {/* Mobile Navigation Drawer */}
           {mobileMenuOpen && (
-            <div className="border-t border-slate-200 bg-white p-5 space-y-3.5 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
+            <div className="border-t border-emerald-200 bg-white p-5 space-y-3 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
               {config.navItems?.map((item: any, idx: number) => (
                 <button
                   key={idx}
@@ -447,23 +447,23 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2 text-sm font-bold text-slate-700 hover:text-emerald-700 border-b border-slate-100"
+                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-slate-800 hover:text-emerald-800 hover:bg-emerald-50 rounded-xl transition"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="w-full text-left py-2.5 text-sm font-bold text-emerald-800 bg-emerald-50 rounded-xl px-3 flex items-center gap-2"
+                className="w-full text-left py-2.5 px-3 text-sm font-bold text-emerald-900 bg-emerald-100/90 rounded-xl flex items-center gap-2 border border-emerald-200"
               >
-                <History className="h-4.5 w-4.5 text-emerald-600" /> Riwayat Konsultasi
+                <History className="h-4.5 w-4.5 text-emerald-700" /> Riwayat Konsultasi
               </button>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-md shadow-emerald-700/20"
               >
-                <LogIn className="h-4.5 w-4.5 text-emerald-600" />
+                <LogIn className="h-4.5 w-4.5 text-white" />
                 <span>{config.btnLoginText}</span>
               </Link>
             </div>
