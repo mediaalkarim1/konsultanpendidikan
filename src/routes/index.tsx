@@ -742,8 +742,8 @@ export function Home() {
               </p>
             </div>
 
-            {/* Mobile: Vertical List | Desktop: 4 Column Grid */}
-            <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
+            {/* Grid / List Poin Utama 4 Langkah (Tanpa Deskripsi) */}
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
               {config.howItWorksSteps?.map((item: any, idx: number) => {
                 const colors = [
                   "from-emerald-500 to-teal-600",
@@ -754,22 +754,21 @@ export function Home() {
                 return (
                   <div 
                     key={idx} 
-                    className="relative flex items-start gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all duration-300"
+                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-300 hover:shadow-md transition-all duration-300 text-left"
                   >
-                    <div className="flex items-center justify-between sm:w-full sm:mb-4 shrink-0">
-                      <div className={`grid h-11 w-11 sm:h-12 sm:w-12 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs`}>
-                        <DynamicIcon name={item.icon || "CheckCircle2"} className="h-5.5 w-5.5 sm:h-6 sm:w-6" />
-                      </div>
+                    {/* Icon Box */}
+                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs transition-transform duration-300 group-hover:scale-105`}>
+                      <DynamicIcon name={item.icon || "CheckCircle2"} className="h-6 w-6" />
                     </div>
 
-                    <div className="flex-1 space-y-1 sm:space-y-0 text-left">
-                      <div className="flex items-center gap-2 mb-1 sm:mb-2">
-                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                          LANGKAH {item.step || `0${idx+1}`}
-                        </span>
-                      </div>
-                      <h3 className="text-sm sm:text-lg font-bold text-slate-900">{item.title}</h3>
-                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+                    {/* Main Point Title & Step Pill */}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <span className="inline-block text-[10px] font-black tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full uppercase">
+                        Langkah {item.step || `0${idx+1}`}
+                      </span>
+                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-emerald-700 transition">
+                        {item.title}
+                      </h3>
                     </div>
                   </div>
                 );
