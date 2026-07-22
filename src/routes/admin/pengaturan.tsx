@@ -796,9 +796,9 @@ export function PengaturanPage() {
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Tombol Utama (Hero Button 1)
+                    Tombol Utama Hero Banner (Hero Button 1)
                   </label>
                   <input
                     type="text"
@@ -809,40 +809,14 @@ export function PengaturanPage() {
                   />
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Link Tombol Utama (Hero Button 1 Link)
+                    Link Tujuan Tombol Utama (Hero Button 1 Link)
                   </label>
                   <input
                     type="text"
                     value={homeForm.heroBtn1Link}
                     onChange={(e) => setHomeForm({ ...homeForm, heroBtn1Link: e.target.value })}
-                    className="w-full rounded-lg border p-2.5 text-sm outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Tombol Sekunder (Hero Button 2)
-                  </label>
-                  <input
-                    type="text"
-                    value={homeForm.heroBtn2}
-                    onChange={(e) => setHomeForm({ ...homeForm, heroBtn2: e.target.value })}
-                    className="w-full rounded-lg border p-2.5 text-sm outline-none"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Link Tombol Sekunder (Hero Button 2 Link)
-                  </label>
-                  <input
-                    type="text"
-                    value={homeForm.heroBtn2Link}
-                    onChange={(e) => setHomeForm({ ...homeForm, heroBtn2Link: e.target.value })}
                     className="w-full rounded-lg border p-2.5 text-sm outline-none"
                     required
                   />
@@ -1709,12 +1683,9 @@ export function PengaturanPage() {
                     <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
                       {homeForm.heroDesc}
                     </p>
-                    <div className="flex justify-center gap-2 pt-1">
-                      <button className="h-10 px-5 rounded-full bg-emerald-700 text-white text-xs font-bold shadow" style={{ backgroundColor: homeForm.colors?.button }}>
+                    <div className="flex justify-center pt-1">
+                      <button className="h-10 px-6 rounded-full bg-emerald-700 text-white text-xs font-bold shadow" style={{ backgroundColor: homeForm.colors?.button }}>
                         {homeForm.heroBtn1}
-                      </button>
-                      <button className="h-10 px-5 rounded-full border bg-white text-slate-600 text-xs font-bold">
-                        {homeForm.heroBtn2}
                       </button>
                     </div>
 

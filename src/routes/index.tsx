@@ -104,8 +104,6 @@ export const DEFAULT_HOMEPAGE_CONFIG = {
   heroImg: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=800&q=80",
   heroBtn1: "Mulai Konsultasi",
   heroBtn1Link: "#jenjang",
-  heroBtn2: "Pelajari Layanan",
-  heroBtn2Link: "#keunggulan",
   heroStats: [
     { value: "1.000+", label: "Orang Tua Terbantu", icon: "Users" },
     { value: "100%", label: "Tim Konsultan Expert", icon: "Award" },
@@ -514,13 +512,6 @@ export function Home() {
                   >
                     <span>{config.heroBtn1}</span>
                     <ArrowRight className="h-5 w-5" />
-                  </button>
-                  
-                  <button
-                    onClick={() => handleScroll(config.heroBtn2Link || "#keunggulan")}
-                    className="inline-flex h-13 items-center justify-center gap-2 rounded-2xl border-2 border-slate-200 bg-white px-7 text-base font-bold text-slate-700 shadow-xs transition hover:border-emerald-400 hover:bg-emerald-50/40 hover:text-emerald-800 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <span>{config.heroBtn2}</span>
                   </button>
                 </div>
 
