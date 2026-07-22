@@ -23,13 +23,19 @@ import {
   CheckCircle2,
   History,
   LogIn,
-  Target
+  Target,
+  Zap,
+  Award,
+  Users,
+  ShieldCheck,
+  MessageSquare
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { saveHomepageSettingsAction } from "@/actions/admin-actions";
+import { DEFAULT_HOMEPAGE_CONFIG } from "@/routes/index";
 
 export const Route = createFileRoute("/admin/pengaturan")({
   component: PengaturanPage,
@@ -39,7 +45,8 @@ export const Route = createFileRoute("/admin/pengaturan")({
 const POPULAR_ICONS = [
   "Target", "Brain", "UserCheck", "Sprout", "MessageSquare", "Lock", 
   "School", "BookOpen", "GraduationCap", "Award", "ShieldCheck", 
-  "Heart", "Activity", "FileText", "Users", "Phone", "Mail", "MapPin"
+  "Heart", "Activity", "FileText", "Users", "Phone", "Mail", "MapPin",
+  "Zap", "Sparkles", "Globe", "CheckCircle2", "Star"
 ];
 
 // Helper component to render icons
@@ -47,124 +54,6 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
   const IconComponent = (LucideIcons as any)[name] || LucideIcons.HelpCircle;
   return <IconComponent className={className} />;
 }
-
-const DEFAULT_HOMEPAGE_CONFIG = {
-  siteName: "Sekolah Alam Al-Karim",
-  logoText: "EduKonsul",
-  logoImg: "",
-  btnLoginText: "Login Admin",
-  
-  // Section Visibility flags
-  showHero: true,
-  showAdvantages: true,
-  showLevels: true,
-  showCta: true,
-  showFooter: true,
-  
-  heroBadge: "Konsultasi Pendidikan Anak",
-  heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
-  heroDesc: "Bantu pahami potensi, karakter, dan kebutuhan belajar anak melalui konsultasi pendidikan yang didampingi Tim Konsultan Sekolah Alam Al-Karim.",
-  heroImg: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&w=800&q=80",
-  heroBtn1: "Mulai Konsultasi",
-  heroBtn1Link: "#jenjang",
-  heroBtn2: "Pelajari Layanan",
-  heroBtn2Link: "#keunggulan",
-  
-  advantagesTitle: "Mengapa Memilih Konsultasi Pendidikan Sekolah Alam Al-Karim?",
-  advantagesSub: "Kami membantu orang tua memahami potensi, karakter, dan kebutuhan belajar anak melalui analisis yang terstruktur serta pendampingan langsung dari Tim Konsultan.",
-  advantages: [
-    {
-      icon: "Target",
-      title: "Analisis Potensi Anak",
-      desc: "Membantu memetakan potensi, karakter, minat, dan gaya belajar anak sehingga orang tua lebih memahami kebutuhan pendidikan anak."
-    },
-    {
-      icon: "Brain",
-      title: "Analisis Cerdas",
-      desc: "Didukung teknologi cerdas untuk membantu menganalisis jawaban orang tua secara cepat, sistematis, dan objektif sebelum ditinjau kembali oleh Tim Konsultan Sekolah Alam Al-Karim."
-    },
-    {
-      icon: "UserCheck",
-      title: "Dikaji Tim Konsultan",
-      desc: "Seluruh hasil analisis ditinjau kembali oleh Tim Konsultan sehingga rekomendasi lebih tepat dan sesuai dengan kondisi anak."
-    },
-    {
-      icon: "Sprout",
-      title: "Rekomendasi Pendidikan",
-      desc: "Prinsip pendidikan holistik yang disesuaikan dengan minat, gaya belajar, dan bakat alami anak."
-    },
-    {
-      icon: "MessageSquare",
-      title: "Konsultasi Gratis",
-      desc: "Orang tua dapat berkonsultasi langsung dengan Tim Sekolah Alam Al-Karim melalui WhatsApp tanpa biaya."
-    },
-    {
-      icon: "Lock",
-      title: "Data Aman & Rahasia",
-      desc: "Seluruh data konsultasi dijaga kerahasiaannya dan hanya digunakan untuk kebutuhan konsultasi pendidikan."
-    }
-  ],
-  
-  levelsTitle: "Pilih Jenjang Pendidikan",
-  levels: [
-    {
-      id: "tksd",
-      name: "TK & SD",
-      tag: "TK / SD",
-      desc: "Selamat datang di jenjang TK & SD! Konsultasikan kebutuhan tumbuh kembang anak usia dini untuk rekomendasi pendidikan terbaik.",
-      icon: "School",
-      btnText: "Mulai Konsultasi",
-      active: true
-    },
-    {
-      id: "smp",
-      name: "SMP",
-      tag: "SMP",
-      desc: "Selamat datang di jenjang SMP! Petakan potensi, karakter, dan minat belajar remaja untuk sekolah menengah yang sesuai.",
-      icon: "BookOpen",
-      btnText: "Mulai Konsultasi",
-      active: true
-    },
-    {
-      id: "sma",
-      name: "SMA",
-      tag: "SMA",
-      desc: "Selamat datang di jenjang SMA! Temukan pemetaan jurusan, kesiapan perkuliahan, dan arah karier masa depan anak secara optimal.",
-      icon: "GraduationCap",
-      btnText: "Mulai Konsultasi",
-      active: true
-    }
-  ],
-  
-  ctaTitle: "Siap Menemukan Pendidikan Terbaik untuk Anak Anda?",
-  ctaDesc: "Konsultasikan kebutuhan pendidikan anak bersama Tim Sekolah Alam Al-Karim.",
-  ctaBtn: "Mulai Konsultasi Sekarang",
-  ctaBtnLink: "#jenjang",
-  ctaBg: "#047857",
-  
-  footerLogo: "",
-  footerSchool: "Sekolah Alam Al-Karim",
-  footerAddress: "Jl. Raya Al-Karim No. 123, Bandar Lampung",
-  footerWa: "081234567890",
-  footerEmail: "kontak@sekolahalamalkarim.sch.id",
-  footerWebsite: "sekolahalamalkarim.sch.id",
-  footerCopyright: "© 2026 EduKonsul — Sekolah Alam Al-Karim. All rights reserved.",
-  socialLinks: [
-    { platform: "Instagram", url: "https://instagram.com/sekolahalamalkarim" },
-    { platform: "Facebook", url: "https://facebook.com/sekolahalamalkarim" },
-    { platform: "Youtube", url: "https://youtube.com/sekolahalamalkarim" }
-  ],
-  
-  colors: {
-    primary: "#047857",
-    secondary: "#059669",
-    button: "#047857",
-    header: "#ffffff",
-    footer: "#0f172a",
-    background: "#ffffff",
-    card: "#ffffff"
-  }
-};
 
 export function PengaturanPage() {
   const { userEmail } = useAuth();
@@ -194,6 +83,13 @@ export function PengaturanPage() {
         setHomeForm({
           ...DEFAULT_HOMEPAGE_CONFIG,
           ...val,
+          navItems: Array.isArray(val.navItems) && val.navItems.length > 0 ? val.navItems : DEFAULT_HOMEPAGE_CONFIG.navItems,
+          heroStats: Array.isArray(val.heroStats) && val.heroStats.length > 0 ? val.heroStats : DEFAULT_HOMEPAGE_CONFIG.heroStats,
+          advantages: Array.isArray(val.advantages) && val.advantages.length > 0 ? val.advantages : DEFAULT_HOMEPAGE_CONFIG.advantages,
+          levels: Array.isArray(val.levels) && val.levels.length > 0 ? val.levels : DEFAULT_HOMEPAGE_CONFIG.levels,
+          howItWorksSteps: Array.isArray(val.howItWorksSteps) && val.howItWorksSteps.length > 0 ? val.howItWorksSteps : DEFAULT_HOMEPAGE_CONFIG.howItWorksSteps,
+          faqs: Array.isArray(val.faqs) && val.faqs.length > 0 ? val.faqs : DEFAULT_HOMEPAGE_CONFIG.faqs,
+          socialLinks: Array.isArray(val.socialLinks) && val.socialLinks.length > 0 ? val.socialLinks : DEFAULT_HOMEPAGE_CONFIG.socialLinks,
           colors: {
             ...DEFAULT_HOMEPAGE_CONFIG.colors,
             ...(val.colors || {})
@@ -213,7 +109,6 @@ export function PengaturanPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size limit (max 1.5MB for base64 storage)
     if (file.size > 1500000) {
       toast.error("File terlalu besar. Maksimum ukuran file gambar adalah 1.5MB.");
       return;
@@ -231,7 +126,7 @@ export function PengaturanPage() {
   };
 
   // Reorder Item in Array helper
-  const moveItem = (index: number, direction: "up" | "down", listName: "advantages" | "levels" | "socialLinks") => {
+  const moveItem = (index: number, direction: "up" | "down", listName: keyof typeof DEFAULT_HOMEPAGE_CONFIG) => {
     const arr = [...(homeForm[listName] as any[])];
     if (direction === "up" && index === 0) return;
     if (direction === "down" && index === arr.length - 1) return;
@@ -288,14 +183,14 @@ export function PengaturanPage() {
             <Layout className="h-6 w-6 text-brand" /> Pengaturan CMS Homepage
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Kelola konten banner, keunggulan, pilihan jenjang, warna branding, dan footer yang tampil di halaman utama.
+            Kelola seluruh konten banner, navigasi, keunggulan, pilihan jenjang, cara kerja, FAQ, warna branding, dan footer homepage.
           </p>
         </div>
 
         <div className="flex gap-2">
           <button
             onClick={() => setPreviewOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted transition cursor-pointer"
           >
             <Eye className="h-4 w-4 text-brand" />
             Preview Draft
@@ -304,7 +199,7 @@ export function PengaturanPage() {
           <button
             onClick={() => handleSaveHomepage()}
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-lg btn-theme-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg btn-theme-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50 shadow-sm cursor-pointer"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan Perubahan
@@ -316,27 +211,33 @@ export function PengaturanPage() {
       <div className="flex border-b border-border overflow-x-auto scrollbar-none gap-2">
         <button
           onClick={() => setActiveTab("header-footer")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition ${activeTab === "header-footer" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition cursor-pointer ${activeTab === "header-footer" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
-          Header, Footer & Tema
+          Header, Navigasi, Footer & Tema
         </button>
         <button
           onClick={() => setActiveTab("hero-banner")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition ${activeTab === "hero-banner" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition cursor-pointer ${activeTab === "hero-banner" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
-          Hero Banner & CTA
+          Hero Banner, Stats & CTA
         </button>
         <button
           onClick={() => setActiveTab("advantages")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition ${activeTab === "advantages" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition cursor-pointer ${activeTab === "advantages" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           Daftar Keunggulan
         </button>
         <button
           onClick={() => setActiveTab("levels")}
-          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition ${activeTab === "levels" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition cursor-pointer ${activeTab === "levels" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
         >
           Jenjang Pendidikan
+        </button>
+        <button
+          onClick={() => setActiveTab("how-faq")}
+          className={`whitespace-nowrap px-4 py-2 text-sm font-bold border-b-2 transition cursor-pointer ${activeTab === "how-faq" ? "border-brand text-brand" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          Cara Kerja & FAQ
         </button>
       </div>
 
@@ -346,6 +247,7 @@ export function PengaturanPage() {
         {/* TAB 1: HEADER, FOOTER & COLORS */}
         {activeTab === "header-footer" && (
           <div className="space-y-6">
+            
             {/* Tema Warna */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
@@ -423,6 +325,42 @@ export function PengaturanPage() {
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Warna Background Header</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={homeForm.colors?.header || "#ffffff"}
+                      onChange={(e) => setHomeForm({ ...homeForm, colors: { ...homeForm.colors, header: e.target.value } })}
+                      className="h-9 w-9 rounded cursor-pointer border"
+                    />
+                    <input
+                      type="text"
+                      value={homeForm.colors?.header || "#ffffff"}
+                      onChange={(e) => setHomeForm({ ...homeForm, colors: { ...homeForm.colors, header: e.target.value } })}
+                      className="flex-1 rounded border px-2 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Warna Background Footer</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      value={homeForm.colors?.footer || "#0f172a"}
+                      onChange={(e) => setHomeForm({ ...homeForm, colors: { ...homeForm.colors, footer: e.target.value } })}
+                      className="h-9 w-9 rounded cursor-pointer border"
+                    />
+                    <input
+                      type="text"
+                      value={homeForm.colors?.footer || "#0f172a"}
+                      onChange={(e) => setHomeForm({ ...homeForm, colors: { ...homeForm.colors, footer: e.target.value } })}
+                      className="flex-1 rounded border px-2 text-xs font-mono"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -434,7 +372,7 @@ export function PengaturanPage() {
               <p className="text-xs text-slate-500">
                 Tampilkan atau sembunyikan bagian-bagian homepage tertentu sesuai kebutuhan.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
                   <input
                     type="checkbox"
@@ -442,7 +380,7 @@ export function PengaturanPage() {
                     onChange={(e) => setHomeForm({ ...homeForm, showHero: e.target.checked })}
                     className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
                   />
-                  <span className="text-xs font-bold text-slate-700">Hero Section</span>
+                  <span className="text-xs font-bold text-slate-700">Hero Banner</span>
                 </label>
 
                 <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
@@ -452,7 +390,7 @@ export function PengaturanPage() {
                     onChange={(e) => setHomeForm({ ...homeForm, showAdvantages: e.target.checked })}
                     className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
                   />
-                  <span className="text-xs font-bold text-slate-700">Keunggulan</span>
+                  <span className="text-xs font-bold text-slate-700">Section Keunggulan</span>
                 </label>
 
                 <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
@@ -463,6 +401,26 @@ export function PengaturanPage() {
                     className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
                   />
                   <span className="text-xs font-bold text-slate-700">Pilihan Jenjang</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showHowItWorks !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showHowItWorks: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Cara Kerja (4 Steps)</span>
+                </label>
+
+                <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
+                  <input
+                    type="checkbox"
+                    checked={homeForm.showFaq !== false}
+                    onChange={(e) => setHomeForm({ ...homeForm, showFaq: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
+                  />
+                  <span className="text-xs font-bold text-slate-700">Section FAQ</span>
                 </label>
 
                 <label className="flex items-center gap-2.5 rounded-lg border p-3 hover:bg-slate-50 cursor-pointer select-none transition">
@@ -487,10 +445,10 @@ export function PengaturanPage() {
               </div>
             </div>
 
-            {/* Header CMS */}
+            {/* Header CMS & Menu Links */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <Globe className="h-5 w-5" /> 2. Tampilan Header & Navigasi
+                <Globe className="h-5 w-5" /> 3. Tampilan Header & Menu Navigasi
               </h2>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -537,18 +495,93 @@ export function PengaturanPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Menu Navigasi Header Manager */}
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-brand">Menu Navigasi Top Header</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(homeForm.navItems || [])];
+                      updated.push({ label: "Menu Baru", link: "#section" });
+                      setHomeForm({ ...homeForm, navItems: updated });
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tambah Menu Navigasi
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {homeForm.navItems?.map((nav: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2 border p-2 rounded-lg bg-slate-50">
+                      <input
+                        type="text"
+                        placeholder="Label Menu"
+                        value={nav.label}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.navItems || [])];
+                          updated[idx].label = e.target.value;
+                          setHomeForm({ ...homeForm, navItems: updated });
+                        }}
+                        className="flex-1 rounded border p-1.5 text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Link / #section"
+                        value={nav.link}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.navItems || [])];
+                          updated[idx].link = e.target.value;
+                          setHomeForm({ ...homeForm, navItems: updated });
+                        }}
+                        className="flex-1 rounded border p-1.5 text-xs font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => moveItem(idx, "up", "navItems")}
+                        className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                        title="Atas"
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveItem(idx, "down", "navItems")}
+                        className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                        title="Bawah"
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = homeForm.navItems?.filter((_, i) => i !== idx);
+                          setHomeForm({ ...homeForm, navItems: updated });
+                        }}
+                        className="p-1 rounded hover:bg-red-50 text-red-500"
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
-            {/* Footer CMS */}
+            {/* Footer & Social Media CMS */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
-                <FileText className="h-5 w-5" /> 3. Tampilan Footer & Kontak
+                <FileText className="h-5 w-5" /> 4. Tampilan Footer, Kontak & Sosial Media
               </h2>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Nama Yayasan / Sekolah
+                    Nama Sekolah / Instansi
                   </label>
                   <input
                     type="text"
@@ -598,7 +631,20 @@ export function PengaturanPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Domain Website Resmi
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.footerWebsite}
+                    onChange={(e) => setHomeForm({ ...homeForm, footerWebsite: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
                     Teks Hak Cipta (Copyright)
                   </label>
@@ -611,13 +657,73 @@ export function PengaturanPage() {
                   />
                 </div>
               </div>
+
+              {/* Social Media Links Manager */}
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-brand">Link Media Sosial Footer</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(homeForm.socialLinks || [])];
+                      updated.push({ platform: "Instagram", url: "https://instagram.com" });
+                      setHomeForm({ ...homeForm, socialLinks: updated });
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tambah Media Sosial
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {homeForm.socialLinks?.map((soc: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2 border p-2 rounded-lg bg-slate-50">
+                      <input
+                        type="text"
+                        placeholder="Platform (Instagram, FB)"
+                        value={soc.platform}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.socialLinks || [])];
+                          updated[idx].platform = e.target.value;
+                          setHomeForm({ ...homeForm, socialLinks: updated });
+                        }}
+                        className="w-1/3 rounded border p-1.5 text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        placeholder="URL https://..."
+                        value={soc.url}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.socialLinks || [])];
+                          updated[idx].url = e.target.value;
+                          setHomeForm({ ...homeForm, socialLinks: updated });
+                        }}
+                        className="flex-1 rounded border p-1.5 text-xs font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = homeForm.socialLinks?.filter((_, i) => i !== idx);
+                          setHomeForm({ ...homeForm, socialLinks: updated });
+                        }}
+                        className="p-1 rounded hover:bg-red-50 text-red-500"
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
           </div>
         )}
 
-        {/* TAB 2: HERO BANNER & CTA */}
+        {/* TAB 2: HERO BANNER, STATS & CTA */}
         {activeTab === "hero-banner" && (
           <div className="space-y-6">
+            
             {/* Hero Section */}
             <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
               <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
@@ -640,7 +746,7 @@ export function PengaturanPage() {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                    Link/Source URL Gambar Hero Banner
+                    Link / Source Gambar Banner Hero
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -740,6 +846,78 @@ export function PengaturanPage() {
                   />
                 </div>
               </div>
+
+              {/* Hero Stats Strip Manager */}
+              <div className="pt-4 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-brand">Item Statistik di Bawah Hero Banner</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(homeForm.heroStats || [])];
+                      updated.push({ value: "100%", label: "Metrik Baru", icon: "CheckCircle2" });
+                      setHomeForm({ ...homeForm, heroStats: updated });
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tambah Stat Metrik
+                  </button>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {homeForm.heroStats?.map((stat: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2 border p-2.5 rounded-lg bg-slate-50">
+                      <select
+                        value={stat.icon}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.heroStats || [])];
+                          updated[idx].icon = e.target.value;
+                          setHomeForm({ ...homeForm, heroStats: updated });
+                        }}
+                        className="rounded border p-1.5 text-xs font-semibold text-slate-700"
+                      >
+                        {POPULAR_ICONS.map(ic => (
+                          <option key={ic} value={ic}>{ic}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Nilai (e.g. 1.000+)"
+                        value={stat.value}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.heroStats || [])];
+                          updated[idx].value = e.target.value;
+                          setHomeForm({ ...homeForm, heroStats: updated });
+                        }}
+                        className="w-1/3 rounded border p-1.5 text-xs font-bold"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Label Keterangan"
+                        value={stat.label}
+                        onChange={(e) => {
+                          const updated = [...(homeForm.heroStats || [])];
+                          updated[idx].label = e.target.value;
+                          setHomeForm({ ...homeForm, heroStats: updated });
+                        }}
+                        className="flex-1 rounded border p-1.5 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = homeForm.heroStats?.filter((_, i) => i !== idx);
+                          setHomeForm({ ...homeForm, heroStats: updated });
+                        }}
+                        className="p-1 rounded hover:bg-red-50 text-red-500"
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             {/* Call To Action */}
@@ -873,7 +1051,7 @@ export function PengaturanPage() {
                       setHomeForm({ ...homeForm, advantages: updated });
                       toast.success("Keunggulan baru ditambahkan!");
                     }}
-                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition"
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" /> Tambah Keunggulan
                   </button>
@@ -993,6 +1171,18 @@ export function PengaturanPage() {
                     required
                   />
                 </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Subjudul Deskripsi Section Jenjang
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.levelsSub || ""}
+                    onChange={(e) => setHomeForm({ ...homeForm, levelsSub: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm text-foreground outline-none"
+                  />
+                </div>
               </div>
 
               {/* Item Manager */}
@@ -1015,7 +1205,7 @@ export function PengaturanPage() {
                       setHomeForm({ ...homeForm, levels: updated });
                       toast.success("Jenjang baru ditambahkan!");
                     }}
-                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition"
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" /> Tambah Jenjang Baru
                   </button>
@@ -1023,7 +1213,7 @@ export function PengaturanPage() {
 
                 <div className="space-y-3">
                   {homeForm.levels?.map((lvl: any, idx: number) => (
-                    <div key={lvl.id} className="rounded-xl border p-4 bg-muted/10 space-y-3 relative group">
+                    <div key={lvl.id || idx} className="rounded-xl border p-4 bg-muted/10 space-y-3 relative group">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold text-slate-500">Jenjang #{idx + 1}</span>
@@ -1173,6 +1363,291 @@ export function PengaturanPage() {
             </div>
           </div>
         )}
+
+        {/* TAB 5: CARA KERJA & FAQ */}
+        {activeTab === "how-faq" && (
+          <div className="space-y-6">
+            
+            {/* Cara Kerja CMS */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+                <Zap className="h-5 w-5" /> 1. Section Cara Kerja (4 Steps Pipeline)
+              </h2>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Judul Section Cara Kerja
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.howItWorksTitle || ""}
+                    onChange={(e) => setHomeForm({ ...homeForm, howItWorksTitle: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm font-bold outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Subjudul Deskripsi Cara Kerja
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.howItWorksSub || ""}
+                    onChange={(e) => setHomeForm({ ...homeForm, howItWorksSub: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Steps Manager */}
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <span className="text-sm font-bold text-brand">Langkah Cara Kerja ({homeForm.howItWorksSteps?.length || 0})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(homeForm.howItWorksSteps || [])];
+                      updated.push({
+                        step: `0${updated.length + 1}`,
+                        title: "Langkah Baru",
+                        desc: "Deskripsi singkat langkah kerja.",
+                        icon: "CheckCircle2"
+                      });
+                      setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tambah Langkah
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {homeForm.howItWorksSteps?.map((step: any, idx: number) => (
+                    <div key={idx} className="rounded-xl border p-4 bg-muted/10 space-y-3">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <span className="text-xs font-bold text-slate-500">Langkah #{idx + 1}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveItem(idx, "up", "howItWorksSteps")}
+                            className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItem(idx, "down", "howItWorksSteps")}
+                            className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = homeForm.howItWorksSteps?.filter((_, i) => i !== idx);
+                              setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                            }}
+                            className="p-1 rounded hover:bg-red-50 text-red-500"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Nomor Step (e.g. 01)</label>
+                          <input
+                            type="text"
+                            value={step.step}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.howItWorksSteps || [])];
+                              updated[idx].step = e.target.value;
+                              setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                            }}
+                            className="w-full rounded border p-2 text-xs font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Pilih Icon</label>
+                          <select
+                            value={step.icon}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.howItWorksSteps || [])];
+                              updated[idx].icon = e.target.value;
+                              setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                            }}
+                            className="w-full rounded border p-2 text-xs font-semibold text-slate-700"
+                          >
+                            {POPULAR_ICONS.map(ic => (
+                              <option key={ic} value={ic}>{ic}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Judul Langkah</label>
+                          <input
+                            type="text"
+                            value={step.title}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.howItWorksSteps || [])];
+                              updated[idx].title = e.target.value;
+                              setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                            }}
+                            className="w-full rounded border p-2 text-xs font-bold"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-3">
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Deskripsi Langkah</label>
+                          <textarea
+                            value={step.desc}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.howItWorksSteps || [])];
+                              updated[idx].desc = e.target.value;
+                              setHomeForm({ ...homeForm, howItWorksSteps: updated });
+                            }}
+                            rows={2}
+                            className="w-full rounded border p-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ CMS */}
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <h2 className="text-base font-bold text-brand flex items-center gap-2 border-b pb-2">
+                <HelpCircle className="h-5 w-5" /> 2. Section FAQ (Pertanyaan Umum)
+              </h2>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Judul Section FAQ
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.faqTitle || ""}
+                    onChange={(e) => setHomeForm({ ...homeForm, faqTitle: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm font-bold outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                    Subjudul Deskripsi FAQ
+                  </label>
+                  <input
+                    type="text"
+                    value={homeForm.faqSub || ""}
+                    onChange={(e) => setHomeForm({ ...homeForm, faqSub: e.target.value })}
+                    className="w-full rounded-lg border p-2.5 text-sm outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* FAQ Items Manager */}
+              <div className="space-y-3 pt-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <span className="text-sm font-bold text-brand">Daftar Tanya Jawab FAQ ({homeForm.faqs?.length || 0})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...(homeForm.faqs || [])];
+                      updated.push({
+                        question: "Pertanyaan Baru?",
+                        answer: "Jawaban penjelasan untuk pertanyaan ini."
+                      });
+                      setHomeForm({ ...homeForm, faqs: updated });
+                    }}
+                    className="inline-flex items-center gap-1 rounded bg-brand/10 hover:bg-brand/20 px-3 py-1.5 text-xs font-bold text-brand transition cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Tambah Pertanyaan FAQ
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {homeForm.faqs?.map((faq: any, idx: number) => (
+                    <div key={idx} className="rounded-xl border p-4 bg-muted/10 space-y-3">
+                      <div className="flex items-center justify-between border-b pb-2">
+                        <span className="text-xs font-bold text-slate-500">FAQ #{idx + 1}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => moveItem(idx, "up", "faqs")}
+                            className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveItem(idx, "down", "faqs")}
+                            className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = homeForm.faqs?.filter((_, i) => i !== idx);
+                              setHomeForm({ ...homeForm, faqs: updated });
+                            }}
+                            className="p-1 rounded hover:bg-red-50 text-red-500"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Pertanyaan</label>
+                          <input
+                            type="text"
+                            value={faq.question}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.faqs || [])];
+                              updated[idx].question = e.target.value;
+                              setHomeForm({ ...homeForm, faqs: updated });
+                            }}
+                            className="w-full rounded border p-2 text-xs font-bold"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-muted-foreground mb-1">Jawaban</label>
+                          <textarea
+                            value={faq.answer}
+                            onChange={(e) => {
+                              const updated = [...(homeForm.faqs || [])];
+                              updated[idx].answer = e.target.value;
+                              setHomeForm({ ...homeForm, faqs: updated });
+                            }}
+                            rows={3}
+                            className="w-full rounded border p-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* --- PREVIEW DRAFT DIALOG --- */}
@@ -1186,7 +1661,7 @@ export function PengaturanPage() {
               </div>
               <button
                 onClick={() => setPreviewOpen(false)}
-                className="text-slate-400 hover:text-white font-bold text-lg"
+                className="text-slate-400 hover:text-white font-bold text-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -1274,6 +1749,22 @@ export function PengaturanPage() {
                           <div className="text-[10px] font-bold text-emerald-700 mt-3 pt-1.5 border-t text-right">
                             {lvl.btnText} →
                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Cara Kerja Preview */}
+                {homeForm.showHowItWorks !== false && (
+                  <section className="px-6 py-8 space-y-4 text-center border-t border-slate-100">
+                    <h3 className="font-bold text-slate-900 text-sm">{homeForm.howItWorksTitle}</h3>
+                    <div className="grid grid-cols-4 gap-2 text-left">
+                      {homeForm.howItWorksSteps?.map((s, i) => (
+                        <div key={i} className="border rounded-lg p-2.5 bg-slate-50">
+                          <span className="text-[9px] font-bold text-emerald-700">STEP {s.step}</span>
+                          <h5 className="font-bold text-xs text-slate-800 mt-1">{s.title}</h5>
+                          <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{s.desc}</p>
                         </div>
                       ))}
                     </div>

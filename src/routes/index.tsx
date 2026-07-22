@@ -72,7 +72,7 @@ function DynamicIcon({ name, className }: { name: string; className?: string }) 
   return <FinalIcon className={className} />;
 }
 
-const DEFAULT_HOMEPAGE_CONFIG = {
+export const DEFAULT_HOMEPAGE_CONFIG = {
   siteName: "Sekolah Alam Al-Karim",
   logoText: "EduKonsul",
   logoImg: "",
@@ -90,9 +90,12 @@ const DEFAULT_HOMEPAGE_CONFIG = {
   showHero: true,
   showAdvantages: true,
   showLevels: true,
+  showHowItWorks: true,
+  showFaq: true,
   showCta: true,
   showFooter: true,
   
+  // Hero Section
   heroBadge: "Konsultasi & Pemetaan Karakter Anak",
   heroTitle: "Konsultasi & Rekomendasi Pendidikan Untuk Anak",
   heroDesc: "Bantu pahami potensi, karakter, dan kebutuhan belajar anak melalui konsultasi pendidikan yang didampingi Tim Konsultan Sekolah Alam Al-Karim.",
@@ -101,7 +104,14 @@ const DEFAULT_HOMEPAGE_CONFIG = {
   heroBtn1Link: "#jenjang",
   heroBtn2: "Pelajari Layanan",
   heroBtn2Link: "#keunggulan",
+  heroStats: [
+    { value: "1.000+", label: "Orang Tua Terbantu", icon: "Users" },
+    { value: "100%", label: "Tim Konsultan Expert", icon: "Award" },
+    { value: "Cerdas", label: "Analisis Objektif", icon: "Zap" },
+    { value: "Gratis", label: "100% Data Rahasia", icon: "ShieldCheck" }
+  ],
   
+  // Advantages Section
   advantagesTitle: "Mengapa Memilih Konsultasi Pendidikan Sekolah Alam Al-Karim?",
   advantagesSub: "Kami membantu orang tua memahami potensi, karakter, dan kebutuhan belajar anak melalui analisis yang terstruktur serta pendampingan langsung dari Tim Konsultan.",
   advantages: [
@@ -137,7 +147,9 @@ const DEFAULT_HOMEPAGE_CONFIG = {
     }
   ],
   
+  // Levels Section
   levelsTitle: "Pilih Jenjang Pendidikan Anak",
+  levelsSub: "Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi.",
   levels: [
     {
       id: "tksd",
@@ -146,8 +158,7 @@ const DEFAULT_HOMEPAGE_CONFIG = {
       desc: "Konsultasikan kebutuhan tumbuh kembang anak usia dini untuk rekomendasi pendidikan & karakter dasar terbaik.",
       icon: "School",
       btnText: "Mulai Konsultasi",
-      active: true,
-      badgeColor: "emerald"
+      active: true
     },
     {
       id: "smp",
@@ -156,8 +167,7 @@ const DEFAULT_HOMEPAGE_CONFIG = {
       desc: "Petakan potensi, karakter, dan minat belajar remaja untuk sekolah menengah & eksplorasi bakat yang sesuai.",
       icon: "BookOpen",
       btnText: "Mulai Konsultasi",
-      active: true,
-      badgeColor: "sky"
+      active: true
     },
     {
       id: "sma",
@@ -166,17 +176,70 @@ const DEFAULT_HOMEPAGE_CONFIG = {
       desc: "Temukan pemetaan jurusan, kesiapan perkuliahan (PTN), dan arah karier masa depan anak secara optimal.",
       icon: "GraduationCap",
       btnText: "Mulai Konsultasi",
-      active: true,
-      badgeColor: "purple"
+      active: true
+    }
+  ],
+
+  // How It Works Section
+  howItWorksTitle: "4 Langkah Mudah Konsultasi Pendidikan",
+  howItWorksSub: "Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik.",
+  howItWorksSteps: [
+    {
+      step: "01",
+      title: "Pilih Jenjang",
+      desc: "Pilih jenjang sekolah anak Anda (TK/SD, SMP, atau SMA) sesuai kelompok usia.",
+      icon: "School"
+    },
+    {
+      step: "02",
+      title: "Isi Kuesioner",
+      desc: "Jawab pertanyaan seputar minat, gaya belajar, dan perilaku tumbuh kembang anak.",
+      icon: "BookOpen"
+    },
+    {
+      step: "03",
+      title: "Analisis Cerdas",
+      desc: "Sistem cerdas memproses jawaban & Tim Konsultan Al-Karim meninjau hasilnya.",
+      icon: "Brain"
+    },
+    {
+      step: "04",
+      title: "Hasil & Diskusi WA",
+      desc: "Dapatkan rekomendasi lengkap dan diskusikan gratis langsung via WhatsApp.",
+      icon: "MessageSquare"
+    }
+  ],
+
+  // FAQ Section
+  faqTitle: "Sering Ditanyakan Orang Tua",
+  faqSub: "Temukan jawaban cepat atas pertanyaan seputar konsultasi pendidikan Sekolah Alam Al-Karim.",
+  faqs: [
+    {
+      question: "Apakah layanan konsultasi ini benar-benar gratis?",
+      answer: "Ya, 100% GRATIS! Sekolah Alam Al-Karim menyediakan pemetaan dan konsultasi ini sebagai bentuk komitmen pengabdian kepada masyarakat agar setiap anak mendapatkan rekomendasi pendampingan pendidikan yang sesuai potensi alaminya."
+    },
+    {
+      question: "Berapa lama proses hingga hasil rekomendasi keluar?",
+      answer: "Setelah pengisian kuesioner selesai, hasil analisis awal akan langsung tergenerasi secara otomatis. Anda juga dapat melanjutkan diskusi dengan Tim Konsultan melalui WhatsApp untuk penjelasan mendalam."
+    },
+    {
+      question: "Apakah data pribadi anak dan orang tua dijamin kerahasiaannya?",
+      answer: "Sangat aman. Seluruh data kuesioner dan identitas Anda dijaga secara ketat dan hanya digunakan semata-mata untuk keperluan evaluasi konsultasi pendidikan."
+    },
+    {
+      question: "Siapa yang menyusun dan menganalisis kuesioner ini?",
+      answer: "Analisis didukung oleh algoritma cerdas yang dikombinasikan dengan kajian langsung oleh Tim Konsultan Pendidikan & Psikolog Perkembangan Sekolah Alam Al-Karim."
     }
   ],
   
+  // CTA Section
   ctaTitle: "Siap Menemukan Pendidikan Terbaik untuk Anak Anda?",
   ctaDesc: "Konsultasikan kebutuhan pendidikan & tumbuh kembang anak secara gratis bersama Tim Konsultan Sekolah Alam Al-Karim.",
   ctaBtn: "Mulai Konsultasi Sekarang",
   ctaBtnLink: "#jenjang",
   ctaBg: "#047857",
   
+  // Footer & Social
   footerLogo: "",
   footerSchool: "Sekolah Alam Al-Karim",
   footerAddress: "Jl. Raya Al-Karim No. 123, Bandar Lampung",
@@ -232,8 +295,11 @@ export function Home() {
           ...DEFAULT_HOMEPAGE_CONFIG,
           ...val,
           navItems: Array.isArray(val.navItems) && val.navItems.length > 0 ? val.navItems : DEFAULT_HOMEPAGE_CONFIG.navItems,
+          heroStats: Array.isArray(val.heroStats) && val.heroStats.length > 0 ? val.heroStats : DEFAULT_HOMEPAGE_CONFIG.heroStats,
           advantages: Array.isArray(val.advantages) && val.advantages.length > 0 ? val.advantages : DEFAULT_HOMEPAGE_CONFIG.advantages,
           levels: Array.isArray(val.levels) && val.levels.length > 0 ? val.levels : DEFAULT_HOMEPAGE_CONFIG.levels,
+          howItWorksSteps: Array.isArray(val.howItWorksSteps) && val.howItWorksSteps.length > 0 ? val.howItWorksSteps : DEFAULT_HOMEPAGE_CONFIG.howItWorksSteps,
+          faqs: Array.isArray(val.faqs) && val.faqs.length > 0 ? val.faqs : DEFAULT_HOMEPAGE_CONFIG.faqs,
           socialLinks: Array.isArray(val.socialLinks) && val.socialLinks.length > 0 ? val.socialLinks : DEFAULT_HOMEPAGE_CONFIG.socialLinks,
           colors: {
             ...DEFAULT_HOMEPAGE_CONFIG.colors,
@@ -266,7 +332,7 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/40 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50/40 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white relative overflow-hidden" style={{ backgroundColor: config.colors?.background }}>
       {/* Inject Dynamic Colors & CSS Custom Utility Rules */}
       <style>{`
         :root {
@@ -298,7 +364,7 @@ export function Home() {
       <div className="pointer-events-none absolute top-2/3 -right-20 h-96 w-96 rounded-full bg-teal-400/15 blur-[120px]" />
 
       {/* 1. STICKY HEADER */}
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-md transition-all shadow-xs">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-md transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3 group">
             {config.logoImg ? (
@@ -456,45 +522,17 @@ export function Home() {
 
                 {/* Trust Metrics Bar */}
                 <div className="pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 font-bold">
-                      <Users className="h-5 w-5" />
+                  {config.heroStats?.map((stat: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-3">
+                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700 font-bold">
+                        <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-black text-slate-900 leading-none">{stat.value}</p>
+                        <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-lg font-black text-slate-900 leading-none">1.000+</p>
-                      <p className="text-[11px] font-semibold text-slate-500">Orang Tua Terbantu</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700 font-bold">
-                      <Award className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-slate-900 leading-none">100%</p>
-                      <p className="text-[11px] font-semibold text-slate-500">Tim Konsultan Expert</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-700 font-bold">
-                      <Zap className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-slate-900 leading-none">Cerdas</p>
-                      <p className="text-[11px] font-semibold text-slate-500">Analisis Objektif</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700 font-bold">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-slate-900 leading-none">Gratis</p>
-                      <p className="text-[11px] font-semibold text-slate-500">100% Data Rahasia</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
               </div>
@@ -571,6 +609,7 @@ export function Home() {
                   <div
                     key={idx}
                     className={`group relative flex flex-col rounded-3xl border ${theme.border} p-6 sm:p-7 bg-white text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${theme.ring}`}
+                    style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Top Icon with Gradient Background */}
                     <div className={`grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}>
@@ -612,7 +651,7 @@ export function Home() {
                 {config.levelsTitle}
               </h2>
               <p className="text-base text-slate-600">
-                Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi.
+                {config.levelsSub || "Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi."}
               </p>
             </div>
 
@@ -632,6 +671,7 @@ export function Home() {
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
                     className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-emerald-400"
+                    style={{ backgroundColor: config.colors?.card }}
                   >
                     <div>
                       {/* Card Header Gradient Banner */}
@@ -688,130 +728,88 @@ export function Home() {
       )}
 
       {/* 5. CARA KERJA (HOW IT WORKS STEP-BY-STEP) */}
-      <section id="carakerja" className="py-16 md:py-24 bg-white border-t border-slate-200/60 relative">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          
-          <div className="mx-auto max-w-3xl text-center space-y-4 mb-14">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
-              <Zap className="h-3.5 w-3.5" />
-              <span>PROSES SANGAT MUDAH</span>
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              4 Langkah Mudah Konsultasi Pendidikan
-            </h2>
-            <p className="text-base text-slate-600">
-              Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik.
-            </p>
-          </div>
-
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                step: "01",
-                title: "Pilih Jenjang",
-                desc: "Pilih jenjang sekolah anak Anda (TK/SD, SMP, atau SMA) sesuai kelompok usia.",
-                icon: "School",
-                color: "from-emerald-500 to-teal-600"
-              },
-              {
-                step: "02",
-                title: "Isi Kuesioner",
-                desc: "Jawab pertanyaan seputar minat, gaya belajar, dan perilaku tumbuh kembang anak.",
-                icon: "BookOpen",
-                color: "from-sky-500 to-blue-600"
-              },
-              {
-                step: "03",
-                title: "Analisis Cerdas",
-                desc: "Sistem cerdas memproses jawaban & Tim Konsultan Al-Karim meninjau hasilnya.",
-                icon: "Brain",
-                color: "from-purple-500 to-indigo-600"
-              },
-              {
-                step: "04",
-                title: "Hasil & Diskusi WA",
-                desc: "Dapatkan rekomendasi lengkap dan diskusikan gratis langsung via WhatsApp.",
-                icon: "MessageSquare",
-                color: "from-amber-500 to-orange-600"
-              }
-            ].map((item, idx) => (
-              <div key={idx} className="relative flex flex-col items-start p-6 rounded-3xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all duration-300">
-                <div className="flex items-center justify-between w-full mb-4">
-                  <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                    LANGKAH {item.step}
-                  </span>
-                  <div className={`grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br ${item.color} text-white shadow-xs`}>
-                    <DynamicIcon name={item.icon} className="h-5 w-5" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                <p className="text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+      {config.showHowItWorks !== false && (
+        <section id="carakerja" className="py-16 md:py-24 bg-white border-t border-slate-200/60 relative">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-14">
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
+                <Zap className="h-3.5 w-3.5" />
+                <span>PROSES SANGAT MUDAH</span>
               </div>
-            ))}
-          </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                {config.howItWorksTitle || "4 Langkah Mudah Konsultasi Pendidikan"}
+              </h2>
+              <p className="text-base text-slate-600">
+                {config.howItWorksSub || "Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik."}
+              </p>
+            </div>
 
-        </div>
-      </section>
+            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {config.howItWorksSteps?.map((item: any, idx: number) => {
+                const colors = [
+                  "from-emerald-500 to-teal-600",
+                  "from-sky-500 to-blue-600",
+                  "from-purple-500 to-indigo-600",
+                  "from-amber-500 to-orange-600"
+                ];
+                return (
+                  <div key={idx} className="relative flex flex-col items-start p-6 rounded-3xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-center justify-between w-full mb-4">
+                      <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
+                        LANGKAH {item.step || `0${idx+1}`}
+                      </span>
+                      <div className={`grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs`}>
+                        <DynamicIcon name={item.icon || "CheckCircle2"} className="h-5 w-5" />
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+          </div>
+        </section>
+      )}
 
       {/* 6. FAQ SECTION */}
-      <section id="faq" className="py-16 md:py-24 bg-slate-50/60 border-t border-slate-200/60 relative">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          
-          <div className="text-center space-y-4 mb-12">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
-              <HelpCircle className="h-3.5 w-3.5" />
-              <span>PERTANYAAN POPULER</span>
+      {config.showFaq !== false && (
+        <section id="faq" className="py-16 md:py-24 bg-slate-50/60 border-t border-slate-200/60 relative">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+            
+            <div className="text-center space-y-4 mb-12">
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
+                <HelpCircle className="h-3.5 w-3.5" />
+                <span>PERTANYAAN POPULER</span>
+              </div>
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+                {config.faqTitle || "Sering Ditanyakan Orang Tua"}
+              </h2>
+              <p className="text-base text-slate-600">
+                {config.faqSub || "Temukan jawaban cepat atas pertanyaan seputar konsultasi pendidikan Sekolah Alam Al-Karim."}
+              </p>
             </div>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Sering Ditanyakan Orang Tua
-            </h2>
-            <p className="text-base text-slate-600">
-              Temukan jawaban cepat atas pertanyaan seputar konsultasi pendidikan Sekolah Alam Al-Karim.
-            </p>
+
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm" style={{ backgroundColor: config.colors?.card }}>
+              <Accordion type="single" collapsible className="w-full space-y-3">
+                {config.faqs?.map((faq: any, idx: number) => (
+                  <AccordionItem key={idx} value={`item-${idx}`} className={`border-b border-slate-100 pb-3 ${idx === (config.faqs?.length || 0) - 1 ? 'border-none pb-0' : ''}`}>
+                    <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-emerald-700 text-left">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </div>
+
           </div>
-
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm">
-            <Accordion type="single" collapsible className="w-full space-y-3">
-              <AccordionItem value="item-1" className="border-b border-slate-100 pb-3">
-                <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-emerald-700">
-                  Apakah layanan konsultasi ini benar-benar gratis?
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
-                  Ya, 100% GRATIS! Sekolah Alam Al-Karim menyediakan pemetaan dan konsultasi ini sebagai bentuk komitmen pengabdian kepada masyarakat agar setiap anak mendapatkan rekomendasi pendampingan pendidikan yang sesuai potensi alaminya.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="item-2" className="border-b border-slate-100 pb-3">
-                <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-emerald-700">
-                  Berapa lama proses hingga hasil rekomendasi keluar?
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
-                  Setelah pengisian kuesioner selesai, hasil analisis awal akan langsung tergenerasi secara otomatis. Anda juga dapat melanjutkan diskusi dengan Tim Konsultan melalui WhatsApp untuk penjelasan mendalam.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="item-3" className="border-b border-slate-100 pb-3">
-                <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-emerald-700">
-                  Apakah data pribadi anak dan orang tua dijamin kerahasiaannya?
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
-                  Sangat aman. Seluruh data kuesioner dan identitas Anda dijaga secara ketat dan hanya digunakan semata-mata untuk keperluan evaluasi konsultasi pendidikan.
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="item-4" className="border-none">
-                <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-emerald-700">
-                  Siapa yang menyusun dan menganalisis kuesioner ini?
-                </AccordionTrigger>
-                <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
-                  Analisis didukung oleh algoritma cerdas yang dikombinasikan dengan kajian langsung oleh Tim Konsultan Pendidikan & Psikolog Perkembangan Sekolah Alam Al-Karim.
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 7. CALL TO ACTION BANNER */}
       {config.showCta !== false && (
