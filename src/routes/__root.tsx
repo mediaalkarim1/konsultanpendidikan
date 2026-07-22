@@ -218,7 +218,7 @@ function RootComponent() {
 
           <button
             onClick={handleJenjangClick}
-            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${currentPath === "/" && window.location.hash === "#jenjang" ? "text-emerald-700" : "text-slate-500"}`}
+            className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${currentPath === "/" && (typeof window !== "undefined" && window.location.hash === "#jenjang") ? "text-emerald-700" : "text-slate-500"}`}
           >
             <Layers className="h-5 w-5" />
             <span>Jenjang</span>

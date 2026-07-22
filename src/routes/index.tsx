@@ -33,8 +33,32 @@ export const Route = createFileRoute("/")({
 
 // Dynamic Icon Component
 function DynamicIcon({ name, className }: { name: string; className?: string }) {
-  const IconComponent = (LucideIcons as any)[name] || LucideIcons.HelpCircle;
-  return <IconComponent className={className} />;
+  if (!name) return <LucideIcons.HelpCircle className={className} />;
+  
+  // 1. Try exact name
+  let IconComponent = (LucideIcons as any)[name];
+  
+  // 2. Try converting kebab-case / snake_case / spaces to PascalCase
+  if (!IconComponent) {
+    const pascalName = name
+      .split(/[-_ ]+/)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join("");
+    IconComponent = (LucideIcons as any)[pascalName];
+  }
+  
+  // 3. Try case-insensitive lookup
+  if (!IconComponent) {
+    const matchKey = Object.keys(LucideIcons).find(
+      key => key.toLowerCase() === name.toLowerCase().replace(/[-_ ]/g, "")
+    );
+    if (matchKey) {
+      IconComponent = (LucideIcons as any)[matchKey];
+    }
+  }
+  
+  const FinalIcon = IconComponent || LucideIcons.HelpCircle;
+  return <FinalIcon className={className} />;
 }
 
 const DEFAULT_HOMEPAGE_CONFIG = {
@@ -197,9 +221,15 @@ export function Home() {
   // Smooth scroll handler
   const handleScroll = (idStr: string) => {
     setMobileMenuOpen(false);
-    const element = document.getElementById(idStr.replace("#", ""));
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+    if (!idStr) return;
+    if (idStr.startsWith("#")) {
+      const cleanId = idStr.replace("#", "");
+      const element = document.getElementById(cleanId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    } else {
+      window.location.href = idStr;
     }
   };
 
@@ -382,7 +412,7 @@ export function Home() {
       {/* 3. SECTION KEUNGGULAN */}
       {config.showAdvantages !== false && (
         <section id="keunggulan" className="py-16 md:py-24 border-t border-border/50 animate-in slide-in-from-bottom duration-500">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div id="tentang" className="mx-auto max-w-6xl px-4 sm:px-6">
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-12 md:mb-16">
               <h2 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3.5xl">
                 {config.advantagesTitle}
