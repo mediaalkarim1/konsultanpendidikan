@@ -338,10 +338,24 @@ export function Home() {
         :root {
           --primary: ${config.colors?.primary || '#2563eb'};
           --brand: ${config.colors?.primary || '#2563eb'};
-          --brand-soft: #f8fbff;
+          --brand-soft: #eff6ff;
           --secondary: ${config.colors?.secondary || '#1e3a5f'};
           --background: ${config.colors?.background || '#ffffff'};
           --card: ${config.colors?.card || '#ffffff'};
+        }
+        .hero-gradient-bg {
+          background: linear-gradient(135deg, #2563EB 0%, #3B82F6 45%, #60A5FA 100%);
+        }
+        .btn-hero-primary {
+          background-color: #ffffff;
+          color: #2563eb;
+          font-weight: 800;
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-hero-primary:hover {
+          background-color: #eff6ff;
+          color: #1d4ed8;
+          box-shadow: 0 10px 25px -5px rgba(255,255,255,0.4);
         }
         .btn-theme-primary {
           background-color: #2563eb;
@@ -359,14 +373,9 @@ export function Home() {
           transition: all 0.2s ease-in-out;
         }
         .btn-theme-secondary:hover {
-          background-color: #f8fbff;
+          background-color: #eff6ff;
           border-color: #1d4ed8;
           color: #1d4ed8;
-        }
-        .gradient-text-brand {
-          background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
         }
       `}</style>
 
@@ -376,7 +385,7 @@ export function Home() {
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
-        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
+        <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
           <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <Link to="/" className="flex items-center gap-3 group">
               {config.logoImg ? (
@@ -411,7 +420,7 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#f8fbff] px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] px-3.5 py-1.5 rounded-xl transition-all"
                 >
                   {item.label}
                 </button>
@@ -437,7 +446,7 @@ export function Home() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#f8fbff] border border-blue-200 text-[#2563eb] md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-[#eff6ff] border border-blue-200 text-[#2563eb] md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -458,7 +467,7 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#f8fbff] rounded-xl transition"
+                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#eff6ff] rounded-xl transition"
                 >
                   {item.label}
                 </button>
@@ -482,28 +491,33 @@ export function Home() {
         </header>
       )}
 
-      {/* 2. HERO SECTION - SECTION 1 (White Background) */}
+      {/* 2. HERO SECTION - SECTION 1 (Hero Gradient with Abstract Circle Decorations & White Text) */}
       {config.showHero !== false && (
-        <section id="tentang" className="relative pt-10 pb-16 md:pt-16 md:pb-24 bg-white border-b border-slate-100">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <section id="tentang" className="relative pt-12 pb-20 md:pt-20 md:pb-28 hero-gradient-bg text-white overflow-hidden shadow-sm">
+          {/* Abstract Circle / Blob Background Decorations (5-10% Opacity) */}
+          <div className="pointer-events-none absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+          <div className="pointer-events-none absolute top-1/2 -left-24 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
+          <div className="pointer-events-none absolute bottom-0 right-1/3 h-64 w-64 rounded-full bg-white/5 blur-xl" />
+
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
               
               {/* Left Column: Teks & CTA */}
               <div className="text-left lg:col-span-7 space-y-6">
                 
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-[#f8fbff] px-4 py-1.5 text-xs font-bold text-[#2563eb] shadow-xs">
-                  <span className="flex h-2 w-2 rounded-full bg-[#2563eb] animate-ping" />
-                  <Sparkles className="h-3.5 w-3.5 text-[#2563eb]" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-white shadow-xs">
+                  <span className="flex h-2 w-2 rounded-full bg-white animate-ping" />
+                  <Sparkles className="h-3.5 w-3.5 text-white" />
                   <span>{config.heroBadge}</span>
                 </div>
 
                 {/* Title */}
-                <h1 className="text-4xl sm:text-6xl lg:text-6.5xl xl:text-7xl font-black leading-[1.08] tracking-tight text-[#1e293b]">
+                <h1 className="text-4xl sm:text-6xl lg:text-6.5xl xl:text-7xl font-black leading-[1.08] tracking-tight text-white">
                   {config.heroTitle?.includes("Untuk Anak") ? (
                     <>
                       Konsultasi & Rekomendasi <br />
-                      <span className="gradient-text-brand">Pendidikan Terbaik Anak</span>
+                      <span className="text-blue-100 underline decoration-white/30 underline-offset-8">Pendidikan Terbaik Anak</span>
                     </>
                   ) : (
                     config.heroTitle
@@ -511,7 +525,7 @@ export function Home() {
                 </h1>
 
                 {/* Description */}
-                <p className="text-base leading-relaxed text-[#64748b] sm:text-lg max-w-2xl">
+                <p className="text-base leading-relaxed text-white/90 sm:text-lg max-w-2xl font-medium">
                   {config.heroDesc}
                 </p>
 
@@ -519,24 +533,24 @@ export function Home() {
                 <div className="flex flex-wrap items-center gap-4 pt-2">
                   <button
                     onClick={() => handleScroll(config.heroBtn1Link || "#jenjang")}
-                    className="inline-flex h-13 items-center justify-center gap-2.5 rounded-2xl btn-theme-primary px-8 text-base font-bold shadow-lg transition hover:scale-[1.02] active:scale-[0.98]"
+                    className="inline-flex h-13 items-center justify-center gap-2.5 rounded-2xl btn-hero-primary px-8 text-base font-extrabold shadow-xl transition hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <span>{config.heroBtn1}</span>
-                    <ArrowRight className="h-5 w-5" />
+                    <ArrowRight className="h-5 w-5 text-[#2563eb]" />
                   </button>
                 </div>
 
                 {/* Trust Metrics Bar */}
                 {config.showHeroStats !== false && (
-                  <div className="pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="pt-8 border-t border-white/20 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {config.heroStats?.map((stat: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-3 bg-[#f8fbff] p-3 rounded-2xl border border-slate-200/70">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-[#2563eb] font-bold">
+                      <div key={idx} className="flex items-center gap-3 bg-white/15 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 text-white shadow-xs">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-white font-bold">
                           <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-lg font-black text-[#1e293b] leading-none">{stat.value}</p>
-                          <p className="text-[11px] font-semibold text-[#64748b]">{stat.label}</p>
+                          <p className="text-lg font-black text-white leading-none">{stat.value}</p>
+                          <p className="text-[11px] font-medium text-blue-50/90">{stat.label}</p>
                         </div>
                       </div>
                     ))}
@@ -547,14 +561,14 @@ export function Home() {
 
               {/* Right Column: Hero Graphic */}
               <div className="relative lg:col-span-5 flex justify-center">
-                <div className="absolute -inset-2 bg-gradient-to-r from-blue-200/60 via-sky-100/40 to-transparent rounded-3xl blur-2xl opacity-50 -z-10" />
+                <div className="absolute -inset-2 bg-white/20 rounded-3xl blur-2xl opacity-60 -z-10" />
                 
                 <div className="relative w-full max-w-[460px]">
                   {/* Hero Main Image */}
                   <img
                     src={config.heroImg}
                     alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
-                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-xl border-4 border-white"
+                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-4 border-white/90"
                   />
                 </div>
               </div>
@@ -564,9 +578,9 @@ export function Home() {
         </section>
       )}
 
-      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Light Blue Background #F8FBFF) */}
+      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Very Light Blue Background #EFF6FF) */}
       {config.showAdvantages !== false && (
-        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-slate-200/60 bg-[#f8fbff] relative">
+        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-blue-100 bg-[#eff6ff] relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
@@ -589,11 +603,11 @@ export function Home() {
                 return (
                   <div
                     key={idx}
-                    className="group flex items-center gap-4 rounded-2xl border border-slate-200/80 p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
+                    className="group flex items-center gap-4 rounded-2xl border border-[#e5e7eb] p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40 shadow-xs"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Icon Box */}
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
                       <DynamicIcon name={adv.icon} className="h-6 w-6" />
                     </div>
 
@@ -618,12 +632,12 @@ export function Home() {
 
       {/* 4. PILIHAN JENJANG PENDIDIKAN - SECTION 3 (Pure White Background #FFFFFF) */}
       {config.showLevels !== false && (
-        <section id="jenjang" className="py-16 md:py-24 bg-white border-b border-slate-200/60 relative">
+        <section id="jenjang" className="py-16 md:py-24 bg-white border-b border-slate-200/80 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#f8fbff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#eff6ff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
                 <School className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>KONSULTASI BERDASARKAN JENJANG</span>
               </div>
@@ -643,13 +657,13 @@ export function Home() {
                     key={level.id}
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
-                    className="group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-8 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
+                    className="group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-[#e5e7eb] bg-white p-4 sm:p-8 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Left Side: Icon & Details */}
                     <div className="flex items-center gap-3.5 sm:gap-5 flex-1 min-w-0">
                       {/* Icon Box */}
-                      <div className="grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-md transition-transform duration-300 group-hover:scale-105">
+                      <div className="grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-[#2563eb] text-white shadow-md transition-transform duration-300 group-hover:scale-105">
                         <DynamicIcon name={level.icon} className="h-6 w-6 sm:h-8 sm:w-8" />
                       </div>
 
@@ -658,7 +672,7 @@ export function Home() {
                           <h3 className="text-base sm:text-2xl font-black text-[#1e293b] tracking-tight group-hover:text-[#2563eb] transition">
                             {level.name}
                           </h3>
-                          <span className="rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border bg-[#f8fbff] text-[#2563eb] border-blue-200">
+                          <span className="rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border bg-[#eff6ff] text-[#2563eb] border-blue-200">
                             {level.tag || level.name}
                           </span>
                         </div>
@@ -701,9 +715,9 @@ export function Home() {
         </section>
       )}
 
-      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Soft Gray Background #F4F6F8) */}
+      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Soft Blue-Gray Background #F8FAFC) */}
       {config.showHowItWorks !== false && (
-        <section id="carakerja" className="py-16 md:py-24 bg-[#f4f6f8] border-t border-b border-slate-200/60 relative">
+        <section id="carakerja" className="py-16 md:py-24 bg-[#f8fafc] border-t border-b border-slate-200/80 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
@@ -725,16 +739,16 @@ export function Home() {
                 return (
                   <div 
                     key={idx} 
-                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-white hover:border-[#2563eb]/40 hover:shadow-md transition-all duration-300 text-left"
+                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-[#e5e7eb] bg-white hover:border-[#2563eb]/40 hover:shadow-md transition-all duration-300 text-left shadow-xs"
                   >
                     {/* Icon Box */}
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
                       <DynamicIcon name={item.icon || "CheckCircle2"} className="h-6 w-6" />
                     </div>
 
                     {/* Main Point Title & Step Pill */}
                     <div className="flex-1 min-w-0 space-y-1">
-                      <span className="inline-block text-[10px] font-black tracking-wider text-[#2563eb] bg-[#f8fbff] border border-blue-200 px-2.5 py-0.5 rounded-full uppercase">
+                      <span className="inline-block text-[10px] font-black tracking-wider text-[#2563eb] bg-[#eff6ff] border border-blue-200 px-2.5 py-0.5 rounded-full uppercase">
                         Langkah {item.step || `0${idx+1}`}
                       </span>
                       <h3 className="text-sm sm:text-base font-extrabold text-[#1e293b] tracking-tight leading-snug group-hover:text-[#2563eb] transition">
@@ -750,13 +764,13 @@ export function Home() {
         </section>
       )}
 
-      {/* 6. FAQ SECTION - SECTION 5 (Pure White Background #FFFFFF) */}
+      {/* 6. FAQ SECTION - SECTION 5 (Very Light Blue Background #EFF6FF) */}
       {config.showFaq !== false && (
-        <section id="faq" className="py-16 md:py-24 bg-white border-b border-slate-200/60 relative">
+        <section id="faq" className="py-16 md:py-24 bg-[#eff6ff] border-t border-b border-blue-100 relative">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             
             <div className="text-center space-y-4 mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#f8fbff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
                 <HelpCircle className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>PERTANYAAN POPULER</span>
               </div>
@@ -768,7 +782,7 @@ export function Home() {
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 md:p-8 shadow-xs" style={{ backgroundColor: config.colors?.card }}>
+            <div className="bg-white rounded-3xl border border-[#e5e7eb] p-6 md:p-8 shadow-xs" style={{ backgroundColor: config.colors?.card }}>
               <Accordion type="single" collapsible className="w-full space-y-3">
                 {config.faqs?.map((faq: any, idx: number) => (
                   <AccordionItem key={idx} value={`item-${idx}`} className={`border-b border-slate-100 pb-3 ${idx === (config.faqs?.length || 0) - 1 ? 'border-none pb-0' : ''}`}>
@@ -787,7 +801,7 @@ export function Home() {
         </section>
       )}
 
-      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Dark Navy #1E3A5F Background) */}
+      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Navy Gradient Background) */}
       {config.showCta !== false && (
         <section className="mx-auto max-w-6xl px-4 py-12 md:py-20">
           <div
@@ -815,7 +829,7 @@ export function Home() {
               <div className="pt-4">
                 <button
                   onClick={() => handleScroll(config.ctaBtnLink || "#jenjang")}
-                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-[#1e3a5f] shadow-lg transition-all hover:scale-105 active:scale-95 hover:bg-slate-100"
+                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-[#2563eb] shadow-lg transition-all hover:scale-105 active:scale-95 hover:bg-blue-50"
                 >
                   <span>{config.ctaBtn}</span>
                   <ArrowRight className="h-5 w-5 text-[#2563eb]" />
@@ -826,9 +840,9 @@ export function Home() {
         </section>
       )}
 
-      {/* 8. FOOTER - SECTION 7 (Dark Slate #0F172A Background) */}
+      {/* 8. FOOTER - SECTION 7 (Navy #1E3A5F Background & White Text & #BFDBFE Links) */}
       {config.showFooter !== false && (
-        <footer className="border-t border-slate-800 bg-[#0f172a] text-slate-400 py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
+        <footer className="border-t border-slate-700 bg-[#1e3a5f] text-white py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-12">
               
@@ -840,10 +854,10 @@ export function Home() {
                   </div>
                   <div className="flex flex-col text-left">
                     <span className="text-xl font-black text-white leading-tight">{config.logoText}</span>
-                    <span className="text-xs text-blue-400 font-semibold">{config.footerSchool}</span>
+                    <span className="text-xs text-[#bfdbfe] font-semibold">{config.footerSchool}</span>
                   </div>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-400 max-w-md">
+                <p className="text-xs leading-relaxed text-blue-100/90 max-w-md">
                   Membimbing langkah anak menuju masa depan gemilang dengan pemahaman utuh karakter, minat, dan potensi tumbuh kembang alami.
                 </p>
                 <div className="flex items-center gap-3 pt-2">
@@ -853,7 +867,7 @@ export function Home() {
                       href={soc.url} 
                       target="_blank" 
                       rel="noreferrer" 
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 text-slate-300 border border-slate-800 hover:bg-[#2563eb] hover:text-white transition"
+                      className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-[#bfdbfe] border border-white/15 hover:bg-[#2563eb] hover:text-white transition"
                       aria-label={soc.platform}
                     >
                       <Globe className="h-4 w-4" />
@@ -867,18 +881,18 @@ export function Home() {
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">Hubungi Kami</h4>
                 <ul className="space-y-3 text-xs">
                   <li className="flex items-start gap-2.5">
-                    <MapPin className="h-4 w-4 text-[#2563eb] shrink-0 mt-0.5" />
-                    <span className="text-slate-300">{config.footerAddress}</span>
+                    <MapPin className="h-4 w-4 text-[#bfdbfe] shrink-0 mt-0.5" />
+                    <span className="text-blue-100/90">{config.footerAddress}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Phone className="h-4 w-4 text-[#2563eb] shrink-0" />
-                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-slate-300 hover:text-[#2563eb] transition font-medium">
+                    <Phone className="h-4 w-4 text-[#bfdbfe] shrink-0" />
+                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-[#bfdbfe] hover:text-white transition font-medium">
                       {config.footerWa}
                     </a>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Mail className="h-4 w-4 text-[#2563eb] shrink-0" />
-                    <a href={`mailto:${config.footerEmail}`} className="text-slate-300 hover:text-[#2563eb] transition font-medium">
+                    <Mail className="h-4 w-4 text-[#bfdbfe] shrink-0" />
+                    <a href={`mailto:${config.footerEmail}`} className="text-[#bfdbfe] hover:text-white transition font-medium">
                       {config.footerEmail}
                     </a>
                   </li>
@@ -896,14 +910,14 @@ export function Home() {
                           if (nav.link?.startsWith("#")) handleScroll(nav.link);
                           else if (nav.link) window.location.href = nav.link;
                         }}
-                        className="text-slate-400 hover:text-white transition"
+                        className="text-blue-100/80 hover:text-white transition"
                       >
                         {nav.label}
                       </button>
                     </li>
                   ))}
                   <li>
-                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex items-center gap-1.5 mt-1">
+                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-[#bfdbfe] hover:underline flex items-center gap-1.5 mt-1">
                       <Globe className="h-3.5 w-3.5" />
                       <span>Website Resmi Sekolah</span>
                     </a>
@@ -913,9 +927,9 @@ export function Home() {
 
             </div>
 
-            <div className="mt-12 border-t border-slate-900 pt-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="mt-12 border-t border-white/10 pt-6 text-center text-xs text-blue-200/60 flex flex-col sm:flex-row items-center justify-between gap-4">
               <p>{config.footerCopyright}</p>
-              <p className="text-[11px] text-slate-600">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
+              <p className="text-[11px] text-blue-200/50">Sekolah Alam Al-Karim — EduKonsul System v2.0</p>
             </div>
           </div>
         </footer>
