@@ -234,7 +234,12 @@ export function AlurSistemPage() {
         addLog("✨ Hasil analisis AI & resume berhasil disimpan ke database!");
 
         // Step 2: Trigger WA Notifications Simulation
-        addLog(`📱 Mengirim Notifikasi WhatsApp ke Admin (${simAdminPhone}) & Orang Tua (${simPhone})...`);
+        addLog(`📱 Mengirim Notifikasi WhatsApp (Provider: ${waGateway.provider.toUpperCase()}) ke Admin (${simAdminPhone}) & Orang Tua (${simPhone})...`);
+        
+        if (waGateway.provider === "mock") {
+          addLog("⚠️ Provider WhatsApp saat ini diatur ke 'Mode Simulasi / Mock' (Tanpa API Key). Pesan disimulasikan di database dan tidak dikirim ke HP fisik.");
+        }
+
         const waRes = await simulateWaSend({
           data: {
             targetAdmin: simAdminPhone,
@@ -244,11 +249,30 @@ export function AlurSistemPage() {
           }
         });
 
-        if (waRes.admin.success) addLog(`✅ Notifikasi WhatsApp Admin Terkirim ke ${simAdminPhone}!`);
-        if (waRes.parent.success) addLog(`✅ Notifikasi WhatsApp Orang Tua Terkirim ke ${simPhone}!`);
+        if (waRes.admin.success) {
+          addLog(`✅ Notifikasi WA Admin OK -> ${simAdminPhone}`);
+        } else {
+          addLog(`❌ Notifikasi WA Admin GAGAL -> Target: ${simAdminPhone} | Error: ${waRes.admin.error || "Unknown Error"}`);
+        }
 
-        addLog("🎉 SIMULASI SELESAI! Seluruh alur end-to-end berjalan 100% SUKSES.");
-        toast.success("Simulasi formulir & notifikasi WA berhasil dijalankan!");
+        if (waRes.parent.success) {
+          addLog(`✅ Notifikasi WA Orang Tua OK -> ${simPhone}`);
+        } else {
+          addLog(`❌ Notifikasi WA Orang Tua GAGAL -> Target: ${simPhone} | Error: ${waRes.parent.error || "Unknown Error"}`);
+        }
+
+        if (waRes.admin.success && waRes.parent.success) {
+          if (waGateway.provider === "mock") {
+            addLog("🎉 SIMULASI MOCK SELESAI! Alur formulir & AI 100% sukses. (Pilih Provider Fonnte/Wablas & masukan API Key untuk pengiriman ke HP nyata).");
+            toast.info("Simulasi berhasil (Mode Mock). Cek Pengaturan WA untuk kirim WA asli.");
+          } else {
+            addLog("🎉 SIMULASI SELESAI! Notifikasi WA asli berhasil terkirim via Provider WhatsApp Gateway!");
+            toast.success("Simulasi formulir & notifikasi WA asli berhasil dikirim!");
+          }
+        } else {
+          addLog("⚠️ SIMULASI DENGAN CATATAN: Data Formulir & AI Sukses, namun pengiriman WA gagal. Periksa API Token & Provider WA Anda!");
+          toast.warning("Simulasi selesai, namun pengiriman WA gagal. Periksa log detail.");
+        }
       } else {
         addLog("❌ Simulasi gagal: " + res.error);
         toast.error("Simulasi gagal: " + res.error);
