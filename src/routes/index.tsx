@@ -585,44 +585,46 @@ export function Home() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-14">
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
                 <Target className="h-3.5 w-3.5" />
                 <span>KEUNGGULAN UTAMA</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                 {config.advantagesTitle}
               </h2>
-              <p className="text-base leading-relaxed text-slate-600">
+              <p className="text-sm sm:text-base leading-relaxed text-slate-600">
                 {config.advantagesSub}
               </p>
             </div>
 
-            {/* Grid 3 Columns */}
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Mobile: Vertical List | Desktop: 3 Column Grid */}
+            <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6">
               {config.advantages?.map((adv: any, idx: number) => {
                 const theme = ADVANTAGE_THEMES[idx % ADVANTAGE_THEMES.length];
                 return (
                   <div
                     key={idx}
-                    className={`group relative flex flex-col rounded-3xl border ${theme.border} p-6 sm:p-7 bg-white text-left transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl ${theme.ring}`}
+                    className={`group relative flex items-start gap-4 sm:flex-col sm:items-start rounded-2xl sm:rounded-3xl border ${theme.border} p-4 sm:p-7 bg-white text-left transition-all duration-300 hover:-translate-y-1 sm:hover:-translate-y-1.5 hover:shadow-lg sm:hover:shadow-xl ${theme.ring}`}
                     style={{ backgroundColor: config.colors?.card }}
                   >
-                    {/* Top Icon with Gradient Background */}
-                    <div className={`grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}>
-                      <DynamicIcon name={adv.icon} className="h-7 w-7" />
+                    {/* Top/Left Icon with Gradient Background */}
+                    <div className={`grid h-11 w-11 sm:h-14 sm:w-14 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}>
+                      <DynamicIcon name={adv.icon} className="h-5.5 w-5.5 sm:h-7 sm:w-7" />
                     </div>
 
-                    <h3 className="mt-5 text-lg font-bold text-slate-900 tracking-tight">
-                      {adv.title}
-                    </h3>
-                    <p className="mt-2.5 text-sm text-slate-600 leading-relaxed">
-                      {adv.desc}
-                    </p>
+                    <div className="flex-1 space-y-1 sm:space-y-0">
+                      <h3 className="text-sm sm:text-lg font-bold text-slate-900 tracking-tight sm:mt-5">
+                        {adv.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed sm:mt-2.5">
+                        {adv.desc}
+                      </p>
 
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-slate-400 group-hover:text-emerald-600 transition">
-                      <span>Standard Al-Karim</span>
-                      <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      <div className="hidden sm:flex mt-6 pt-4 border-t border-slate-100 items-center justify-between text-xs font-bold text-slate-400 group-hover:text-emerald-600 transition">
+                        <span>Standard Al-Karim</span>
+                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </div>
                     </div>
                   </div>
                 );
@@ -639,21 +641,21 @@ export function Home() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-14">
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
                 <School className="h-3.5 w-3.5" />
                 <span>KONSULTASI BERDASARKAN JENJANG</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                 {config.levelsTitle}
               </h2>
-              <p className="text-base text-slate-600">
+              <p className="text-sm sm:text-base text-slate-600">
                 {config.levelsSub || "Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi."}
               </p>
             </div>
 
-            {/* Layout 3 Baris (Stacked Row Cards) */}
-            <div className="space-y-6 max-w-5xl mx-auto">
+            {/* Layout 3 Baris Sejajar (3 Rows Stacked Cards on Mobile & Desktop) */}
+            <div className="flex flex-col gap-3.5 sm:space-y-6 max-w-5xl mx-auto">
               {config.levels?.filter((l: any) => l.active !== false).map((level: any, idx: number) => {
                 const cardGradients = [
                   { border: "hover:border-emerald-400 hover:shadow-emerald-900/10", iconGradient: "from-emerald-500 to-teal-600", tagBg: "bg-emerald-50 text-emerald-800 border-emerald-200" },
@@ -667,32 +669,32 @@ export function Home() {
                     key={level.id}
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
-                    className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${grad.border}`}
+                    className={`group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-8 shadow-sm sm:shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${grad.border}`}
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Left Side: Icon & Details */}
-                    <div className="flex flex-col sm:flex-row items-start gap-5 flex-1">
+                    <div className="flex items-center gap-3.5 sm:gap-5 flex-1 min-w-0">
                       {/* Icon Box */}
-                      <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${grad.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-105`}>
-                        <DynamicIcon name={level.icon} className="h-8 w-8" />
+                      <div className={`grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${grad.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-105`}>
+                        <DynamicIcon name={level.icon} className="h-6 w-6 sm:h-8 sm:w-8" />
                       </div>
 
-                      <div className="space-y-2.5 text-left flex-1">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-emerald-700 transition">
+                      <div className="space-y-1 sm:space-y-2.5 text-left flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                          <h3 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight group-hover:text-emerald-700 transition">
                             {level.name}
                           </h3>
-                          <span className={`rounded-full px-3 py-1 text-xs font-bold border ${grad.tagBg}`}>
+                          <span className={`rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border ${grad.tagBg}`}>
                             {level.tag || level.name}
                           </span>
                         </div>
 
-                        <p className="text-sm text-slate-600 leading-relaxed max-w-2xl">
+                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
                           {level.desc}
                         </p>
 
-                        {/* Bullet Highlights */}
-                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-slate-700">
+                        {/* Bullet Highlights (Visible on sm+) */}
+                        <div className="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-slate-700">
                           <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                             <span>Pemetaan Gaya Belajar</span>
@@ -710,10 +712,10 @@ export function Home() {
                     </div>
 
                     {/* Right Side: Action Button */}
-                    <div className="shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 flex items-center justify-end">
-                      <div className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl btn-theme-primary px-7 text-sm font-bold shadow-sm transition group-hover:shadow-md">
-                        <span>{level.btnText || "Mulai Konsultasi"}</span>
-                        <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
+                    <div className="shrink-0 flex items-center justify-end">
+                      <div className="inline-flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl btn-theme-primary px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-xs sm:shadow-sm transition group-hover:shadow-md">
+                        <span>{level.btnText || "Mulai"}</span>
+                        <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5 transition-transform group-hover:translate-x-1" />
                       </div>
                     </div>
                   </Link>
@@ -730,20 +732,21 @@ export function Home() {
         <section id="carakerja" className="py-16 md:py-24 bg-white border-t border-slate-200/60 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
-            <div className="mx-auto max-w-3xl text-center space-y-4 mb-14">
+            <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-100/80 px-3.5 py-1 text-xs font-bold text-emerald-800">
                 <Zap className="h-3.5 w-3.5" />
                 <span>PROSES SANGAT MUDAH</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
                 {config.howItWorksTitle || "4 Langkah Mudah Konsultasi Pendidikan"}
               </h2>
-              <p className="text-base text-slate-600">
+              <p className="text-sm sm:text-base text-slate-600">
                 {config.howItWorksSub || "Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik."}
               </p>
             </div>
 
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Mobile: Vertical List | Desktop: 4 Column Grid */}
+            <div className="flex flex-col gap-3.5 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
               {config.howItWorksSteps?.map((item: any, idx: number) => {
                 const colors = [
                   "from-emerald-500 to-teal-600",
@@ -752,17 +755,25 @@ export function Home() {
                   "from-amber-500 to-orange-600"
                 ];
                 return (
-                  <div key={idx} className="relative flex flex-col items-start p-6 rounded-3xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all duration-300">
-                    <div className="flex items-center justify-between w-full mb-4">
-                      <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full">
-                        LANGKAH {item.step || `0${idx+1}`}
-                      </span>
-                      <div className={`grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs`}>
-                        <DynamicIcon name={item.icon || "CheckCircle2"} className="h-5 w-5" />
+                  <div 
+                    key={idx} 
+                    className="relative flex items-start gap-4 sm:flex-col sm:items-start p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-between sm:w-full sm:mb-4 shrink-0">
+                      <div className={`grid h-11 w-11 sm:h-12 sm:w-12 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs`}>
+                        <DynamicIcon name={item.icon || "CheckCircle2"} className="h-5.5 w-5.5 sm:h-6 sm:w-6" />
                       </div>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-                    <p className="text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+
+                    <div className="flex-1 space-y-1 sm:space-y-0 text-left">
+                      <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                        <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                          LANGKAH {item.step || `0${idx+1}`}
+                        </span>
+                      </div>
+                      <h3 className="text-sm sm:text-lg font-bold text-slate-900">{item.title}</h3>
+                      <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{item.desc}</p>
+                    </div>
                   </div>
                 );
               })}
