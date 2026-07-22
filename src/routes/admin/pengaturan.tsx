@@ -1726,20 +1726,25 @@ export function PengaturanPage() {
 
                 {/* Jenjang Preview */}
                 {homeForm.showLevels !== false && (
-                  <section className="px-6 py-10 bg-slate-50/50 space-y-6">
+                  <section className="px-6 py-8 bg-slate-50/50 space-y-4">
                     <h3 className="font-bold text-slate-900 text-center text-base">{homeForm.levelsTitle}</h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="space-y-3 max-w-xl mx-auto">
                       {homeForm.levels?.filter((l: any) => l.active !== false).map((lvl: any) => (
-                        <div key={lvl.id} className="border rounded-xl p-3 bg-white flex flex-col justify-between" style={{ backgroundColor: homeForm.colors?.card }}>
-                          <div>
-                            <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center">
+                        <div key={lvl.id} className="border rounded-xl p-3 bg-white flex items-center justify-between gap-3 text-left" style={{ backgroundColor: homeForm.colors?.card }}>
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 bg-emerald-50 rounded-lg text-emerald-600 grid place-items-center shrink-0">
                               <DynamicIcon name={lvl.icon} className="h-5 w-5" />
                             </div>
-                            <h4 className="font-bold text-xs text-slate-800 mt-2">{lvl.name}</h4>
-                            <p className="text-[10px] text-slate-400 leading-normal line-clamp-2 mt-1">{lvl.desc}</p>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-xs text-slate-800">{lvl.name}</h4>
+                                <span className="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">{lvl.tag}</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 leading-normal line-clamp-1 mt-0.5">{lvl.desc}</p>
+                            </div>
                           </div>
-                          <div className="text-[10px] font-bold text-emerald-700 mt-3 pt-1.5 border-t text-right">
-                            {lvl.btnText} →
+                          <div className="text-[10px] font-bold text-emerald-700 shrink-0">
+                            {lvl.btnText || "Mulai"} →
                           </div>
                         </div>
                       ))}

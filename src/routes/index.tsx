@@ -652,13 +652,13 @@ export function Home() {
               </p>
             </div>
 
-            {/* Grid 3 Cards */}
-            <div className="grid gap-8 md:grid-cols-3">
+            {/* Layout 3 Baris (Stacked Row Cards) */}
+            <div className="space-y-6 max-w-5xl mx-auto">
               {config.levels?.filter((l: any) => l.active !== false).map((level: any, idx: number) => {
                 const cardGradients = [
-                  { headerBg: "from-emerald-600 to-teal-700", iconBg: "bg-emerald-100 text-emerald-700", badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                  { headerBg: "from-sky-600 to-indigo-700", iconBg: "bg-sky-100 text-sky-700", badgeBg: "bg-sky-50 text-sky-700 border-sky-200" },
-                  { headerBg: "from-purple-600 to-amber-600", iconBg: "bg-purple-100 text-purple-700", badgeBg: "bg-purple-50 text-purple-700 border-purple-200" }
+                  { border: "hover:border-emerald-400 hover:shadow-emerald-900/10", iconGradient: "from-emerald-500 to-teal-600", tagBg: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+                  { border: "hover:border-sky-400 hover:shadow-sky-900/10", iconGradient: "from-sky-500 to-indigo-600", tagBg: "bg-sky-50 text-sky-800 border-sky-200" },
+                  { border: "hover:border-purple-400 hover:shadow-purple-900/10", iconGradient: "from-purple-600 to-amber-500", tagBg: "bg-purple-50 text-purple-800 border-purple-200" }
                 ];
                 const grad = cardGradients[idx % cardGradients.length];
 
@@ -667,50 +667,51 @@ export function Home() {
                     key={level.id}
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
-                    className="group flex flex-col justify-between rounded-3xl border border-slate-200 bg-white shadow-md overflow-hidden transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:border-emerald-400"
+                    className={`group relative flex flex-col md:flex-row md:items-center justify-between gap-6 rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${grad.border}`}
                     style={{ backgroundColor: config.colors?.card }}
                   >
-                    <div>
-                      {/* Card Header Gradient Banner */}
-                      <div className={`h-24 bg-gradient-to-r ${grad.headerBg} p-6 relative flex items-center justify-between`}>
-                        <span className={`rounded-full px-3 py-1 text-xs font-bold border ${grad.badgeBg} shadow-xs`}>
-                          {level.tag || level.name}
-                        </span>
-                        <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-md grid place-items-center text-white">
-                          <DynamicIcon name={level.icon} className="h-6 w-6" />
-                        </div>
+                    {/* Left Side: Icon & Details */}
+                    <div className="flex flex-col sm:flex-row items-start gap-5 flex-1">
+                      {/* Icon Box */}
+                      <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-gradient-to-br ${grad.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-105`}>
+                        <DynamicIcon name={level.icon} className="h-8 w-8" />
                       </div>
 
-                      {/* Card Body */}
-                      <div className="p-6 space-y-4 text-left">
-                        <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight group-hover:text-emerald-700 transition">
-                          {level.name}
-                        </h3>
-                        <p className="text-sm text-slate-600 leading-relaxed">
+                      <div className="space-y-2.5 text-left flex-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-emerald-700 transition">
+                            {level.name}
+                          </h3>
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold border ${grad.tagBg}`}>
+                            {level.tag || level.name}
+                          </span>
+                        </div>
+
+                        <p className="text-sm text-slate-600 leading-relaxed max-w-2xl">
                           {level.desc}
                         </p>
 
                         {/* Bullet Highlights */}
-                        <ul className="space-y-2 pt-2 border-t border-slate-100 text-xs font-medium text-slate-700">
-                          <li className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-slate-700">
+                          <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                            <span>Pemetaan Gaya Belajar & Karakter</span>
-                          </li>
-                          <li className="flex items-center gap-2">
+                            <span>Pemetaan Gaya Belajar</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                            <span>Analisis Objektif Kebutuhan Anak</span>
-                          </li>
-                          <li className="flex items-center gap-2">
+                            <span>Analisis Kebutuhan Anak</span>
+                          </span>
+                          <span className="flex items-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                            <span>Rekomendasi Pendampingan Sekolah</span>
-                          </li>
-                        </ul>
+                            <span>Rekomendasi Sekolah</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Card Footer Button */}
-                    <div className="p-6 pt-0">
-                      <div className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary text-sm font-bold shadow-sm transition group-hover:shadow-md">
+                    {/* Right Side: Action Button */}
+                    <div className="shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 flex items-center justify-end">
+                      <div className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl btn-theme-primary px-7 text-sm font-bold shadow-sm transition group-hover:shadow-md">
                         <span>{level.btnText || "Mulai Konsultasi"}</span>
                         <ArrowRight className="h-4.5 w-4.5 transition-transform group-hover:translate-x-1" />
                       </div>
