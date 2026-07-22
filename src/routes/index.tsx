@@ -332,57 +332,57 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-900 font-sans selection:bg-rose-800 selection:text-white relative overflow-hidden" style={{ backgroundColor: config.colors?.background }}>
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-rose-800 selection:text-white relative overflow-hidden" style={{ backgroundColor: config.colors?.background && config.colors.background !== '#ffffff' ? config.colors.background : undefined }}>
       {/* Inject Dynamic Colors & CSS Custom Utility Rules */}
       <style>{`
         :root {
           --primary: ${config.colors?.primary || '#1e3a8a'};
           --brand: ${config.colors?.primary || '#1e3a8a'};
-          --brand-soft: #eff6ff;
+          --brand-soft: #1e293b;
           --secondary: ${config.colors?.secondary || '#881337'};
-          --background: ${config.colors?.background || '#ffffff'};
-          --card: ${config.colors?.card || '#ffffff'};
+          --background: #090d16;
+          --card: #0f172a;
         }
         .btn-theme-primary {
-          background: linear-gradient(135deg, ${config.colors?.primary || '#1e3a8a'} 0%, #1e40af 45%, ${config.colors?.secondary || '#881337'} 100%);
+          background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #881337 100%);
           color: #ffffff;
         }
         .btn-theme-primary:hover {
-          filter: brightness(1.1);
-          box-shadow: 0 10px 25px -5px rgba(30,58,138,0.4);
+          filter: brightness(1.15);
+          box-shadow: 0 10px 30px -5px rgba(37,99,235,0.45);
         }
         .gradient-text-brand {
-          background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 40%, #be123c 80%, #881337 100%);
+          background: linear-gradient(135deg, #60a5fa 0%, #93c5fd 35%, #fb7185 75%, #f43f5e 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
       `}</style>
 
       {/* Decorative Ambient Background Lights - Deep Navy & Rich Maroon */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-blue-700/25 via-indigo-600/15 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-1/3 -left-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-rose-800/25 via-red-950/15 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-2/3 -right-20 h-[500px] w-[500px] rounded-full bg-gradient-to-bl from-blue-900/20 via-rose-700/15 to-transparent blur-[140px]" />
+      <div className="pointer-events-none absolute -top-40 -right-40 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-600/35 via-indigo-700/20 to-transparent blur-[150px]" />
+      <div className="pointer-events-none absolute top-1/3 -left-40 h-[600px] w-[600px] rounded-full bg-gradient-to-tr from-rose-800/35 via-red-900/20 to-transparent blur-[150px]" />
+      <div className="pointer-events-none absolute top-2/3 -right-20 h-[600px] w-[600px] rounded-full bg-gradient-to-bl from-blue-900/30 via-rose-700/20 to-transparent blur-[150px]" />
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
-        <header className="sticky top-0 z-40 border-b border-blue-200/60 bg-white/90 backdrop-blur-xl transition-all shadow-xs" style={{ backgroundColor: config.colors?.header ? config.colors.header + 'f0' : undefined }}>
+        <header className="sticky top-0 z-40 border-b border-blue-900/40 bg-slate-950/90 backdrop-blur-xl transition-all shadow-lg" style={{ backgroundColor: config.colors?.header && config.colors.header !== '#ffffff' ? config.colors.header + 'f0' : undefined }}>
           <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
             <Link to="/" className="flex items-center gap-3 group">
               {config.logoImg ? (
                 <img src={config.logoImg} alt={config.siteName} className="h-10 w-auto rounded-xl shadow-xs transition group-hover:scale-105" />
               ) : (
-                <div className="grid h-11 w-11 place-items-center rounded-2xl btn-theme-primary font-black shadow-md text-xl transition group-hover:scale-105">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl btn-theme-primary font-black shadow-md text-xl transition group-hover:scale-105 text-white">
                   {config.logoText ? config.logoText.charAt(0) : "E"}
                 </div>
               )}
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-blue-900 transition">
+                  <span className="text-lg font-black tracking-tight text-white group-hover:text-blue-400 transition">
                     {config.logoText}
                   </span>
-                  <span className="inline-block h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
+                  <span className="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                 </div>
-                <span className="text-[11px] text-rose-900 font-bold tracking-wide">
+                <span className="text-[11px] text-rose-300 font-bold tracking-wide">
                   {config.siteName}
                 </span>
               </div>
@@ -400,16 +400,16 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-xs sm:text-sm font-bold text-slate-700 hover:text-blue-950 hover:bg-blue-50/80 px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-xs sm:text-sm font-bold text-slate-200 hover:text-white hover:bg-blue-900/40 px-3.5 py-1.5 rounded-xl border border-transparent hover:border-blue-700/50 transition-all"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="text-xs font-bold text-rose-950 transition flex items-center gap-1.5 rounded-2xl bg-rose-100/90 px-3.5 py-2 border border-rose-300/80 hover:bg-rose-200 hover:border-rose-400 shadow-xs hover:scale-105 active:scale-95 ml-2"
+                className="text-xs font-bold text-rose-200 transition flex items-center gap-1.5 rounded-2xl bg-rose-950/80 px-3.5 py-2 border border-rose-700/60 hover:bg-rose-900 hover:border-rose-500 shadow-md hover:scale-105 active:scale-95 ml-2"
               >
-                <History className="h-4 w-4 text-rose-800" /> 
+                <History className="h-4 w-4 text-rose-300" /> 
                 <span>Cek Riwayat</span>
               </button>
             </nav>
@@ -417,7 +417,7 @@ export function Home() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all hover:scale-105 active:scale-95 md:inline-flex"
+                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-lg shadow-blue-950/50 border border-blue-400/30 transition-all hover:scale-105 active:scale-95 md:inline-flex"
               >
                 <LogIn className="h-4 w-4 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -426,7 +426,7 @@ export function Home() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 border border-blue-200 text-blue-950 md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 border border-slate-700 text-slate-200 md:hidden active:scale-95 transition shadow-xs hover:bg-slate-800"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -436,7 +436,7 @@ export function Home() {
 
           {/* Mobile Navigation Drawer */}
           {mobileMenuOpen && (
-            <div className="border-t border-blue-200 bg-white p-5 space-y-3 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
+            <div className="border-t border-blue-900/40 bg-slate-950/95 p-5 space-y-3 md:hidden shadow-2xl animate-in slide-in-from-top duration-200">
               {config.navItems?.map((item: any, idx: number) => (
                 <button
                   key={idx}
@@ -447,21 +447,21 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-slate-800 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition"
+                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-slate-200 hover:text-white hover:bg-blue-900/40 rounded-xl transition"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="w-full text-left py-2.5 px-3 text-sm font-bold text-rose-950 bg-rose-100/90 rounded-xl flex items-center gap-2 border border-rose-200"
+                className="w-full text-left py-2.5 px-3 text-sm font-bold text-rose-200 bg-rose-950/80 rounded-xl flex items-center gap-2 border border-rose-800/80"
               >
-                <History className="h-4.5 w-4.5 text-rose-800" /> Riwayat Konsultasi
+                <History className="h-4.5 w-4.5 text-rose-400" /> Riwayat Konsultasi
               </button>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-md shadow-blue-900/20"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-lg shadow-blue-950/50"
               >
                 <LogIn className="h-4.5 w-4.5 text-white" />
                 <span>{config.btnLoginText}</span>
