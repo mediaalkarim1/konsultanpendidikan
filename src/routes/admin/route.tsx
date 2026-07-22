@@ -11,7 +11,7 @@ import {
   LogOut, 
   Menu 
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: () => {},
@@ -29,13 +29,29 @@ const menuItems = [
 ];
 
 function AdminLayout() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isLoaded, logout, userEmail } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    if (isLoaded && !isAuthenticated) {
+      navigate({ to: "/login", replace: true });
+    }
+  }, [isLoaded, isAuthenticated, navigate]);
+
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="text-center space-y-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#0f284b] border-t-transparent mx-auto"></div>
+          <p className="text-sm font-semibold text-slate-600">Memuat Admin Panel...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    navigate({ to: "/login", replace: true });
     return null;
   }
 
@@ -112,7 +128,7 @@ function AdminLayout() {
           </button>
           
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-700">Admin EduKonsul</span>
+            <span className="text-sm font-medium text-slate-700">{userEmail || "Admin EduKonsul"}</span>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 rounded-full border border-slate-200 px-3.5 py-1.5 text-sm text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"

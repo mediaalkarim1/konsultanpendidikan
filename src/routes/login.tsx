@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -12,14 +13,22 @@ function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const { loginFallback, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: "/admin", replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Normalize input username/email
-    const loginEmail = username.trim() === "mediaalkarim" ? "admin@mediaalkarim.com" : username.trim();
+    const cleanUsername = username.trim();
+    const loginEmail = cleanUsername === "mediaalkarim" ? "admin@mediaalkarim.com" : cleanUsername;
+    const isDefaultAdmin = (cleanUsername === "mediaalkarim" || loginEmail === "admin@mediaalkarim.com") && password === "mediaalkarim";
 
     try {
       // 1. Try signing in with Supabase Auth
@@ -28,8 +37,8 @@ function LoginPage() {
         password: password,
       });
 
-      // 2. If user doesn't exist yet, attempt automatic sign up for default admin credentials
-      if (error && (username.trim() === "mediaalkarim" || loginEmail === "admin@mediaalkarim.com") && password === "mediaalkarim") {
+      // 2. If user doesn't exist yet in Supabase Auth, attempt automatic sign up for default admin credentials
+      if (error && isDefaultAdmin) {
         const signUpRes = await supabase.auth.signUp({
           email: "admin@mediaalkarim.com",
           password: "mediaalkarim",
@@ -38,7 +47,6 @@ function LoginPage() {
         if (!signUpRes.error && signUpRes.data.session) {
           error = null;
         } else {
-          // If auto sign up succeeded without session (e.g. requires confirmation), try signing in one more time
           const retrySignIn = await supabase.auth.signInWithPassword({
             email: "admin@mediaalkarim.com",
             password: "mediaalkarim",
@@ -48,20 +56,26 @@ function LoginPage() {
       }
 
       if (error) {
-        // Fallback for simple login requirement if Supabase Auth is strictly disabled/unseeded
-        if ((username.trim() === "mediaalkarim" || loginEmail === "admin@mediaalkarim.com") && password === "mediaalkarim") {
+        // Fallback for simple admin login if Supabase Auth is unseeded/disabled
+        if (isDefaultAdmin) {
+          loginFallback();
           toast.success("Berhasil login (Mode Admin)");
-          // Set local storage session fallback if needed
-          localStorage.setItem("edu_admin_session", "true");
-          navigate({ to: "/admin" });
+          navigate({ to: "/admin", replace: true });
           return;
         }
         toast.error("Gagal login: " + error.message);
       } else {
+        loginFallback();
         toast.success("Berhasil login");
-        navigate({ to: "/admin" });
+        navigate({ to: "/admin", replace: true });
       }
     } catch (err: any) {
+      if (isDefaultAdmin) {
+        loginFallback();
+        toast.success("Berhasil login (Mode Admin)");
+        navigate({ to: "/admin", replace: true });
+        return;
+      }
       toast.error("Error: " + err.message);
     } finally {
       setLoading(false);
