@@ -237,7 +237,7 @@ export const DEFAULT_HOMEPAGE_CONFIG = {
   ctaDesc: "Konsultasikan kebutuhan pendidikan & tumbuh kembang anak secara gratis bersama Tim Konsultan Sekolah Alam Al-Karim.",
   ctaBtn: "Mulai Konsultasi Sekarang",
   ctaBtnLink: "#jenjang",
-  ctaBg: "#881337",
+  ctaBg: "#1e3a5f",
   
   // Footer & Social
   footerLogo: "",
@@ -254,23 +254,23 @@ export const DEFAULT_HOMEPAGE_CONFIG = {
   ],
   
   colors: {
-    primary: "#1e3a8a",
-    secondary: "#881337",
-    button: "#1e3a8a",
+    primary: "#2563eb",
+    secondary: "#1e3a5f",
+    button: "#2563eb",
     header: "#ffffff",
-    footer: "#0b1329",
+    footer: "#0f172a",
     background: "#ffffff",
     card: "#ffffff"
   }
 };
 
 const ADVANTAGE_THEMES = [
-  { bg: "bg-blue-500/10", border: "border-blue-200 dark:border-blue-800", text: "text-blue-950 dark:text-blue-400", ring: "group-hover:border-blue-500", iconGradient: "from-blue-950 via-indigo-900 to-blue-900" },
-  { bg: "bg-rose-500/10", border: "border-rose-200 dark:border-rose-800", text: "text-rose-950 dark:text-rose-400", ring: "group-hover:border-rose-500", iconGradient: "from-rose-950 via-maroon-900 to-rose-900" },
-  { bg: "bg-indigo-500/10", border: "border-indigo-200 dark:border-indigo-800", text: "text-indigo-950 dark:text-indigo-400", ring: "group-hover:border-indigo-500", iconGradient: "from-indigo-950 via-blue-900 to-slate-900" },
-  { bg: "bg-red-500/10", border: "border-red-200 dark:border-red-800", text: "text-red-950 dark:text-red-400", ring: "group-hover:border-red-500", iconGradient: "from-red-950 via-rose-950 to-maroon-900" },
-  { bg: "bg-sky-500/10", border: "border-sky-200 dark:border-sky-800", text: "text-sky-950 dark:text-sky-400", ring: "group-hover:border-sky-500", iconGradient: "from-blue-900 via-sky-950 to-indigo-950" },
-  { bg: "bg-pink-500/10", border: "border-pink-200 dark:border-pink-800", text: "text-pink-950 dark:text-pink-400", ring: "group-hover:border-pink-500", iconGradient: "from-rose-900 via-pink-950 to-rose-950" }
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-[#1e3a5f] to-[#2563eb]" },
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-blue-600 to-indigo-600" },
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-[#1e3a5f] to-slate-800" },
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-blue-700 to-[#1e3a5f]" },
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-indigo-600 to-blue-600" },
+  { bg: "bg-blue-50/80", border: "border-slate-200", text: "text-slate-900", ring: "group-hover:border-blue-400", iconGradient: "from-[#1e3a5f] to-blue-800" }
 ];
 
 export function Home() {
@@ -332,36 +332,47 @@ export function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-rose-800 selection:text-white relative overflow-hidden" style={{ backgroundColor: config.colors?.background }}>
+    <div className="min-h-screen bg-white text-[#1e293b] font-sans selection:bg-[#2563eb] selection:text-white relative overflow-hidden" style={{ backgroundColor: config.colors?.background }}>
       {/* Inject Dynamic Colors & CSS Custom Utility Rules */}
       <style>{`
         :root {
-          --primary: ${config.colors?.primary || '#1e3a8a'};
-          --brand: ${config.colors?.primary || '#1e3a8a'};
-          --brand-soft: #eff6ff;
-          --secondary: ${config.colors?.secondary || '#881337'};
+          --primary: ${config.colors?.primary || '#2563eb'};
+          --brand: ${config.colors?.primary || '#2563eb'};
+          --brand-soft: #f8fbff;
+          --secondary: ${config.colors?.secondary || '#1e3a5f'};
           --background: ${config.colors?.background || '#ffffff'};
           --card: ${config.colors?.card || '#ffffff'};
         }
         .btn-theme-primary {
-          background: linear-gradient(135deg, ${config.colors?.primary || '#1e3a8a'} 0%, #2563eb 45%, ${config.colors?.secondary || '#881337'} 100%);
+          background-color: #2563eb;
           color: #ffffff;
+          transition: all 0.2s ease-in-out;
         }
         .btn-theme-primary:hover {
-          filter: brightness(1.1);
-          box-shadow: 0 10px 25px -5px rgba(30,58,138,0.35);
+          background-color: #1d4ed8;
+          box-shadow: 0 8px 20px -4px rgba(37,99,235,0.35);
+        }
+        .btn-theme-secondary {
+          background-color: #ffffff;
+          border: 1px solid #2563eb;
+          color: #2563eb;
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-theme-secondary:hover {
+          background-color: #f8fbff;
+          border-color: #1d4ed8;
+          color: #1d4ed8;
         }
         .gradient-text-brand {
-          background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 40%, #be123c 75%, #881337 100%);
+          background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
         }
       `}</style>
 
-      {/* Decorative Ambient Background Lights - Deep Navy & Rich Maroon */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-300/10 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-1/3 -left-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-rose-400/20 via-red-300/10 to-transparent blur-[140px]" />
-      <div className="pointer-events-none absolute top-2/3 -right-20 h-[500px] w-[500px] rounded-full bg-gradient-to-bl from-blue-500/15 via-rose-400/15 to-transparent blur-[140px]" />
+      {/* Decorative Ambient Background Lights - Subtle Soft Blue */}
+      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-gradient-to-br from-blue-100/60 via-sky-50/40 to-transparent blur-[140px]" />
+      <div className="pointer-events-none absolute top-1/3 -left-40 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-slate-100/80 via-blue-50/30 to-transparent blur-[140px]" />
 
       {/* 1. STICKY HEADER */}
       {config.showHeader !== false && (
@@ -377,12 +388,12 @@ export function Home() {
               )}
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-blue-900 transition">
+                  <span className="text-lg font-black tracking-tight text-[#1e293b] group-hover:text-[#2563eb] transition">
                     {config.logoText}
                   </span>
-                  <span className="inline-block h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
+                  <span className="inline-block h-2 w-2 rounded-full bg-[#2563eb] animate-pulse" />
                 </div>
-                <span className="text-[11px] text-rose-900 font-bold tracking-wide">
+                <span className="text-[11px] text-[#475569] font-bold tracking-wide">
                   {config.siteName}
                 </span>
               </div>
@@ -400,16 +411,16 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="text-xs sm:text-sm font-bold text-slate-700 hover:text-blue-950 hover:bg-blue-50/80 px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-xs sm:text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#f8fbff] px-3.5 py-1.5 rounded-xl transition-all"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="text-xs font-bold text-rose-950 transition flex items-center gap-1.5 rounded-2xl bg-rose-100/90 px-3.5 py-2 border border-rose-300/80 hover:bg-rose-200 hover:border-rose-400 shadow-xs hover:scale-105 active:scale-95 ml-2"
+                className="text-xs font-bold btn-theme-secondary transition flex items-center gap-1.5 rounded-2xl px-3.5 py-2 shadow-xs hover:scale-105 active:scale-95 ml-2"
               >
-                <History className="h-4 w-4 text-rose-800" /> 
+                <History className="h-4 w-4 text-[#2563eb]" /> 
                 <span>Cek Riwayat</span>
               </button>
             </nav>
@@ -417,7 +428,7 @@ export function Home() {
             <div className="flex items-center gap-3">
               <Link
                 to="/login"
-                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-md shadow-blue-900/20 transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
+                className="hidden h-10 items-center gap-2 rounded-2xl btn-theme-primary px-5 text-xs sm:text-sm font-bold shadow-md transition-all hover:scale-105 active:scale-95 md:inline-flex text-white"
               >
                 <LogIn className="h-4 w-4 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -426,7 +437,7 @@ export function Home() {
               {/* Mobile Hamburger Button */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 border border-blue-200 text-blue-950 md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-[#f8fbff] border border-blue-200 text-[#2563eb] md:hidden active:scale-95 transition shadow-xs hover:bg-blue-100"
                 aria-label="Menu Mobile"
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -436,7 +447,7 @@ export function Home() {
 
           {/* Mobile Navigation Drawer */}
           {mobileMenuOpen && (
-            <div className="border-t border-blue-200 bg-white p-5 space-y-3 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
+            <div className="border-t border-slate-200 bg-white p-5 space-y-3 md:hidden shadow-xl animate-in slide-in-from-top duration-200">
               {config.navItems?.map((item: any, idx: number) => (
                 <button
                   key={idx}
@@ -447,21 +458,21 @@ export function Home() {
                       window.location.href = item.link;
                     }
                   }}
-                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-slate-800 hover:text-blue-900 hover:bg-blue-50 rounded-xl transition"
+                  className="block w-full text-left py-2.5 px-3 text-sm font-bold text-[#475569] hover:text-[#2563eb] hover:bg-[#f8fbff] rounded-xl transition"
                 >
                   {item.label}
                 </button>
               ))}
               <button
                 onClick={handleOpenHistoryModal}
-                className="w-full text-left py-2.5 px-3 text-sm font-bold text-rose-950 bg-rose-100/90 rounded-xl flex items-center gap-2 border border-rose-200"
+                className="w-full text-left py-2.5 px-3 text-sm font-bold btn-theme-secondary rounded-xl flex items-center gap-2"
               >
-                <History className="h-4.5 w-4.5 text-rose-800" /> Riwayat Konsultasi
+                <History className="h-4.5 w-4.5 text-[#2563eb]" /> Riwayat Konsultasi
               </button>
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-md shadow-blue-900/20 text-white"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl btn-theme-primary py-3 text-sm font-bold shadow-md text-white"
               >
                 <LogIn className="h-4.5 w-4.5 text-white" />
                 <span>{config.btnLoginText}</span>
@@ -471,9 +482,9 @@ export function Home() {
         </header>
       )}
 
-      {/* 2. HERO SECTION */}
+      {/* 2. HERO SECTION - SECTION 1 (White Background) */}
       {config.showHero !== false && (
-        <section id="tentang" className="relative pt-10 pb-16 md:pt-16 md:pb-24">
+        <section id="tentang" className="relative pt-10 pb-16 md:pt-16 md:pb-24 bg-white border-b border-slate-100">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
               
@@ -481,14 +492,14 @@ export function Home() {
               <div className="text-left lg:col-span-7 space-y-6">
                 
                 {/* Badge */}
-                <div className="inline-flex items-center gap-2 rounded-full border border-blue-300/80 bg-gradient-to-r from-blue-50 via-indigo-50 to-rose-50/80 px-4 py-1.5 text-xs font-bold text-blue-950 shadow-xs">
-                  <span className="flex h-2 w-2 rounded-full bg-rose-600 animate-ping" />
-                  <Sparkles className="h-3.5 w-3.5 text-rose-700" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-[#f8fbff] px-4 py-1.5 text-xs font-bold text-[#2563eb] shadow-xs">
+                  <span className="flex h-2 w-2 rounded-full bg-[#2563eb] animate-ping" />
+                  <Sparkles className="h-3.5 w-3.5 text-[#2563eb]" />
                   <span>{config.heroBadge}</span>
                 </div>
 
                 {/* Title */}
-                <h1 className="text-4xl sm:text-6xl lg:text-6.5xl xl:text-7xl font-black leading-[1.08] tracking-tight text-slate-900">
+                <h1 className="text-4xl sm:text-6xl lg:text-6.5xl xl:text-7xl font-black leading-[1.08] tracking-tight text-[#1e293b]">
                   {config.heroTitle?.includes("Untuk Anak") ? (
                     <>
                       Konsultasi & Rekomendasi <br />
@@ -500,7 +511,7 @@ export function Home() {
                 </h1>
 
                 {/* Description */}
-                <p className="text-base leading-relaxed text-slate-600 sm:text-lg max-w-2xl">
+                <p className="text-base leading-relaxed text-[#64748b] sm:text-lg max-w-2xl">
                   {config.heroDesc}
                 </p>
 
@@ -519,13 +530,13 @@ export function Home() {
                 {config.showHeroStats !== false && (
                   <div className="pt-8 border-t border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {config.heroStats?.map((stat: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100/90 text-blue-950 font-bold">
+                      <div key={idx} className="flex items-center gap-3 bg-[#f8fbff] p-3 rounded-2xl border border-slate-200/70">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-[#2563eb] font-bold">
                           <DynamicIcon name={stat.icon || "Award"} className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-lg font-black text-slate-900 leading-none">{stat.value}</p>
-                          <p className="text-[11px] font-semibold text-slate-500">{stat.label}</p>
+                          <p className="text-lg font-black text-[#1e293b] leading-none">{stat.value}</p>
+                          <p className="text-[11px] font-semibold text-[#64748b]">{stat.label}</p>
                         </div>
                       </div>
                     ))}
@@ -536,14 +547,14 @@ export function Home() {
 
               {/* Right Column: Hero Graphic */}
               <div className="relative lg:col-span-5 flex justify-center">
-                <div className="absolute -inset-2 bg-gradient-to-r from-blue-700 via-indigo-600 to-rose-700 rounded-3xl blur-2xl opacity-30 animate-pulse -z-10" />
+                <div className="absolute -inset-2 bg-gradient-to-r from-blue-200/60 via-sky-100/40 to-transparent rounded-3xl blur-2xl opacity-50 -z-10" />
                 
                 <div className="relative w-full max-w-[460px]">
                   {/* Hero Main Image */}
                   <img
                     src={config.heroImg}
                     alt="Konsultasi Pendidikan Anak Sekolah Alam Al-Karim"
-                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-2xl border-4 border-white"
+                    className="w-full h-[380px] sm:h-[440px] rounded-3xl object-cover shadow-xl border-4 border-white"
                   />
                 </div>
               </div>
@@ -553,48 +564,47 @@ export function Home() {
         </section>
       )}
 
-      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) */}
+      {/* 3. SECTION KEUNGGULAN (ADVANTAGES) - SECTION 2 (Light Blue Background #F8FBFF) */}
       {config.showAdvantages !== false && (
-        <section id="keunggulan" className="py-16 md:py-24 border-t border-slate-200/60 bg-white relative">
+        <section id="keunggulan" className="py-16 md:py-24 border-t border-b border-slate-200/60 bg-[#f8fbff] relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3.5 py-1 text-xs font-bold text-blue-950">
-                <Target className="h-3.5 w-3.5 text-rose-700" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
+                <Target className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>KEUNGGULAN UTAMA</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
                 {config.advantagesTitle}
               </h2>
-              <p className="text-sm sm:text-base leading-relaxed text-slate-600">
+              <p className="text-sm sm:text-base leading-relaxed text-[#475569]">
                 {config.advantagesSub}
               </p>
             </div>
 
-            {/* List Poin Utama Keunggulan (Tanpa Deskripsi) */}
+            {/* List Poin Utama Keunggulan */}
             <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
               {config.advantages?.map((adv: any, idx: number) => {
-                const theme = ADVANTAGE_THEMES[idx % ADVANTAGE_THEMES.length];
                 return (
                   <div
                     key={idx}
-                    className={`group flex items-center gap-4 rounded-2xl border ${theme.border} p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${theme.ring}`}
+                    className="group flex items-center gap-4 rounded-2xl border border-slate-200/80 p-4 sm:p-5 bg-white text-left transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Icon Box */}
-                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${theme.iconGradient} text-white shadow-xs transition-transform duration-300 group-hover:scale-105`}>
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
                       <DynamicIcon name={adv.icon} className="h-6 w-6" />
                     </div>
 
                     {/* Main Point Title Only */}
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-blue-950 transition">
+                      <h3 className="text-sm sm:text-base font-extrabold text-[#1e293b] tracking-tight leading-snug group-hover:text-[#2563eb] transition">
                         {adv.title}
                       </h3>
                     </div>
 
-                    <div className="shrink-0 text-rose-800">
+                    <div className="shrink-0 text-[#2563eb]">
                       <CheckCircle2 className="h-5 w-5" />
                     </div>
                   </div>
@@ -606,76 +616,69 @@ export function Home() {
         </section>
       )}
 
-      {/* 4. PILIHAN JENJANG PENDIDIKAN */}
+      {/* 4. PILIHAN JENJANG PENDIDIKAN - SECTION 3 (Pure White Background #FFFFFF) */}
       {config.showLevels !== false && (
-        <section id="jenjang" className="py-16 md:py-24 bg-gradient-to-b from-slate-100/70 via-blue-50/30 to-slate-50 border-t border-slate-200/60 relative">
+        <section id="jenjang" className="py-16 md:py-24 bg-white border-b border-slate-200/60 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             {/* Header Section */}
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3.5 py-1 text-xs font-bold text-blue-950">
-                <School className="h-3.5 w-3.5 text-rose-700" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#f8fbff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
+                <School className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>KONSULTASI BERDASARKAN JENJANG</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
                 {config.levelsTitle}
               </h2>
-              <p className="text-sm sm:text-base text-slate-600">
+              <p className="text-sm sm:text-base text-[#475569]">
                 {config.levelsSub || "Pilihlah jenjang pendidikan anak Anda untuk langsung memulai pengisian formulir kuesioner pemetaan potensi."}
               </p>
             </div>
 
-            {/* Layout 3 Baris Sejajar (3 Rows Stacked Cards on Mobile & Desktop) */}
+            {/* Layout 3 Baris Sejajar */}
             <div className="flex flex-col gap-3.5 sm:space-y-6 max-w-5xl mx-auto">
-              {config.levels?.filter((l: any) => l.active !== false).map((level: any, idx: number) => {
-                const cardGradients = [
-                  { border: "hover:border-blue-500 hover:shadow-blue-900/10", iconGradient: "from-blue-950 via-indigo-900 to-blue-900", tagBg: "bg-blue-50 text-blue-950 border-blue-200" },
-                  { border: "hover:border-rose-500 hover:shadow-rose-900/10", iconGradient: "from-rose-950 via-maroon-900 to-rose-900", tagBg: "bg-rose-50 text-rose-950 border-rose-200" },
-                  { border: "hover:border-indigo-500 hover:shadow-indigo-900/10", iconGradient: "from-indigo-950 via-blue-900 to-slate-900", tagBg: "bg-indigo-50 text-indigo-950 border-indigo-200" }
-                ];
-                const grad = cardGradients[idx % cardGradients.length];
-
+              {config.levels?.filter((l: any) => l.active !== false).map((level: any) => {
                 return (
                   <Link
                     key={level.id}
                     to="/formulir/$jenjang"
                     params={{ jenjang: level.id }}
-                    className={`group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-8 shadow-sm sm:shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${grad.border}`}
+                    className="group relative flex items-center justify-between gap-3.5 sm:gap-6 rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-4 sm:p-8 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-[#2563eb]/40"
                     style={{ backgroundColor: config.colors?.card }}
                   >
                     {/* Left Side: Icon & Details */}
                     <div className="flex items-center gap-3.5 sm:gap-5 flex-1 min-w-0">
                       {/* Icon Box */}
-                      <div className={`grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br ${grad.iconGradient} text-white shadow-md transition-transform duration-300 group-hover:scale-105`}>
+                      <div className="grid h-12 w-12 sm:h-16 sm:w-16 shrink-0 place-items-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-md transition-transform duration-300 group-hover:scale-105">
                         <DynamicIcon name={level.icon} className="h-6 w-6 sm:h-8 sm:w-8" />
                       </div>
 
                       <div className="space-y-1 sm:space-y-2.5 text-left flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                          <h3 className="text-base sm:text-2xl font-black text-slate-900 tracking-tight group-hover:text-blue-950 transition">
+                          <h3 className="text-base sm:text-2xl font-black text-[#1e293b] tracking-tight group-hover:text-[#2563eb] transition">
                             {level.name}
                           </h3>
-                          <span className={`rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border ${grad.tagBg}`}>
+                          <span className="rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold border bg-[#f8fbff] text-[#2563eb] border-blue-200">
                             {level.tag || level.name}
                           </span>
                         </div>
 
-                        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
+                        <p className="text-xs sm:text-sm text-[#64748b] leading-relaxed line-clamp-2 sm:line-clamp-none">
                           {level.desc}
                         </p>
 
-                        {/* Bullet Highlights (Visible on sm+) */}
-                        <div className="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-slate-700">
+                        {/* Bullet Highlights */}
+                        <div className="hidden sm:flex flex-wrap items-center gap-x-6 gap-y-2 pt-1 text-xs font-semibold text-[#475569]">
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-rose-700 shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
                             <span>Pemetaan Gaya Belajar</span>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-rose-700 shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
                             <span>Analisis Kebutuhan Anak</span>
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4 text-rose-700 shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#2563eb] shrink-0" />
                             <span>Rekomendasi Sekolah</span>
                           </span>
                         </div>
@@ -684,7 +687,7 @@ export function Home() {
 
                     {/* Right Side: Action Button */}
                     <div className="shrink-0 flex items-center justify-end">
-                      <div className="inline-flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl btn-theme-primary px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-xs sm:shadow-sm transition group-hover:shadow-md">
+                      <div className="inline-flex h-10 sm:h-12 items-center justify-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-2xl btn-theme-primary px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-xs transition group-hover:shadow-md">
                         <span>{level.btnText || "Mulai"}</span>
                         <ArrowRight className="h-4 w-4 sm:h-4.5 sm:w-4.5 transition-transform group-hover:translate-x-1" />
                       </div>
@@ -698,49 +701,43 @@ export function Home() {
         </section>
       )}
 
-      {/* 5. CARA KERJA (HOW IT WORKS STEP-BY-STEP) */}
+      {/* 5. CARA KERJA (HOW IT WORKS) - SECTION 4 (Soft Gray Background #F4F6F8) */}
       {config.showHowItWorks !== false && (
-        <section id="carakerja" className="py-16 md:py-24 bg-white border-t border-slate-200/60 relative">
+        <section id="carakerja" className="py-16 md:py-24 bg-[#f4f6f8] border-t border-b border-slate-200/60 relative">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
             <div className="mx-auto max-w-3xl text-center space-y-4 mb-10 sm:mb-14">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3.5 py-1 text-xs font-bold text-blue-950">
-                <Zap className="h-3.5 w-3.5 text-rose-700" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3.5 py-1 text-xs font-bold text-[#2563eb] shadow-xs">
+                <Zap className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>PROSES SANGAT MUDAH</span>
               </div>
-              <h2 className="text-2.5xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-2.5xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
                 {config.howItWorksTitle || "4 Langkah Mudah Konsultasi Pendidikan"}
               </h2>
-              <p className="text-sm sm:text-base text-slate-600">
+              <p className="text-sm sm:text-base text-[#475569]">
                 {config.howItWorksSub || "Proses efisien dan terstruktur untuk membantu Anda mendapatkan arahan pendidikan terbaik."}
               </p>
             </div>
 
-            {/* Grid / List Poin Utama 4 Langkah (Tanpa Deskripsi) */}
+            {/* Grid / List Poin Utama 4 Langkah */}
             <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4 sm:gap-5">
               {config.howItWorksSteps?.map((item: any, idx: number) => {
-                const colors = [
-                  "from-blue-950 to-indigo-900",
-                  "from-rose-950 to-maroon-900",
-                  "from-indigo-950 to-slate-900",
-                  "from-red-950 to-rose-900"
-                ];
                 return (
                   <div 
                     key={idx} 
-                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all duration-300 text-left"
+                    className="group relative flex items-center gap-4 p-4 sm:p-5 rounded-2xl border border-slate-200/80 bg-white hover:border-[#2563eb]/40 hover:shadow-md transition-all duration-300 text-left"
                   >
                     {/* Icon Box */}
-                    <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${colors[idx % colors.length]} text-white shadow-xs transition-transform duration-300 group-hover:scale-105`}>
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] text-white shadow-xs transition-transform duration-300 group-hover:scale-105">
                       <DynamicIcon name={item.icon || "CheckCircle2"} className="h-6 w-6" />
                     </div>
 
                     {/* Main Point Title & Step Pill */}
                     <div className="flex-1 min-w-0 space-y-1">
-                      <span className="inline-block text-[10px] font-black tracking-wider text-rose-950 bg-rose-100/90 px-2.5 py-0.5 rounded-full uppercase">
+                      <span className="inline-block text-[10px] font-black tracking-wider text-[#2563eb] bg-[#f8fbff] border border-blue-200 px-2.5 py-0.5 rounded-full uppercase">
                         Langkah {item.step || `0${idx+1}`}
                       </span>
-                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-snug group-hover:text-blue-950 transition">
+                      <h3 className="text-sm sm:text-base font-extrabold text-[#1e293b] tracking-tight leading-snug group-hover:text-[#2563eb] transition">
                         {item.title}
                       </h3>
                     </div>
@@ -753,32 +750,32 @@ export function Home() {
         </section>
       )}
 
-      {/* 6. FAQ SECTION */}
+      {/* 6. FAQ SECTION - SECTION 5 (Pure White Background #FFFFFF) */}
       {config.showFaq !== false && (
-        <section id="faq" className="py-16 md:py-24 bg-slate-50/60 border-t border-slate-200/60 relative">
+        <section id="faq" className="py-16 md:py-24 bg-white border-b border-slate-200/60 relative">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             
             <div className="text-center space-y-4 mb-12">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100/90 px-3.5 py-1 text-xs font-bold text-blue-950">
-                <HelpCircle className="h-3.5 w-3.5 text-rose-700" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#f8fbff] border border-blue-200 px-3.5 py-1 text-xs font-bold text-[#2563eb]">
+                <HelpCircle className="h-3.5 w-3.5 text-[#2563eb]" />
                 <span>PERTANYAAN POPULER</span>
               </div>
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+              <h2 className="text-3xl font-extrabold tracking-tight text-[#1e293b] sm:text-4xl">
                 {config.faqTitle || "Sering Ditanyakan Orang Tua"}
               </h2>
-              <p className="text-base text-slate-600">
+              <p className="text-base text-[#475569]">
                 {config.faqSub || "Temukan jawaban cepat atas pertanyaan seputar konsultasi pendidikan Sekolah Alam Al-Karim."}
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 md:p-8 shadow-sm" style={{ backgroundColor: config.colors?.card }}>
+            <div className="bg-white rounded-3xl border border-slate-200/90 p-6 md:p-8 shadow-xs" style={{ backgroundColor: config.colors?.card }}>
               <Accordion type="single" collapsible className="w-full space-y-3">
                 {config.faqs?.map((faq: any, idx: number) => (
                   <AccordionItem key={idx} value={`item-${idx}`} className={`border-b border-slate-100 pb-3 ${idx === (config.faqs?.length || 0) - 1 ? 'border-none pb-0' : ''}`}>
-                    <AccordionTrigger className="text-base font-bold text-slate-900 hover:text-blue-950 text-left">
+                    <AccordionTrigger className="text-base font-bold text-[#1e293b] hover:text-[#2563eb] text-left">
                       {faq.question}
                     </AccordionTrigger>
-                    <AccordionContent className="text-sm text-slate-600 leading-relaxed pt-2">
+                    <AccordionContent className="text-sm text-[#64748b] leading-relaxed pt-2">
                       {faq.answer}
                     </AccordionContent>
                   </AccordionItem>
@@ -790,24 +787,24 @@ export function Home() {
         </section>
       )}
 
-      {/* 7. CALL TO ACTION BANNER */}
+      {/* 7. CALL TO ACTION BANNER - SECTION 6 (Dark Navy #1E3A5F Background) */}
       {config.showCta !== false && (
         <section className="mx-auto max-w-6xl px-4 py-12 md:py-20">
           <div
-            className="rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-2xl bg-gradient-to-r from-blue-950 via-slate-900 to-rose-950"
+            className="rounded-3xl p-8 sm:p-12 text-center text-white relative overflow-hidden shadow-xl bg-gradient-to-r from-[#1e3a5f] to-[#2563eb]"
             style={{ backgroundColor: config.ctaBg || undefined }}
           >
             {/* Background Decorative Rings */}
             <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-xl" />
-            <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-rose-500/20 blur-xl" />
+            <div className="pointer-events-none absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-blue-400/20 blur-xl" />
 
             <div className="relative z-10 space-y-6 max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-rose-100 border border-white/20">
-                <Sparkles className="h-4 w-4 text-rose-300" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md px-4 py-1.5 text-xs font-bold text-blue-100 border border-white/20">
+                <Sparkles className="h-4 w-4 text-blue-200" />
                 <span>MULAI LANGKAH AWAL SEKARANG</span>
               </div>
 
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight text-white">
                 {config.ctaTitle}
               </h2>
 
@@ -818,10 +815,10 @@ export function Home() {
               <div className="pt-4">
                 <button
                   onClick={() => handleScroll(config.ctaBtnLink || "#jenjang")}
-                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-blue-950 shadow-xl transition-all hover:scale-105 active:scale-95 hover:bg-rose-50"
+                  className="inline-flex h-14 items-center justify-center gap-2.5 rounded-2xl bg-white px-9 text-base font-extrabold text-[#1e3a5f] shadow-lg transition-all hover:scale-105 active:scale-95 hover:bg-slate-100"
                 >
                   <span>{config.ctaBtn}</span>
-                  <ArrowRight className="h-5 w-5 text-rose-800" />
+                  <ArrowRight className="h-5 w-5 text-[#2563eb]" />
                 </button>
               </div>
             </div>
@@ -829,21 +826,21 @@ export function Home() {
         </section>
       )}
 
-      {/* 8. FOOTER */}
+      {/* 8. FOOTER - SECTION 7 (Dark Slate #0F172A Background) */}
       {config.showFooter !== false && (
-        <footer className="border-t border-slate-800 bg-slate-950 text-slate-400 py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
+        <footer className="border-t border-slate-800 bg-[#0f172a] text-slate-400 py-12 md:py-16 relative" style={{ backgroundColor: config.colors?.footer }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-12">
               
               {/* Brand Info */}
               <div className="space-y-4 md:col-span-5 text-left">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-blue-900 font-black text-white text-xl shadow-md">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#2563eb] font-black text-white text-xl shadow-md">
                     {config.logoText?.charAt(0) || "E"}
                   </div>
                   <div className="flex flex-col text-left">
                     <span className="text-xl font-black text-white leading-tight">{config.logoText}</span>
-                    <span className="text-xs text-rose-400 font-semibold">{config.footerSchool}</span>
+                    <span className="text-xs text-blue-400 font-semibold">{config.footerSchool}</span>
                   </div>
                 </div>
                 <p className="text-xs leading-relaxed text-slate-400 max-w-md">
@@ -856,7 +853,7 @@ export function Home() {
                       href={soc.url} 
                       target="_blank" 
                       rel="noreferrer" 
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 text-slate-300 border border-slate-800 hover:bg-rose-900 hover:text-white transition"
+                      className="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 text-slate-300 border border-slate-800 hover:bg-[#2563eb] hover:text-white transition"
                       aria-label={soc.platform}
                     >
                       <Globe className="h-4 w-4" />
@@ -870,18 +867,18 @@ export function Home() {
                 <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">Hubungi Kami</h4>
                 <ul className="space-y-3 text-xs">
                   <li className="flex items-start gap-2.5">
-                    <MapPin className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+                    <MapPin className="h-4 w-4 text-[#2563eb] shrink-0 mt-0.5" />
                     <span className="text-slate-300">{config.footerAddress}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Phone className="h-4 w-4 text-rose-500 shrink-0" />
-                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-slate-300 hover:text-rose-400 transition font-medium">
+                    <Phone className="h-4 w-4 text-[#2563eb] shrink-0" />
+                    <a href={`https://wa.me/${config.footerWa}`} target="_blank" rel="noreferrer" className="text-slate-300 hover:text-[#2563eb] transition font-medium">
                       {config.footerWa}
                     </a>
                   </li>
                   <li className="flex items-center gap-2.5">
-                    <Mail className="h-4 w-4 text-rose-500 shrink-0" />
-                    <a href={`mailto:${config.footerEmail}`} className="text-slate-300 hover:text-rose-400 transition font-medium">
+                    <Mail className="h-4 w-4 text-[#2563eb] shrink-0" />
+                    <a href={`mailto:${config.footerEmail}`} className="text-slate-300 hover:text-[#2563eb] transition font-medium">
                       {config.footerEmail}
                     </a>
                   </li>
@@ -906,7 +903,7 @@ export function Home() {
                     </li>
                   ))}
                   <li>
-                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-emerald-400 hover:underline flex items-center gap-1.5 mt-1">
+                    <a href={`https://${config.footerWebsite}`} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline flex items-center gap-1.5 mt-1">
                       <Globe className="h-3.5 w-3.5" />
                       <span>Website Resmi Sekolah</span>
                     </a>
