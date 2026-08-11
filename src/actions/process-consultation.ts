@@ -446,7 +446,12 @@ export const processConsultation = createServerFn({ method: "POST" })
 
     const { data: answers } = await supabaseAdmin.from("consultation_answers").select("*").eq("consultation_id", consultationId);
 
-    const formattedAnswersList = answers ? answers.map((a: any) => `P: ${a.question_id}\nJ: ${a.answer_text || (a.selected_option_ids || []).join(", ")}`).join("\n\n") : "";
+    const formattedAnswersList = answers ? answers.map((a: any) => {
+      const qText = a.question || a.question_text || a.question_id || "Pertanyaan";
+      const aText = a.answer || a.answer_text || (a.selected_option_ids || []).join(", ") || "-";
+      return `P: ${qText}\nJ: ${aText}`;
+    }).join("\n\n") : "";
+
 
     const aiResult = await runAiEngineAnalysis(
       consultation.parent_name,

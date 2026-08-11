@@ -255,8 +255,19 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
       potentials.push(
         `🌟 ${topic}\nJawaban orang tua menunjukkan ${lower(shorten(item.a, 120))}, sehingga ini menjadi kekuatan yang dapat terus dikembangkan.`
       );
+    } else {
+      if (concerns.length <= potentials.length) {
+        concerns.push(
+          `❗ ${topic}\nBerdasarkan jawaban orang tua (${lower(shorten(item.a, 120))}), aspek ini dapat menjadi perhatian dalam pendampingan harian.`
+        );
+      } else {
+        potentials.push(
+          `🌟 ${topic}\nJawaban orang tua mencatat ${lower(shorten(item.a, 120))}, yang menjadi bagian dari keunikan dan potensi anak.`
+        );
+      }
     }
   }
+
 
   if (concerns.length === 0 && qa.length > 0) {
     concerns.push(
