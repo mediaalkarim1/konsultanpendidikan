@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
-import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction } from "@/actions/admin-actions";
+import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction, bulkSyncConsultationStatusesAction } from "@/actions/admin-actions";
 import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult } from "@/lib/pdf-generator";
+
 
 
 export const Route = createFileRoute("/admin/konsultasi")({
@@ -89,6 +90,25 @@ function KonsultasiPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+
+  async function handleBulkSync() {
+    setSyncing(true);
+    try {
+      const res = await bulkSyncConsultationStatusesAction({ data: { email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success(res.message || "Status berhasil disinkronkan!");
+        fetchData();
+      } else {
+        toast.error("Gagal sinkronisasi: " + res.error);
+      }
+    } catch (e: any) {
+      toast.error("Gagal sinkronisasi: " + e.message);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -270,13 +290,26 @@ function KonsultasiPage() {
           <p className="text-sm text-muted-foreground mt-1">Kelola data konsultasi, hasil analisis AI, dan follow up orang tua.</p>
         </div>
 
-        <button
-          onClick={handleExportExcel}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
-        >
-          <FileSpreadsheet className="h-4 w-4" />
-          Download Excel
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleBulkSync}
+            disabled={syncing}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-teal-300 bg-teal-50 dark:bg-teal-950/40 dark:border-teal-800 px-3.5 py-2 text-sm font-semibold text-teal-700 dark:text-teal-300 shadow-sm transition hover:bg-teal-100 dark:hover:bg-teal-900/50 disabled:opacity-50"
+            title="Singkronkan & Perbarui Otomatis Status AI Konsultasi"
+          >
+            <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? "Menyingkronkan..." : "Singkronkan Status"}</span>
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>Download Excel</span>
+          </button>
+        </div>
+
       </div>
 
       {/* Summary Statistics Cards */}

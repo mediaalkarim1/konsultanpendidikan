@@ -890,6 +890,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       });
 
       return {
+
         success: true,
         data: normalizedData,
         count: count || normalizedData.length,
@@ -906,3 +907,47 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       return { success: false, error: e.message, data: [], count: 0, stats: { total: 0, today: 0, pendingAi: 0, pendingFollowUp: 0, completed: 0 } };
     }
   });
+
+// --- Bulk Sync & Auto-Generate Statuses Action ---
+
+export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST" })
+  .validator((payload: { email: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { email } = ctx.data;
+
+      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, status, ai_result");
+      const { data: allAnalysis } = await supabaseAdmin.from("consultation_analysis").select("consultation_id");
+      const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
+
+      let updatedCount = 0;
+      let generatedCount = 0;
+
+      for (const item of allCons || []) {
+        const hasAnalysis = analyzedSet.has(item.id) || Boolean(item.ai_result);
+        const s = (item.status || "").trim();
+
+        if (hasAnalysis) {
+          if (s !== "Analisis AI Selesai" && s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai") {
+            await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", item.id);
+            updatedCount++;
+          }
+        } else if (s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai") {
+          // Auto generate analysis for unanalyzed rows
+          const res = await processConsultation({ data: item.id });
+          if (res.success) {
+            generatedCount++;
+            updatedCount++;
+          }
+        }
+      }
+
+      await logActivityInternal(email, "BULK_SYNC_STATUSES", { updatedCount, generatedCount });
+      return { success: true, updatedCount, generatedCount, message: `Berhasil menyinkronkan status (${updatedCount} data diperbarui, ${generatedCount} analisis ter-generate).` };
+    } catch (e: any) {
+      console.error("bulkSyncConsultationStatusesAction exception:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
