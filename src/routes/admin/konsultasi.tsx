@@ -233,7 +233,7 @@ function KonsultasiPage() {
       const rows = exportData.map((item, index) => {
         const dateStr = format(new Date(item.created_at), "dd MMMM yyyy HH:mm", { locale: id });
         const parentName = (item.parent_name || "").replace(/"/g, '""');
-        const childName = (item.child_name || "-").replace(/"/g, '""');
+        const childName = ((item as any).child_name || "-").replace(/"/g, '""');
         const waNum = `'${item.whatsapp_number || ""}`;
         const levelLabel = LEVEL_LABELS[item.level] || item.level;
         const statusLabel = item.status || "-";
@@ -622,7 +622,7 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
         // Formatted answers text for narrative generator
         const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
-        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, consultation.child_name || "-", consultation.level, answersFormatted);
+        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, (consultation as any).child_name || "-", consultation.level, answersFormatted);
 
         let effectiveAnalysis = analysisData;
 
