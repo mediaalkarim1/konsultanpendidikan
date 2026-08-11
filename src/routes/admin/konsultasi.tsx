@@ -526,6 +526,25 @@ function KonsultasiPage() {
                           </button>
 
                           <button
+                            onClick={() => handleReAnalyze(row.id)}
+                            disabled={regeneratingId === row.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                            title="Jalankan Analisis Ulang AI"
+                          >
+                            {regeneratingId === row.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                <span>Menganalisis...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                                <span>Analisis Ulang</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
                             onClick={() => handleDelete(row.id)}
                             className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                             title="Hapus Data"
