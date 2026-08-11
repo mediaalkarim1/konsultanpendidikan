@@ -1,14 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { processConsultation } from "./process-consultation";
+import { getAdminSupabase } from "@/lib/supabase-admin";
 
-function getAdminSupabase() {
-  const DEFAULT_URL = "https://muyugntbzspnincoaekj.supabase.co";
-  const DEFAULT_KEY = "sb_publishable_KHzSJnooFPXSFmwcL8yvpg_pHLzwSBK";
-  const supabaseUrl = (typeof process !== 'undefined' && (process.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL)) || DEFAULT_URL;
-  const supabaseServiceKey = (typeof process !== 'undefined' && (process.env?.SUPABASE_SERVICE_ROLE_KEY || process.env?.SUPABASE_SERVICE_KEY || process.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) || DEFAULT_KEY;
-  return createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
-}
 
 // Internal helper for logging
 export async function logActivityInternal(adminEmail: string, action: string, details: any = null, ipAddress: string = "") {

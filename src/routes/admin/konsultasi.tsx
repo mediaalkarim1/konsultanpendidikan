@@ -133,7 +133,42 @@ function KonsultasiPage() {
   }, [debouncedSearch, statusFilter, levelFilter, dateFilter, page]);
 
   async function fetchStats() {
-    // Handled directly inside getConsultationsListAction
+    try {
+      const { data: allCons } = await supabase.from("consultations").select("id, created_at, status");
+      if (!allCons || allCons.length === 0) return;
+
+      const todayStr = new Date().toISOString().split("T")[0];
+      let todayCount = 0;
+      let pendingAiCount = 0;
+      let pendingFollowUpCount = 0;
+      let completedCount = 0;
+
+      allCons.forEach((item) => {
+        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        if (itemDate === todayStr) todayCount++;
+
+        const s = (item.status || "").trim();
+        if (s === "Analisis AI Selesai" || s.includes("Follow Up") || s.includes("Selesai Dianalisis")) {
+          pendingFollowUpCount++;
+        } else if (s === "Sudah Dihubungi") {
+          pendingFollowUpCount++;
+        } else if (s === "Selesai" || s === "Closed" || s.includes("Konsultasi Selesai")) {
+          completedCount++;
+        } else {
+          pendingAiCount++;
+        }
+      });
+
+      setStats({
+        total: allCons.length,
+        today: todayCount,
+        pendingAi: pendingAiCount,
+        pendingFollowUp: pendingFollowUpCount,
+        completed: completedCount
+      });
+    } catch (e) {
+      console.warn("fetchStats error:", e);
+    }
   }
 
   async function fetchData() {
@@ -150,20 +185,50 @@ function KonsultasiPage() {
         }
       });
 
-      if (res.success && res.data) {
+      if (res.success && res.data && res.data.length > 0) {
         setData(res.data as any);
         setTotal(res.count);
-        if (res.stats) setStats(res.stats);
+        if (res.stats && res.stats.total > 0) setStats(res.stats);
+        else fetchStats();
       } else {
-        toast.error("Gagal mengambil data konsultasi: " + (res.error || "Error server"));
+        await fetchDataFallback();
       }
     } catch (e: any) {
-      console.error("fetchData exception:", e);
-      toast.error("Error server: " + e.message);
+      console.warn("getConsultationsListAction error, falling back:", e);
+      await fetchDataFallback();
     } finally {
       setLoading(false);
     }
   }
+
+  async function fetchDataFallback() {
+    const from = (page - 1) * itemsPerPage;
+    const to = from + itemsPerPage - 1;
+    let query = supabase.from("consultations").select("*", { count: "exact" });
+
+    if (debouncedSearch) {
+      query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
+    }
+    if (statusFilter) {
+      if (statusFilter === "Menunggu Analisis") query = query.in("status", ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"]);
+      else if (statusFilter === "Analisis AI Selesai") query = query.in("status", ["Analisis AI Selesai", "Selesai Dianalisis"]);
+      else query = query.eq("status", statusFilter);
+    }
+    if (levelFilter) query = query.eq("level", levelFilter as any);
+    if (dateFilter) {
+      query = query.gte("created_at", `${dateFilter}T00:00:00.000Z`).lte("created_at", `${dateFilter}T23:59:59.999Z`);
+    }
+
+    const { data: cols, count, error } = await query.order("created_at", { ascending: false }).range(from, to);
+
+    if (!error && cols) {
+      const normalized = cols.map(normalizeParentRow);
+      setData(normalized);
+      setTotal(count || normalized.length);
+    }
+    fetchStats();
+  }
+
 
 
 

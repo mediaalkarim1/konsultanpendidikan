@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { getAdminSupabase } from "@/lib/supabase-admin";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
 import { runAiEngineAnalysis } from "./ai-engine";
 import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
 import { seedTKSDQuestionsDirect } from "./seed-tksd";
 import { seedSMPQuestionsDirect } from "./seed-smp";
 import { seedSMAQuestionsDirect } from "./seed-sma";
+
 
 export type ConsultationSubmitPayload = {
   parent_name: string;
@@ -20,15 +20,8 @@ export type ConsultationSubmitPayload = {
   }[];
 };
 
-function getAdminSupabase() {
-  const DEFAULT_URL = "https://muyugntbzspnincoaekj.supabase.co";
-  const DEFAULT_KEY = "sb_publishable_KHzSJnooFPXSFmwcL8yvpg_pHLzwSBK";
-  const supabaseUrl = (typeof process !== 'undefined' && (process.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL)) || DEFAULT_URL;
-  const supabaseServiceKey = (typeof process !== 'undefined' && (process.env?.SUPABASE_SERVICE_ROLE_KEY || process.env?.SUPABASE_SERVICE_KEY || process.env?.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env?.VITE_SUPABASE_PUBLISHABLE_KEY)) || DEFAULT_KEY;
-  return createClient<Database>(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
-}
-
 export const submitConsultationAction = createServerFn({ method: "POST" })
+
   .validator((payload: ConsultationSubmitPayload) => payload)
   .handler(async (ctx) => {
     const { parent_name, child_name, whatsapp_number, level, answers } = ctx.data;
