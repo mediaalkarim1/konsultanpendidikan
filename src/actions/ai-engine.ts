@@ -274,13 +274,17 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
+    const composed = [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation]
+      .filter((v: any) => typeof v === "string" && v.trim())
+      .join("\n\n");
+
     return {
       summary: obj.summary || "Analisis telah selesai disusun.",
-      analysis: obj.analysis || text,
-      strengths: obj.strengths || "-",
+      analysis: obj.analysis || composed || text,
+      strengths: obj.strengths || obj.potential || "-",
       weaknesses: obj.weaknesses || "-",
       potential: obj.potential || "-",
-      risk: obj.risk || "-",
+      risk: obj.risk || obj.weaknesses || "-",
       education_recommendation: typeof obj.education_recommendation === "string" 
         ? obj.education_recommendation 
         : JSON.stringify(obj.education_recommendation, null, 2) || "-"
