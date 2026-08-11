@@ -223,81 +223,78 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
   const parentDisplay = parentName || "Orang Tua";
 
-  // Parse answers into Q&A pairs
-  const qaPairs: { q: string; a: string }[] = [];
-  if (formattedAnswers && formattedAnswers.trim()) {
-    const items = formattedAnswers.split("\n\n");
-    for (const item of items) {
+  type QA = { q: string; a: string };
+  const qa: QA[] = (formattedAnswers || "")
+    .split("\n\n")
+    .map((item) => {
       const lines = item.split("\n");
-      const q = lines[0]?.replace(/^P:\s*/, "").trim() || "";
-      const a = lines[1]?.replace(/^J:\s*/, "").trim() || "";
-      if (q && a && a !== "-") qaPairs.push({ q, a });
+      return {
+        q: (lines[0] || "").replace(/^P:\s*/, "").trim(),
+        a: (lines[1] || "").replace(/^J:\s*/, "").trim()
+      };
+    })
+    .filter((x) => x.q || x.a);
+
+  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat)/i;
+  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah)/i;
+
+  const shorten = (t: string, max = 90) => (t.length > max ? t.slice(0, max).trim() + "..." : t);
+  const lower = (t: string) => (t ? t.charAt(0).toLowerCase() + t.slice(1) : t);
+
+  const concerns: string[] = [];
+  const potentials: string[] = [];
+
+  for (const item of qa) {
+    if (!item.a) continue;
+    const topic = shorten(item.q.replace(/\?$/, ""));
+    if (NEGATIVE.test(item.a)) {
+      concerns.push(
+        `❗ ${topic}\nDari jawaban orang tua (${lower(shorten(item.a, 120))}), bagian ini terlihat masih membutuhkan pendampingan yang konsisten.`
+      );
+    } else if (POSITIVE.test(item.a)) {
+      potentials.push(
+        `🌟 ${topic}\nJawaban orang tua menunjukkan ${lower(shorten(item.a, 120))}, sehingga ini menjadi kekuatan yang dapat terus dikembangkan.`
+      );
     }
   }
 
-  // Build summary (1–2 paragraphs)
-  const summary = `${nameDisplay} adalah anak jenjang ${jenjangLabel} yang berdasarkan informasi dari ${parentDisplay} memiliki sejumlah karakteristik unik yang perlu dipahami dan didukung secara tepat. Dari keseluruhan jawaban yang disampaikan, terdapat beberapa pola yang perlu mendapat perhatian sekaligus potensi yang dapat dikembangkan lebih lanjut.`;
-
-  // Build area perhatian dynamically from answers
-  const areaItems: string[] = [];
-  if (qaPairs.length > 0) {
-    // Use up to first 3-4 Q&A pairs as area of concern
-    const concernPairs = qaPairs.slice(0, Math.min(4, qaPairs.length));
-    for (const pair of concernPairs) {
-      const shortQ = pair.q.length > 60 ? pair.q.substring(0, 60) + "..." : pair.q;
-      areaItems.push(`### ❗ ${shortQ}\n\nOrang tua menyampaikan bahwa ${pair.a.toLowerCase()}. Hal ini perlu mendapat perhatian dan pendampingan yang sesuai agar perkembangan ${nameDisplay} dapat berjalan optimal.`);
-    }
-  } else {
-    areaItems.push(`### ❗ Perlu Pendampingan Belajar yang Konsisten\n\nBerdasarkan informasi yang tersedia, ${nameDisplay} masih membutuhkan pendampingan yang terstruktur dalam rutinitas belajar sehari-hari.`);
+  if (concerns.length === 0 && qa.length > 0) {
+    concerns.push(
+      `❗ Konsistensi rutinitas belajar\nBelum terlihat kendala menonjol dari jawaban, namun menjaga ritme belajar harian tetap perlu diperhatikan.`
+    );
   }
-  const weaknessesText = areaItems.join("\n\n");
-
-  // Build minat & potensi
-  const potentialItems: string[] = [];
-  if (qaPairs.length > 2) {
-    const potentialPairs = qaPairs.slice(Math.min(4, qaPairs.length));
-    for (const pair of potentialPairs.slice(0, 3)) {
-      const shortQ = pair.q.length > 50 ? pair.q.substring(0, 50) + "..." : pair.q;
-      potentialItems.push(`### 🌟 ${shortQ}\n\nOrang tua menyebutkan bahwa ${pair.a.toLowerCase()}, yang menunjukkan adanya potensi yang dapat dikembangkan lebih jauh dengan stimulasi yang tepat.`);
-    }
+  if (potentials.length === 0 && qa.length > 0) {
+    potentials.push(
+      `🌟 Keterbukaan terhadap pendampingan\nDari jawaban yang diberikan, Ananda ${nameDisplay} masih responsif terhadap arahan orang tua.`
+    );
   }
-  if (potentialItems.length === 0) {
-    potentialItems.push(`### 🌟 Kemampuan Adaptasi\n\nBerdasarkan informasi yang tersedia, ${nameDisplay} menunjukkan kemampuan untuk menyesuaikan diri dengan lingkungan sekitarnya.`);
-  }
-  const strengthsText = potentialItems.join("\n\n");
 
-  // Build recommendation
-  const rekomendasi = `### 🎯 Rekomendasi Pendampingan
+  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan jawaban yang diberikan mengenai Ananda ${nameDisplay} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki kecenderungan belajar dan kebiasaan tersendiri yang khas.
 
-- Luangkan waktu setiap hari untuk mendampingi ${nameDisplay} belajar dalam suasana yang nyaman dan menyenangkan.
-- Berikan pujian atas usaha yang ditunjukkan ${nameDisplay}, bukan hanya pada hasil akhirnya.
-- Ciptakan rutinitas harian yang konsisten agar ${nameDisplay} merasa aman dan termotivasi.
-- Amati kegiatan yang paling membuat ${nameDisplay} bersemangat dan jadikan itu sebagai pintu masuk untuk belajar hal-hal baru.
-- Jalin komunikasi terbuka dengan ${nameDisplay} setiap hari agar orang tua dapat memahami perasaan dan kebutuhannya.`;
+Secara umum, kekuatan yang menonjol tampak pada ${potentials.length} hal, sementara terdapat ${concerns.length} hal utama yang perlu mendapat perhatian dan pendampingan di rumah.`;
 
-  // Build full analysis (all 4 sections combined)
-  const fullAnalysis = `## Ringkasan Awal
+  const concernsText = concerns.join("\n\n");
+  const potentialsText = potentials.join("\n\n");
 
-${summary}
+  const recommendation = `🎯 Rekomendasi Pendampingan
 
-## ❗ Area yang Perlu Diperhatikan
+- Dampingi Ananda ${nameDisplay} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
+- Kaitkan aktivitas belajar dengan minat dan potensi yang sudah terlihat agar anak lebih terlibat.
+- Beri apresiasi pada setiap usaha, bukan hanya pada hasil akhirnya.
+- Sepakati rutinitas harian yang sederhana dan realistis bersama anak.`;
 
-${weaknessesText}
-
-## 🌟 Minat & Potensi
-
-${strengthsText}
-
-${rekomendasi}`;
+  const fullNarrative = `${summary}\n\n${concernsText}\n\n${potentialsText}\n\n${recommendation}`;
 
   return {
     summary,
-    analysis: fullAnalysis,
-    strengths: strengthsText,
-    weaknesses: weaknessesText,
-    potential: potentialItems.map(p => p.replace(/^###.*\n\n/, "")).join(" "),
-    risk: areaItems.map(a => a.replace(/^###.*\n\n/, "")).join(" "),
-    education_recommendation: rekomendasi
+    analysis: fullNarrative,
+    strengths: potentialsText,
+    weaknesses: concernsText,
+    potential: potentialsText,
+    risk: concernsText,
+    education_recommendation: recommendation
+  };
+
   };
 }
 

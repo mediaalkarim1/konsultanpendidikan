@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { generateFallbackAnalysisResult, type AiAnalysisResult } from "../lib/pdf-generator";
+import { DEFAULT_UNIFIED_PROMPT } from "../lib/ai-prompt-default";
 
 function getAdminSupabase() {
   const DEFAULT_URL = "https://muyugntbzspnincoaekj.supabase.co";
@@ -78,8 +79,8 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
         id: "default-ai-engine",
         provider_name: "EduKonsul AI Engine",
         provider_key: "lovable",
-        api_key: process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
-        base_url: "https://ai-gateway.lovable.dev/v1",
+        api_key: process.env.LOVABLE_API_KEY || process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
+        base_url: "https://ai.gateway.lovable.dev/v1",
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
         max_tokens: 2048,
@@ -154,82 +155,8 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
     console.info("[AI Engine] No new-format prompt in DB — will auto-save new prompt to settings.");
   }
 
-  const defaultUnifiedPrompt = `# PERAN
-Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA.
+  const defaultUnifiedPrompt = DEFAULT_UNIFIED_PROMPT;
 
-Gunakan bahasa Indonesia yang hangat, sopan, mudah dipahami, dan tidak menghakimi. Berikan analisis yang membangun, realistis, dan berorientasi pada solusi.
-
----
-
-# DATA KONSULTASI
-Nama Orang Tua: {{nama_orang_tua}}
-Nama Anak: {{nama_anak}}
-Jenjang Pendidikan: {{jenjang}}
-
----
-
-# TUGAS
-Baca SELURUH jawaban orang tua dengan seksama.
-
-Temukan pola yang BENAR-BENAR muncul dari jawaban tersebut.
-
-Jangan gunakan template kategori yang sama untuk setiap anak.
-
-Setiap anak harus mendapatkan analisis yang berbeda sesuai jawaban orang tuanya.
-
----
-
-# FORMAT OUTPUT
-
-Hasil analisis hanya terdiri dari 4 bagian:
-
-## 1. RINGKASAN AWAL
-Berikan ringkasan singkat berdasarkan keseluruhan jawaban orang tua.
-Jelaskan: gambaran umum anak, kecenderungan yang terlihat, kekuatan yang menonjol, hal utama yang perlu diperhatikan.
-Gunakan 1–2 paragraf pendek.
-Jangan membuat kesimpulan yang tidak didukung oleh jawaban.
-
-## 2. AREA YANG PERLU DIPERHATIKAN
-Baca seluruh jawaban dan tentukan sendiri area yang perlu diperhatikan berdasarkan jawaban tersebut.
-JANGAN gunakan daftar kategori tetap seperti: konsentrasi, akademik, sosial, emosi, kemandirian, komunikasi, disiplin — kecuali memang benar-benar muncul dari jawaban.
-Tampilkan SEMUA area yang ditemukan dari jawaban — jumlahnya tidak ditentukan (bisa 2, bisa 8, bisa 10).
-Setiap area diawali dengan tanda ❗ dan menggunakan format heading ### ❗ [Nama Area]
-Disertai penjelasan singkat berdasarkan jawaban orang tua.
-Gabungkan jawaban dengan pola yang sama menjadi satu temuan.
-Jangan mengarang area yang tidak didukung jawaban.
-Jangan memberikan label negatif atau melakukan diagnosis medis.
-
-## 3. MINAT & POTENSI
-Temukan sendiri minat dan potensi anak berdasarkan jawaban orang tua.
-Jangan gunakan template potensi yang sama untuk semua anak.
-Tampilkan hanya potensi yang memiliki dasar dari jawaban.
-Setiap potensi menggunakan format heading ### 🌟 [Nama Potensi]
-Disertai penjelasan singkat berdasarkan jawaban.
-
-## 4. REKOMENDASI
-Berikan rekomendasi khusus untuk orang tua berdasarkan hasil analisis.
-Rekomendasi harus berhubungan langsung dengan area yang perlu diperhatikan, minat, potensi, pola belajar, dan kebutuhan anak dari jawaban.
-Gunakan rekomendasi konkret yang dapat dilakukan di rumah.
-JANGAN memberikan rekomendasi sekolah atau lembaga pendidikan tertentu.
-Gunakan heading ### 🎯 Rekomendasi Pendampingan
-Disertai bullet point rekomendasi yang spesifik.
-
----
-
-# ATURAN PENTING
-- Jangan membuat narasi panjang yang mengalir.
-- Jangan menggunakan template yang sama untuk semua anak.
-- Gunakan format heading dan bullet yang terstruktur.
-- Semua area perhatian WAJIB diawali tanda ❗.
-- Semua potensi WAJIB diawali tanda 🌟.
-- Rekomendasi WAJIB menggunakan 🎯.
-- Jangan menakut-nakuti orang tua.
-- Jangan melakukan diagnosis medis atau psikologis.
-- Jangan memberikan rekomendasi sekolah.
-- Jumlah area perhatian dan potensi mengikuti temuan dari jawaban.
-
-Data Jawaban Konsultasi:
-{{jawaban_lengkap}}`;
 
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
 
@@ -271,8 +198,9 @@ Nomor WhatsApp: ${whatsappNumber}
 ${formattedAnswers}
 
 === PETUNJUK OUTPUT ===
-Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
+Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
+<<<<<<< HEAD
   "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
   "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur: mulai dari ## Ringkasan Awal, lalu ### ❗ area-area yang perlu diperhatikan (hanya yang benar-benar ditemukan dari jawaban, jumlah tidak ditentukan), lalu ### 🌟 potensi dan minat (hanya yang ada dari jawaban), lalu ### 🎯 Rekomendasi Pendampingan berupa bullet point konkret untuk orang tua. Jangan gunakan kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
   "strengths": "Format markdown: Bagian 🌟 Minat & Potensi saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
@@ -280,6 +208,15 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
   "potential": "Narasi singkat proyeksi potensi anak berdasarkan jawaban (bukan template).",
   "risk": "Narasi singkat hal utama yang perlu perhatian berdasarkan jawaban.",
   "education_recommendation": "Format markdown: Bagian 🎯 Rekomendasi Pendampingan saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
+=======
+  "summary": "RINGKASAN AWAL: 1-2 paragraf pendek berdasarkan keseluruhan jawaban (gambaran umum, kecenderungan, kekuatan menonjol, hal utama yang perlu diperhatikan). Tanpa narasi panjang.",
+  "weaknesses": "AREA YANG PERLU DIPERHATIKAN: daftar temuan nyata dari jawaban. Setiap area diawali '❗ ' + judul area spesifik pada barisnya sendiri, lalu baris berikutnya penjelasan singkat. Pisahkan tiap area dengan baris kosong. Jumlah area mengikuti temuan (boleh 2, boleh 10). Jangan pakai kategori tetap.",
+  "potential": "MINAT & POTENSI: setiap potensi diawali '🌟 ' + nama potensi pada barisnya sendiri, lalu baris penjelasan singkat berdasarkan jawaban. Pisahkan dengan baris kosong.",
+  "education_recommendation": "REKOMENDASI: diawali '🎯 Rekomendasi Pendampingan' lalu daftar rekomendasi konkret untuk orang tua di rumah, terkait langsung dengan area perhatian dan potensi di atas. Jangan memberi rekomendasi untuk sekolah.",
+  "analysis": "Gabungan lengkap keempat bagian di atas berurutan: ringkasan, lalu semua baris ❗, lalu semua baris 🌟, lalu bagian 🎯. Tanpa narasi tambahan.",
+  "strengths": "Sama dengan isi MINAT & POTENSI.",
+  "risk": "Sama dengan isi AREA YANG PERLU DIPERHATIKAN."
+>>>>>>> ffb2e7377024e42c2692b7a4ec6db9d658e3c930
 }
 `;
 
@@ -354,11 +291,11 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
 
     } else {
       // OpenAI / Lovable Gateway / OpenRouter / DeepSeek / Groq / Mistral (Standard OpenAI format)
-      let endpoint = `${baseUrl || (provider.provider_key === "lovable" ? "https://ai-gateway.lovable.dev/v1" : "https://api.openai.com/v1")}/chat/completions`;
+      let endpoint = `${baseUrl || (provider.provider_key === "lovable" ? "https://ai.gateway.lovable.dev/v1" : "https://api.openai.com/v1")}/chat/completions`;
       
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const effectiveKey = (provider.provider_key === "lovable" && (!key || key.includes("auto"))) 
-        ? (process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto") 
+        ? (process.env.LOVABLE_API_KEY || process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto") 
         : key;
 
       if (effectiveKey) headers["Authorization"] = `Bearer ${effectiveKey}`;
@@ -415,13 +352,17 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
+    const composed = [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation]
+      .filter((v: any) => typeof v === "string" && v.trim())
+      .join("\n\n");
+
     return {
       summary: obj.summary || "Analisis telah selesai disusun.",
-      analysis: obj.analysis || text,
-      strengths: obj.strengths || "-",
+      analysis: obj.analysis || composed || text,
+      strengths: obj.strengths || obj.potential || "-",
       weaknesses: obj.weaknesses || "-",
       potential: obj.potential || "-",
-      risk: obj.risk || "-",
+      risk: obj.risk || obj.weaknesses || "-",
       education_recommendation: typeof obj.education_recommendation === "string" 
         ? obj.education_recommendation 
         : JSON.stringify(obj.education_recommendation, null, 2) || "-"

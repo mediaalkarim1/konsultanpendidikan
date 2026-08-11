@@ -81,6 +81,7 @@ function KonsultasiPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -190,6 +191,26 @@ function KonsultasiPage() {
     }
   }
 
+  async function handleReAnalyze(id: string) {
+    if (regeneratingId) return;
+    if (!confirm("Jalankan analisis ulang AI untuk data konsultasi ini? Hasil analisis lama akan diperbarui.")) return;
+    setRegeneratingId(id);
+    try {
+      const res = await reGenerateAnalysisAction({ data: { consultationId: id, email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success(`Analisis ulang selesai via ${res.provider || "AI Provider"}`);
+      } else {
+        toast.error("Gagal analisis ulang: " + (res.error || "Error AI Engine"));
+      }
+      fetchData();
+      fetchStats();
+    } catch (e: any) {
+      toast.error("Gagal analisis ulang: " + e.message);
+    } finally {
+      setRegeneratingId(null);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Apakah Anda yakin ingin menghapus data konsultasi ini? Seluruh jawaban & analisis terkait akan dihapus.")) return;
     
@@ -233,7 +254,7 @@ function KonsultasiPage() {
       const rows = exportData.map((item, index) => {
         const dateStr = format(new Date(item.created_at), "dd MMMM yyyy HH:mm", { locale: id });
         const parentName = (item.parent_name || "").replace(/"/g, '""');
-        const childName = (item.child_name || "-").replace(/"/g, '""');
+        const childName = ((item as any).child_name || "-").replace(/"/g, '""');
         const waNum = `'${item.whatsapp_number || ""}`;
         const levelLabel = LEVEL_LABELS[item.level] || item.level;
         const statusLabel = item.status || "-";
@@ -505,6 +526,25 @@ function KonsultasiPage() {
                           </button>
 
                           <button
+                            onClick={() => handleReAnalyze(row.id)}
+                            disabled={regeneratingId === row.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                            title="Jalankan Analisis Ulang AI"
+                          >
+                            {regeneratingId === row.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                <span>Menganalisis...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                                <span>Analisis Ulang</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
                             onClick={() => handleDelete(row.id)}
                             className="rounded-md border border-red-200 p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                             title="Hapus Data"
@@ -622,7 +662,7 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
         // Formatted answers text for narrative generator
         const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
-        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, consultation.child_name || "-", consultation.level, answersFormatted);
+        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, (consultation as any).child_name || "-", consultation.level, answersFormatted);
 
         let effectiveAnalysis = analysisData;
 
