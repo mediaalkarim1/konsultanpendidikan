@@ -656,19 +656,19 @@ export function normalizeParentRow(row: any) {
   }
 
   // Automatic Status determination:
-  // If analysis result exists -> "Analisis AI Selesai"
-  // If analysis is missing & status was pending -> "Menunggu Analisis"
+  // If analysis result exists -> "Analisis AI Selesai" (unless manually set to "Sudah Dihubungi" or "Selesai")
+  // If analysis is missing -> "Menunggu Analisis"
   // If error occurred -> "Gagal Analisis"
   const hasAnalysisData = Boolean(row.ai_result || row.summary || row.recommendation || row.analysis);
-  const isFailed = status.toLowerCase().includes("gagal") || Boolean(row.error_message);
+  const isFailed = (status && status.toLowerCase().includes("gagal")) || Boolean(row.error_message);
+  const isManualDoneOrContacted = status === "Sudah Dihubungi" || status === "Selesai" || status === "Closed" || status === "Konsultasi Selesai";
 
   if (isFailed) {
     status = "Gagal Analisis";
-  } else if (hasAnalysisData && (status === "Menunggu Analisis" || status === "Menunggu Analisis AI" || status === "Sedang Dianalisis" || status === "new")) {
-    status = "Analisis AI Selesai";
-  } else if (!hasAnalysisData && (status === "Analisis AI Selesai" || status === "Selesai Dianalisis" || status === "analyzed")) {
-    status = "Menunggu Analisis";
+  } else if (!isManualDoneOrContacted) {
+    status = hasAnalysisData ? "Analisis AI Selesai" : "Menunggu Analisis";
   }
+
 
   return {
     ...row,
@@ -826,7 +826,8 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
         }
       });
 
-      // Auto Sync DB: Update status in consultations table for analyzed rows
+      // Auto Sync & Auto-Heal:
+      // 1. Update status in consultations table for analyzed rows
       if (unSyncedAnalyzedIds.length > 0) {
         supabaseAdmin
           .from("consultations")
@@ -837,6 +838,23 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
           })
           .catch(() => {});
       }
+
+      // 2. Auto-analyze any pending consultations that have no analysis record yet
+      const pendingUnAnalyzed = (allCons || []).filter((item) => {
+        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
+        const s = (item.status || "").trim();
+        return !isAnalyzed && s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai";
+      });
+
+      if (pendingUnAnalyzed.length > 0) {
+        console.info(`[getConsultationsListAction] Auto-analyzing ${pendingUnAnalyzed.length} pending consultations...`);
+        for (const item of pendingUnAnalyzed.slice(0, 10)) {
+          processConsultation({ data: item.id }).catch((err) => {
+            console.warn(`[Auto-Analyze Warning] Failed for ${item.id}:`, err);
+          });
+        }
+      }
+
 
       // 3. Build query for paginated data
       let query = supabaseAdmin.from("consultations").select("*", { count: "exact" });
