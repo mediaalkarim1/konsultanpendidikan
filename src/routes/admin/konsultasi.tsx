@@ -756,35 +756,49 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
   const handleCopy = () => {
     if (!data) return;
+    const rawMarkdown = analysis?.analysis || data.ai_result || "";
+    
+    // Parse 4 sections dynamically
+    let sSummary = analysis?.summary || "";
+    let sWeaknesses = analysis?.weaknesses && analysis.weaknesses !== "-" ? analysis.weaknesses : "";
+    let sStrengths = analysis?.strengths && analysis.strengths !== "-" ? analysis.strengths : "";
+    let sRec = analysis?.education_recommendation && analysis.education_recommendation !== "-" ? analysis.education_recommendation : "";
+
+    if (!sWeaknesses && rawMarkdown) {
+      const match = rawMarkdown.match(/(?:##?\s*(?:2\.\s*)?AREA YANG PERLU DIPERHATIKAN|##?\s*❗[\s\S]*?Area yang Perlu Diperhatikan)([\s\S]*?)(?=## 3|## 4|\n# |$)/i);
+      if (match) sWeaknesses = match[1].trim();
+    }
+
+    if (!sStrengths && rawMarkdown) {
+      const match = rawMarkdown.match(/(?:##?\s*(?:3\.\s*)?MINAT & POTENSI|##?\s*🌟[\s\S]*?Minat & Potensi)([\s\S]*?)(?=## 4|\n# |$)/i);
+      if (match) sStrengths = match[1].trim();
+    }
+
+    if (!sRec && rawMarkdown) {
+      const match = rawMarkdown.match(/(?:##?\s*(?:4\.\s*)?REKOMENDASI|##?\s*🎯[\s\S]*?Rekomendasi)([\s\S]*?)(?=$)/i);
+      if (match) sRec = match[1].trim();
+    }
+
     const text = `=== LAPORAN EVALUASI & REKOMENDASI EDUKONSUL ===
 Nama Orang Tua: ${data.parent_name}
 Nama Anak: ${data.child_name || "-"}
 Nomor WhatsApp: ${data.whatsapp_number}
-Jenjang: ${LEVEL_LABELS[data.level]}
+Jenjang: ${LEVEL_LABELS[data.level] || data.level}
 
-1. RESUME KONDISI ANAK:
-${analysis?.summary || "-"}
+1. RINGKASAN AWAL:
+${sSummary || "-"}
 
-2. ANALISIS MENDALAM:
-${analysis?.analysis || data.ai_result || "-"}
+2. AREA YANG PERLU DIPERHATIKAN:
+${sWeaknesses || "-"}
 
-3. KEKUATAN UTAMA:
-${analysis?.strengths || "-"}
+3. MINAT & POTENSI:
+${sStrengths || "-"}
 
-4. AREA PENGEMBANGAN (KELEMAHAN):
-${analysis?.weaknesses || "-"}
-
-5. POTENSI ANAK:
-${analysis?.potential || "-"}
-
-6. TANTANGAN / RISIKO:
-${analysis?.risk || "-"}
-
-7. REKOMENDASI PENDIDIKAN & PARENTING:
-${analysis?.education_recommendation || "-"}
+4. REKOMENDASI PENDAMPINGAN:
+${sRec || "-"}
 `;
     navigator.clipboard.writeText(text);
-    toast.success("Seluruh laporan analisis berhasil disalin.");
+    toast.success("Hasil analisis (4 bagian) berhasil disalin.");
   };
 
   const handleSendWaManual = () => {
@@ -883,11 +897,11 @@ ${analysis?.education_recommendation || "-"}
               </div>
             </div>
 
-            {/* 3. HASIL ANALISIS AI (7 KOMPONEN) */}
+            {/* 3. HASIL ANALISIS AI (4 BAGIAN UTAMA) */}
             <div className="rounded-xl border border-brand/30 bg-brand/5 p-5 space-y-4 print:border-gray-300 print:bg-transparent">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-brand/20 pb-3 print:border-gray-300">
                 <h3 className="text-lg font-bold text-brand print:text-black flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Hasil Analisis & Rekomendasi AI
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Hasil Analisis AI (4 Bagian Utama)
                 </h3>
                 
                 <div className="flex items-center gap-2 print:hidden">
@@ -897,7 +911,7 @@ ${analysis?.education_recommendation || "-"}
                     className="flex items-center gap-1.5 rounded-md bg-brand/10 text-brand px-3 py-1.5 text-xs font-medium hover:bg-brand/20 disabled:opacity-50"
                   >
                     {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                    Generate Ulang AI
+                    Analisis Ulang AI
                   </button>
 
                   <button
@@ -914,31 +928,19 @@ ${analysis?.education_recommendation || "-"}
                 /* Form Edit Hasil AI */
                 <form onSubmit={handleSaveAnalysisEdit} className="space-y-4 print:hidden">
                   <div>
-                    <label className="block text-xs font-semibold mb-1">1. Ringkasan Kondisi Anak</label>
-                    <textarea value={editForm.summary} onChange={e => setEditForm({...editForm, summary: e.target.value})} className="w-full rounded border p-2 text-sm" rows={2} />
+                    <label className="block text-xs font-semibold mb-1">1. Ringkasan Awal</label>
+                    <textarea value={editForm.summary} onChange={e => setEditForm({...editForm, summary: e.target.value})} className="w-full rounded border p-2 text-sm" rows={3} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">2. Analisis Karakter & Gaya Belajar</label>
-                    <textarea value={editForm.analysis} onChange={e => setEditForm({...editForm, analysis: e.target.value})} className="w-full rounded border p-2 text-sm" rows={4} />
+                    <label className="block text-xs font-semibold mb-1">2. Area yang Perlu Diperhatikan (❗)</label>
+                    <textarea value={editForm.weaknesses} onChange={e => setEditForm({...editForm, weaknesses: e.target.value})} className="w-full rounded border p-2 text-sm" rows={4} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">3. Kekuatan Utama Anak</label>
-                    <textarea value={editForm.strengths} onChange={e => setEditForm({...editForm, strengths: e.target.value})} className="w-full rounded border p-2 text-sm" rows={2} />
+                    <label className="block text-xs font-semibold mb-1">3. Minat & Potensi (🌟)</label>
+                    <textarea value={editForm.strengths} onChange={e => setEditForm({...editForm, strengths: e.target.value})} className="w-full rounded border p-2 text-sm" rows={4} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">4. Area yang Perlu Dikembangkan (Kelemahan)</label>
-                    <textarea value={editForm.weaknesses} onChange={e => setEditForm({...editForm, weaknesses: e.target.value})} className="w-full rounded border p-2 text-sm" rows={2} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1">5. Potensi Bakat Anak</label>
-                    <textarea value={editForm.potential} onChange={e => setEditForm({...editForm, potential: e.target.value})} className="w-full rounded border p-2 text-sm" rows={2} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1">6. Risiko / Tantangan</label>
-                    <textarea value={editForm.risk} onChange={e => setEditForm({...editForm, risk: e.target.value})} className="w-full rounded border p-2 text-sm" rows={2} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1">7. Rekomendasi Pendidikan & Saran Konsultan</label>
+                    <label className="block text-xs font-semibold mb-1">4. Rekomendasi Pendampingan (🎯)</label>
                     <textarea value={editForm.education_recommendation} onChange={e => setEditForm({...editForm, education_recommendation: e.target.value})} className="w-full rounded border p-2 text-sm" rows={4} />
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
@@ -948,54 +950,39 @@ ${analysis?.education_recommendation || "-"}
                   </div>
                 </form>
               ) : (
-                /* View Mode 7 Komponen */
+                /* View Mode 4 Bagian Utama */
                 <div className="space-y-4 text-sm">
-                  {/* 1. Ringkasan */}
+                  {/* 1. Ringkasan Awal */}
                   <div className="rounded-lg bg-card p-3 border">
-                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">1. Ringkasan Kondisi Anak</h4>
+                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">1. Ringkasan Awal</h4>
                     <p className="whitespace-pre-wrap">{analysis?.summary || "Belum ada ringkasan."}</p>
                   </div>
 
-                  {/* 2. Analisis Karakter & Gaya Belajar */}
-                  <div className="rounded-lg bg-card p-3 border">
-                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">2. Analisis Karakter & Gaya Belajar</h4>
-                    <p className="whitespace-pre-wrap">{analysis?.analysis || data.ai_result || "Belum ada analisis."}</p>
+                  {/* 2. Area yang Perlu Diperhatikan */}
+                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200">
+                    <h4 className="font-semibold text-xs text-amber-700 uppercase tracking-wider mb-1">2. ❗ Area yang Perlu Diperhatikan</h4>
+                    <p className="whitespace-pre-wrap text-amber-900 dark:text-amber-300">
+                      {analysis?.weaknesses && analysis.weaknesses !== "-" ? analysis.weaknesses : (analysis?.analysis || data.ai_result || "-")}
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* 3. Kekuatan */}
-                    <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3 border border-emerald-200">
-                      <h4 className="font-semibold text-xs text-emerald-700 uppercase tracking-wider mb-1">3. Kekuatan Utama Anak</h4>
-                      <p className="whitespace-pre-wrap text-emerald-900 dark:text-emerald-300">{analysis?.strengths || "-"}</p>
-                    </div>
-
-                    {/* 4. Kelemahan */}
-                    <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200">
-                      <h4 className="font-semibold text-xs text-amber-700 uppercase tracking-wider mb-1">4. Area yang Perlu Dikembangkan</h4>
-                      <p className="whitespace-pre-wrap text-amber-900 dark:text-amber-300">{analysis?.weaknesses || "-"}</p>
-                    </div>
-
-                    {/* 5. Potensi */}
-                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-3 border border-blue-200">
-                      <h4 className="font-semibold text-xs text-blue-700 uppercase tracking-wider mb-1">5. Potensi Bakat Masa Depan</h4>
-                      <p className="whitespace-pre-wrap text-blue-900 dark:text-blue-300">{analysis?.potential || "-"}</p>
-                    </div>
-
-                    {/* 6. Risiko */}
-                    <div className="rounded-lg bg-red-50 dark:bg-red-950/20 p-3 border border-red-200">
-                      <h4 className="font-semibold text-xs text-red-700 uppercase tracking-wider mb-1">6. Risiko / Tantangan</h4>
-                      <p className="whitespace-pre-wrap text-red-900 dark:text-red-300">{analysis?.risk || "-"}</p>
-                    </div>
+                  {/* 3. Minat & Potensi */}
+                  <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3 border border-emerald-200">
+                    <h4 className="font-semibold text-xs text-emerald-700 uppercase tracking-wider mb-1">3. 🌟 Minat & Potensi</h4>
+                    <p className="whitespace-pre-wrap text-emerald-900 dark:text-emerald-300">
+                      {analysis?.strengths && analysis.strengths !== "-" ? analysis.strengths : (analysis?.potential || "-")}
+                    </p>
                   </div>
 
-                  {/* 7. Rekomendasi & Saran Konsultan */}
+                  {/* 4. Rekomendasi Pendampingan */}
                   <div className="rounded-lg bg-card p-3 border border-brand/40">
-                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">7. Rekomendasi & Saran Konsultan</h4>
+                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">4. 🎯 Rekomendasi Pendampingan</h4>
                     <p className="whitespace-pre-wrap">{analysis?.education_recommendation || "-"}</p>
                   </div>
                 </div>
               )}
             </div>
+
 
             {/* Riwayat Notifikasi WhatsApp */}
             <div className="mt-6 print:hidden" data-html2canvas-ignore="true">
