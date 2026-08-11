@@ -646,6 +646,7 @@ export function normalizeParentRow(row: any) {
   let childName = (row.child_name && row.child_name !== "-") ? row.child_name : "";
   let whatsappNumber = row.whatsapp_number || row.parent_phone || row.phone || "";
   let level = row.level || row.education_level || "tksd";
+  let status = (row.status || "Menunggu Analisis").trim();
 
   // If child_name is missing, empty, or '-', attempt to extract it from parent_name if saved as "Parent (Anak: Child)"
   if ((!childName || childName === "-") && typeof parentName === "string" && parentName.includes(" (Anak: ")) {
@@ -654,6 +655,20 @@ export function normalizeParentRow(row: any) {
     childName = parts[1].replace(/\)$/, "").trim();
   }
 
+  // Automatic Status determination:
+  // If analysis result exists -> "Analisis AI Selesai"
+  // If analysis is missing & status was pending -> "Menunggu Analisis"
+  // If error occurred -> "Gagal Analisis"
+  const hasAnalysisData = Boolean(row.ai_result || row.summary || row.recommendation || row.analysis);
+  const isFailed = status.toLowerCase().includes("gagal") || Boolean(row.error_message);
+
+  if (isFailed) {
+    status = "Gagal Analisis";
+  } else if (hasAnalysisData && (status === "Menunggu Analisis" || status === "Menunggu Analisis AI" || status === "Sedang Dianalisis" || status === "new")) {
+    status = "Analisis AI Selesai";
+  } else if (!hasAnalysisData && (status === "Analisis AI Selesai" || status === "Selesai Dianalisis" || status === "analyzed")) {
+    status = "Menunggu Analisis";
+  }
 
   return {
     ...row,
@@ -662,8 +677,8 @@ export function normalizeParentRow(row: any) {
     child_name: childName || "-",
     whatsapp_number: whatsappNumber,
     level,
-    created_at: row.created_at || new Date().toISOString(),
-    status: row.status || "Baru"
+    status,
+    created_at: row.created_at || new Date().toISOString()
   };
 }
 

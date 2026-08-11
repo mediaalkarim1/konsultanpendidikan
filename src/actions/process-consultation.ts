@@ -56,9 +56,9 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           parent_phone: whatsapp_number.trim(),
           level,
           education_level: level,
-          status: "Menunggu Analisis AI",
-          ai_status: "Menunggu Analisis AI",
-          consultation_status: "Menunggu Analisis AI"
+          status: "Menunggu Analisis",
+          ai_status: "Menunggu Analisis",
+          consultation_status: "Menunggu Analisis"
         })
         .select("*")
         .single();
@@ -76,7 +76,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             child_name: child_name.trim(),
             whatsapp_number: whatsapp_number.trim(),
             level,
-            status: "Menunggu Analisis AI"
+            status: "Menunggu Analisis"
           })
           .select("*")
           .single();
@@ -98,8 +98,9 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             parent_name: fallbackParentName,
             whatsapp_number: whatsapp_number.trim(),
             level,
-            status: "Menunggu Analisis AI"
+            status: "Menunggu Analisis"
           })
+
           .select("*")
           .single();
 
@@ -308,12 +309,13 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
         try {
           await supabaseAdmin.from("consultations").update({
-            status: "Gagal Analisis AI",
+            status: "Gagal Analisis",
             error_message: errMsg
           }).eq("id", consultation.id);
         } catch (_) {
-          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis AI" }).eq("id", consultation.id);
+          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis" }).eq("id", consultation.id);
         }
+
       } else {
         // 4. SIMPAN HASIL ANALISIS KE DATABASE
         const analysisData = aiResult.data;
