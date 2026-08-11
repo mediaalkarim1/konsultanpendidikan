@@ -191,6 +191,26 @@ function KonsultasiPage() {
     }
   }
 
+  async function handleReAnalyze(id: string) {
+    if (regeneratingId) return;
+    if (!confirm("Jalankan analisis ulang AI untuk data konsultasi ini? Hasil analisis lama akan diperbarui.")) return;
+    setRegeneratingId(id);
+    try {
+      const res = await reGenerateAnalysisAction({ data: { consultationId: id, email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success(`Analisis ulang selesai via ${res.provider || "AI Provider"}`);
+      } else {
+        toast.error("Gagal analisis ulang: " + (res.error || "Error AI Engine"));
+      }
+      fetchData();
+      fetchStats();
+    } catch (e: any) {
+      toast.error("Gagal analisis ulang: " + e.message);
+    } finally {
+      setRegeneratingId(null);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Apakah Anda yakin ingin menghapus data konsultasi ini? Seluruh jawaban & analisis terkait akan dihapus.")) return;
     
