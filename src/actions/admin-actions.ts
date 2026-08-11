@@ -229,7 +229,134 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-// --- Re-Generate AI Analysis & Edit Analysis ---
+// --- Force Activate New AI Prompt Format ---
+// This action writes the new 4-section structured prompt directly to DB,
+// overwriting any old narrative-format prompt that may exist.
+export const forceActivateNewPromptAction = createServerFn({ method: "POST" })
+  .validator((email: string) => email)
+  .handler(async (ctx) => {
+    const supabaseAdmin = getAdminSupabase();
+    const email = ctx.data || "admin";
+
+    const NEW_PROMPT = `# PERAN
+Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA.
+
+Gunakan bahasa Indonesia yang hangat, sopan, mudah dipahami, dan tidak menghakimi. Berikan analisis yang membangun, realistis, dan berorientasi pada solusi.
+
+---
+
+# DATA KONSULTASI
+Nama Orang Tua: {{nama_orang_tua}}
+Nama Anak: {{nama_anak}}
+Jenjang Pendidikan: {{jenjang}}
+
+---
+
+# TUGAS
+Baca SELURUH jawaban orang tua dengan seksama.
+
+Temukan pola yang BENAR-BENAR muncul dari jawaban tersebut.
+
+Jangan gunakan template kategori yang sama untuk setiap anak.
+
+Setiap anak harus mendapatkan analisis yang berbeda sesuai jawaban orang tuanya.
+
+---
+
+# FORMAT OUTPUT
+
+Hasil analisis hanya terdiri dari 4 bagian:
+
+## 1. RINGKASAN AWAL
+Berikan ringkasan singkat berdasarkan keseluruhan jawaban orang tua.
+Jelaskan: gambaran umum anak, kecenderungan yang terlihat, kekuatan yang menonjol, hal utama yang perlu diperhatikan.
+Gunakan 1-2 paragraf pendek.
+Jangan membuat kesimpulan yang tidak didukung oleh jawaban.
+
+## 2. AREA YANG PERLU DIPERHATIKAN
+Baca seluruh jawaban dan tentukan sendiri area yang perlu diperhatikan berdasarkan jawaban tersebut.
+JANGAN gunakan daftar kategori tetap seperti: konsentrasi, akademik, sosial, emosi, kemandirian, komunikasi, disiplin - kecuali memang benar-benar muncul dari jawaban.
+Tampilkan SEMUA area yang ditemukan dari jawaban - jumlahnya tidak ditentukan (bisa 2, bisa 8, bisa 10).
+Setiap area diawali dengan tanda dan menggunakan format heading ### [tanda seru] [Nama Area]
+Disertai penjelasan singkat berdasarkan jawaban orang tua.
+Gabungkan jawaban dengan pola yang sama menjadi satu temuan.
+Jangan mengarang area yang tidak didukung jawaban.
+Jangan memberikan label negatif atau melakukan diagnosis medis.
+
+## 3. MINAT & POTENSI
+Temukan sendiri minat dan potensi anak berdasarkan jawaban orang tua.
+Jangan gunakan template potensi yang sama untuk semua anak.
+Tampilkan hanya potensi yang memiliki dasar dari jawaban.
+Setiap potensi menggunakan format heading ### [bintang] [Nama Potensi]
+Disertai penjelasan singkat berdasarkan jawaban.
+
+## 4. REKOMENDASI
+Berikan rekomendasi khusus untuk orang tua berdasarkan hasil analisis.
+Rekomendasi harus berhubungan langsung dengan area yang perlu diperhatikan, minat, potensi, pola belajar, dan kebutuhan anak dari jawaban.
+Gunakan rekomendasi konkret yang dapat dilakukan di rumah.
+JANGAN memberikan rekomendasi sekolah atau lembaga pendidikan tertentu.
+Gunakan heading ### [target] Rekomendasi Pendampingan
+Disertai bullet point rekomendasi yang spesifik.
+
+---
+
+# ATURAN PENTING
+- Jangan membuat narasi panjang yang mengalir.
+- Jangan menggunakan template yang sama untuk semua anak.
+- Gunakan format heading dan bullet yang terstruktur.
+- Semua area perhatian WAJIB diawali tanda seru.
+- Semua potensi WAJIB diawali tanda bintang.
+- Rekomendasi WAJIB menggunakan tanda target.
+- Jangan menakut-nakuti orang tua.
+- Jangan melakukan diagnosis medis atau psikologis.
+- Jangan memberikan rekomendasi sekolah.
+- Jumlah area perhatian dan potensi mengikuti temuan dari jawaban.
+
+Data Jawaban Konsultasi:
+{{jawaban_lengkap}}`;
+
+    const settingPayload = {
+      id: "unified-prompt-v2",
+      system_prompt: NEW_PROMPT,
+      analysis_prompt: NEW_PROMPT,
+      summary_prompt: NEW_PROMPT,
+      recommendation_prompt: NEW_PROMPT,
+      selected_model: "google/gemini-2.5-flash",
+      format_version: "v2-structured-4section",
+      updated_at: new Date().toISOString()
+    };
+
+    // 1. Overwrite settings table
+    const { error: settingErr } = await supabaseAdmin.from("settings").upsert({
+      key: "ai.unified_prompt",
+      value: settingPayload as any,
+      is_public: false,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "key" });
+
+    if (settingErr) {
+      console.error("[forceActivateNewPromptAction] settings upsert error:", settingErr);
+      return { success: false, error: settingErr.message };
+    }
+
+    // 2. Also overwrite all rows in ai_prompts table
+    try {
+      await supabaseAdmin.from("ai_prompts").update({
+        system_prompt: NEW_PROMPT,
+        analysis_prompt: NEW_PROMPT,
+        summary_prompt: NEW_PROMPT,
+        recommendation_prompt: NEW_PROMPT,
+        updated_at: new Date().toISOString()
+      }).neq("id", "00000000-0000-0000-0000-000000000000"); // update all rows
+    } catch (dbErr) {
+      console.warn("[forceActivateNewPromptAction] ai_prompts update notice:", dbErr);
+    }
+
+    await logActivityInternal(email, "FORCE_ACTIVATE_NEW_PROMPT", { format_version: "v2-structured-4section" });
+    return { success: true, message: "Prompt baru (format 4 bagian) berhasil diaktifkan di database." };
+  });
+
+
 export const reGenerateAnalysisAction = createServerFn({ method: "POST" })
   .validator((payload: { consultationId: string; email: string }) => payload)
   .handler(async (ctx) => {

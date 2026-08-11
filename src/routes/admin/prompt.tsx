@@ -3,81 +3,85 @@ import { useEffect, useState } from "react";
 import { Save, Loader2, Info, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
-import { getMultiPromptsAction, saveMultiPromptsAction } from "@/actions/admin-actions";
+import { getMultiPromptsAction, saveMultiPromptsAction, forceActivateNewPromptAction } from "@/actions/admin-actions";
 
 export const Route = createFileRoute("/admin/prompt")({
   component: PromptAIPage,
 });
 
-const DEFAULT_UNIFIED_PROMPT = `# ROLE
-Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA. Anda bertugas membantu orang tua memahami kondisi anak berdasarkan jawaban yang diberikan pada formulir konsultasi.
+const DEFAULT_UNIFIED_PROMPT = `# PERAN
+Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA.
 
 Gunakan bahasa Indonesia yang hangat, sopan, mudah dipahami, dan tidak menghakimi. Berikan analisis yang membangun, realistis, dan berorientasi pada solusi.
 
 ---
 
-# TUGAS
-Analisis seluruh jawaban dari orang tua secara menyeluruh.
-
-Jangan hanya menjelaskan setiap jawaban satu per satu, tetapi hubungkan seluruh informasi menjadi sebuah cerita yang utuh sehingga orang tua merasa sedang membaca hasil konsultasi dari seorang konsultan pendidikan.
-
-Tulislah dalam bentuk narasi yang mengalir, bukan poin-poin.
-
+# DATA KONSULTASI
 Nama Orang Tua: {{nama_orang_tua}}
 Nama Anak: {{nama_anak}}
 Jenjang Pendidikan: {{jenjang}}
 
 ---
 
-# FORMAT HASIL
-Awali dengan sapaan kepada orang tua (Ibu/Bapak {{nama_orang_tua}} / Ayah Bunda).
+# TUGAS
+Baca SELURUH jawaban orang tua dengan seksama.
 
-Contoh:
-"Ayah Bunda {{nama_orang_tua}}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda {{nama_anak}}."
+Temukan pola yang BENAR-BENAR muncul dari jawaban tersebut.
 
-Selanjutnya buat narasi yang membahas:
-• Gambaran umum kondisi anak.
-• Potensi yang sudah terlihat.
-• Hal-hal yang masih perlu mendapatkan perhatian.
-• Analisis hubungan antar jawaban yang diberikan.
-• Faktor yang kemungkinan memengaruhi kondisi anak.
-• Dampak apabila kondisi tersebut tidak mendapatkan pendampingan yang tepat.
-• Harapan perkembangan anak apabila mendapatkan stimulasi yang sesuai.
+Jangan gunakan template kategori yang sama untuk setiap anak.
 
-Kemudian tutup dengan narasi rekomendasi yang hangat.
-
-Contoh:
-"Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda {{nama_anak}} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran."
+Setiap anak harus mendapatkan analisis yang berbeda sesuai jawaban orang tuanya.
 
 ---
 
-# GAYA PENULISAN
-- Gunakan paragraf yang mengalir.
-- Hindari bullet point.
-- Hindari angka atau penilaian skor.
-- Hindari kalimat yang terlalu teknis.
-- Hindari bahasa yang menghakimi.
-- Hindari menyimpulkan diagnosis.
-- Gunakan bahasa yang empatik.
-- Berikan penjelasan yang mudah dipahami oleh orang tua.
+# FORMAT OUTPUT
+
+Hasil analisis hanya terdiri dari 4 bagian:
+
+## 1. RINGKASAN AWAL
+Berikan ringkasan singkat berdasarkan keseluruhan jawaban orang tua.
+Jelaskan: gambaran umum anak, kecenderungan yang terlihat, kekuatan yang menonjol, hal utama yang perlu diperhatikan.
+Gunakan 1–2 paragraf pendek.
+Jangan membuat kesimpulan yang tidak didukung oleh jawaban.
+
+## 2. AREA YANG PERLU DIPERHATIKAN
+Baca seluruh jawaban dan tentukan sendiri area yang perlu diperhatikan berdasarkan jawaban tersebut.
+JANGAN gunakan daftar kategori tetap seperti: konsentrasi, akademik, sosial, emosi, kemandirian, komunikasi, disiplin — kecuali memang benar-benar muncul dari jawaban.
+Tampilkan SEMUA area yang ditemukan dari jawaban — jumlahnya tidak ditentukan (bisa 2, bisa 8, bisa 10).
+Setiap area diawali dengan tanda ❗ dan menggunakan format heading ### ❗ [Nama Area]
+Disertai penjelasan singkat berdasarkan jawaban orang tua.
+Gabungkan jawaban dengan pola yang sama menjadi satu temuan.
+Jangan mengarang area yang tidak didukung jawaban.
+Jangan memberikan label negatif atau melakukan diagnosis medis.
+
+## 3. MINAT & POTENSI
+Temukan sendiri minat dan potensi anak berdasarkan jawaban orang tua.
+Jangan gunakan template potensi yang sama untuk semua anak.
+Tampilkan hanya potensi yang memiliki dasar dari jawaban.
+Setiap potensi menggunakan format heading ### 🌟 [Nama Potensi]
+Disertai penjelasan singkat berdasarkan jawaban.
+
+## 4. REKOMENDASI
+Berikan rekomendasi khusus untuk orang tua berdasarkan hasil analisis.
+Rekomendasi harus berhubungan langsung dengan area yang perlu diperhatikan, minat, potensi, pola belajar, dan kebutuhan anak dari jawaban.
+Gunakan rekomendasi konkret yang dapat dilakukan di rumah.
+JANGAN memberikan rekomendasi sekolah atau lembaga pendidikan tertentu.
+Gunakan heading ### 🎯 Rekomendasi Pendampingan
+Disertai bullet point rekomendasi yang spesifik.
 
 ---
 
-# PANJANG ANALISIS
-Minimal 500 kata.
-Maksimal 900 kata.
-
----
-
-# OUTPUT
-Hasil akhir harus berupa narasi konsultasi profesional yang terasa seperti ditulis langsung oleh seorang konsultan pendidikan, bukan oleh AI.
-
-Jangan menggunakan format markdown.
-Jangan menggunakan tabel.
-Jangan menggunakan bullet point.
-Jangan menggunakan heading.
-
-Hasil hanya berupa narasi utuh dari awal hingga akhir.
+# ATURAN PENTING
+- Jangan membuat narasi panjang yang mengalir.
+- Jangan menggunakan template yang sama untuk semua anak.
+- Gunakan format heading dan bullet yang terstruktur.
+- Semua area perhatian WAJIB diawali tanda ❗.
+- Semua potensi WAJIB diawali tanda 🌟.
+- Rekomendasi WAJIB menggunakan 🎯.
+- Jangan menakut-nakuti orang tua.
+- Jangan melakukan diagnosis medis atau psikologis.
+- Jangan memberikan rekomendasi sekolah.
+- Jumlah area perhatian dan potensi mengikuti temuan dari jawaban.
 
 Data Jawaban Konsultasi:
 {{jawaban_lengkap}}`;
@@ -94,11 +98,20 @@ export function PromptAIPage() {
   const { userEmail } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activating, setActivating] = useState(false);
+  const [isOldFormat, setIsOldFormat] = useState(false);
 
   const [promptId, setPromptId] = useState("");
   const [promptTitle, setPromptTitle] = useState("Prompt Analisis, Resume & Rekomendasi Pendidikan AI Engine");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3.5-flash");
+
+  const OLD_FORMAT_MARKERS = [
+    "500 kata", "900 kata", "narasi yang mengalir", "FORMAT HASIL",
+    "GAYA PENULISAN", "PANJANG ANALISIS", "narasi utuh dari awal hingga akhir",
+    "# ROLE\n", "Pakar Analis Potensi", "RANGKUMAN PROFIL"
+  ];
+  const detectOldFormat = (p: string) => OLD_FORMAT_MARKERS.some(m => p.includes(m));
 
   const loadPrompts = async () => {
     try {
@@ -106,10 +119,19 @@ export function PromptAIPage() {
       const data = await getMultiPromptsAction();
       if (data) {
         setPromptId(data.id || "");
-        setSystemPrompt(data.system_prompt || DEFAULT_UNIFIED_PROMPT);
+        const dbPrompt = data.system_prompt || DEFAULT_UNIFIED_PROMPT;
+        // If DB has old format prompt, show new default + flag warning
+        if (detectOldFormat(dbPrompt)) {
+          setSystemPrompt(DEFAULT_UNIFIED_PROMPT);
+          setIsOldFormat(true);
+        } else {
+          setSystemPrompt(dbPrompt);
+          setIsOldFormat(false);
+        }
         if (data.selected_model) setSelectedModel(data.selected_model);
       } else {
         setSystemPrompt(DEFAULT_UNIFIED_PROMPT);
+        setIsOldFormat(false);
       }
     } catch (e) {
       console.error(e);
@@ -154,6 +176,23 @@ export function PromptAIPage() {
     }
   };
 
+  const handleForceActivate = async () => {
+    setActivating(true);
+    try {
+      const res = await forceActivateNewPromptAction({ data: userEmail || "admin" });
+      if (res && res.success) {
+        toast.success("✅ Prompt baru (format 4 bagian) berhasil diaktifkan di database!");
+        setIsOldFormat(false);
+        await loadPrompts();
+      } else {
+        toast.error("Gagal mengaktifkan prompt: " + ((res as any)?.error || "Error"));
+      }
+    } catch (e: any) {
+      toast.error("Error: " + (e.message || "Gagal mengaktifkan prompt"));
+    } finally {
+      setActivating(false);
+    }
+  };
   if (loading) {
     return (
       <div className="flex h-32 items-center justify-center">
@@ -174,6 +213,27 @@ export function PromptAIPage() {
           </p>
         </div>
       </div>
+
+      {isOldFormat && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 p-4 flex gap-3">
+          <div className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400 text-lg">⚠️</div>
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800 dark:text-amber-200 text-sm">Prompt lama (format narasi) masih tersimpan di database</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              Prompt AI yang tersimpan di Supabase masih menggunakan format narasi lama. AI Analysis akan menggunakan format baru dari kode, namun untuk memastikan konsistensi penuh, aktifkan prompt baru ke database sekarang.
+            </p>
+            <button
+              type="button"
+              onClick={handleForceActivate}
+              disabled={activating}
+              className="mt-2 flex items-center gap-2 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-semibold text-white transition disabled:opacity-50"
+            >
+              {activating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              {activating ? "Mengaktifkan..." : "Aktifkan Prompt Baru ke Database Sekarang"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSave} className="space-y-6">
         <div className="rounded-xl border border-blue-200 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/30 p-4 flex gap-3 text-sm text-blue-700 dark:text-blue-300">

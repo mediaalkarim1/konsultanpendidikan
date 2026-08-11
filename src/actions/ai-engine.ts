@@ -91,95 +91,166 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
 
   // 2. Fetch active prompts from DB
   let systemPromptFromDb = "";
-  const { data: promptSetting } = await supabaseAdmin
-    .from("settings")
-    .select("value")
-    .eq("key", "ai.unified_prompt")
-    .maybeSingle();
 
-  if (promptSetting && (promptSetting.value as any)?.system_prompt) {
-    systemPromptFromDb = (promptSetting.value as any).system_prompt;
-  } else {
-    let { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
-    if (prompt?.system_prompt) {
-      systemPromptFromDb = prompt.system_prompt;
+  // Helper: detect if a prompt string is the OLD narrative format (pre-Aug 2026)
+  // If old format is detected, we ignore DB and use the new hardcoded default
+  const isOldFormatPrompt = (p: string): boolean => {
+    if (!p) return false;
+    const oldMarkers = [
+      "500 kata",
+      "900 kata",
+      "narasi yang mengalir",
+      "narasi konsultasi profesional",
+      "FORMAT HASIL",
+      "GAYA PENULISAN",
+      "PANJANG ANALISIS",
+      "narasi utuh dari awal hingga akhir",
+      "Gunakan paragraf yang mengalir",
+      "bullet point",
+      "Pakar Analis Potensi",
+      "RANGKUMAN PROFIL",
+      "ANALISIS KESIAPAN",
+      "REKOMENDASI PENDIDIKAN",
+      "gaya belajar dominan",
+      "# ROLE\n"
+    ];
+    return oldMarkers.some(marker => p.includes(marker));
+  };
+
+  try {
+    const { data: promptSetting } = await supabaseAdmin
+      .from("settings")
+      .select("value")
+      .eq("key", "ai.unified_prompt")
+      .maybeSingle();
+
+    if (promptSetting && (promptSetting.value as any)?.system_prompt) {
+      const dbPrompt = (promptSetting.value as any).system_prompt;
+      if (!isOldFormatPrompt(dbPrompt)) {
+        systemPromptFromDb = dbPrompt;
+        console.info("[AI Engine] Using prompt from settings table (new format).");
+      } else {
+        console.info("[AI Engine] DB prompt is old format — using new default prompt instead.");
+      }
     }
+  } catch (_) {}
+
+  // Fallback: check ai_prompts table only if settings had nothing usable
+  if (!systemPromptFromDb) {
+    try {
+      const { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+      if (prompt?.system_prompt && !isOldFormatPrompt(prompt.system_prompt)) {
+        systemPromptFromDb = prompt.system_prompt;
+        console.info("[AI Engine] Using prompt from ai_prompts table (new format).");
+      } else if (prompt?.system_prompt) {
+        console.info("[AI Engine] ai_prompts table prompt is old format — using new default.");
+      }
+    } catch (_) {}
   }
 
-  const defaultUnifiedPrompt = `# ROLE
-Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA. Anda bertugas membantu orang tua memahami kondisi anak berdasarkan jawaban yang diberikan pada formulir konsultasi.
+  // Auto-update DB in background if no valid new-format prompt was found
+  // This writes the new prompt to DB so future calls use DB (avoids code dependency)
+  if (!systemPromptFromDb) {
+    console.info("[AI Engine] No new-format prompt in DB — will auto-save new prompt to settings.");
+  }
+
+  const defaultUnifiedPrompt = `# PERAN
+Anda adalah Konsultan Pendidikan Anak profesional yang berpengalaman dalam perkembangan anak usia TK, SD, SMP, dan SMA.
 
 Gunakan bahasa Indonesia yang hangat, sopan, mudah dipahami, dan tidak menghakimi. Berikan analisis yang membangun, realistis, dan berorientasi pada solusi.
 
 ---
 
-# TUGAS
-Analisis seluruh jawaban dari orang tua secara menyeluruh.
-
-Jangan hanya menjelaskan setiap jawaban satu per satu, tetapi hubungkan seluruh informasi menjadi sebuah cerita yang utuh sehingga orang tua merasa sedang membaca hasil konsultasi dari seorang konsultan pendidikan.
-
-Tulislah dalam bentuk narasi yang mengalir, bukan poin-poin.
-
+# DATA KONSULTASI
 Nama Orang Tua: {{nama_orang_tua}}
 Nama Anak: {{nama_anak}}
 Jenjang Pendidikan: {{jenjang}}
 
 ---
 
-# FORMAT HASIL
-Awali dengan sapaan kepada orang tua (Ibu/Bapak {{nama_orang_tua}} / Ayah Bunda).
+# TUGAS
+Baca SELURUH jawaban orang tua dengan seksama.
 
-Contoh:
-"Ayah Bunda {{nama_orang_tua}}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda {{nama_anak}}."
+Temukan pola yang BENAR-BENAR muncul dari jawaban tersebut.
 
-Selanjutnya buat narasi yang membahas:
-• Gambaran umum kondisi anak.
-• Potensi yang sudah terlihat.
-• Hal-hal yang masih perlu mendapatkan perhatian.
-• Analisis hubungan antar jawaban yang diberikan.
-• Faktor yang kemungkinan memengaruhi kondisi anak.
-• Dampak apabila kondisi tersebut tidak mendapatkan pendampingan yang tepat.
-• Harapan perkembangan anak apabila mendapatkan stimulasi yang sesuai.
+Jangan gunakan template kategori yang sama untuk setiap anak.
 
-Kemudian tutup dengan narasi rekomendasi yang hangat.
-
-Contoh:
-"Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda {{nama_anak}} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran."
+Setiap anak harus mendapatkan analisis yang berbeda sesuai jawaban orang tuanya.
 
 ---
 
-# GAYA PENULISAN
-- Gunakan paragraf yang mengalir.
-- Hindari bullet point.
-- Hindari angka atau penilaian skor.
-- Hindari kalimat yang terlalu teknis.
-- Hindari bahasa yang menghakimi.
-- Hindari menyimpulkan diagnosis.
-- Gunakan bahasa yang empatik.
-- Berikan penjelasan yang mudah dipahami oleh orang tua.
+# FORMAT OUTPUT
+
+Hasil analisis hanya terdiri dari 4 bagian:
+
+## 1. RINGKASAN AWAL
+Berikan ringkasan singkat berdasarkan keseluruhan jawaban orang tua.
+Jelaskan: gambaran umum anak, kecenderungan yang terlihat, kekuatan yang menonjol, hal utama yang perlu diperhatikan.
+Gunakan 1–2 paragraf pendek.
+Jangan membuat kesimpulan yang tidak didukung oleh jawaban.
+
+## 2. AREA YANG PERLU DIPERHATIKAN
+Baca seluruh jawaban dan tentukan sendiri area yang perlu diperhatikan berdasarkan jawaban tersebut.
+JANGAN gunakan daftar kategori tetap seperti: konsentrasi, akademik, sosial, emosi, kemandirian, komunikasi, disiplin — kecuali memang benar-benar muncul dari jawaban.
+Tampilkan SEMUA area yang ditemukan dari jawaban — jumlahnya tidak ditentukan (bisa 2, bisa 8, bisa 10).
+Setiap area diawali dengan tanda ❗ dan menggunakan format heading ### ❗ [Nama Area]
+Disertai penjelasan singkat berdasarkan jawaban orang tua.
+Gabungkan jawaban dengan pola yang sama menjadi satu temuan.
+Jangan mengarang area yang tidak didukung jawaban.
+Jangan memberikan label negatif atau melakukan diagnosis medis.
+
+## 3. MINAT & POTENSI
+Temukan sendiri minat dan potensi anak berdasarkan jawaban orang tua.
+Jangan gunakan template potensi yang sama untuk semua anak.
+Tampilkan hanya potensi yang memiliki dasar dari jawaban.
+Setiap potensi menggunakan format heading ### 🌟 [Nama Potensi]
+Disertai penjelasan singkat berdasarkan jawaban.
+
+## 4. REKOMENDASI
+Berikan rekomendasi khusus untuk orang tua berdasarkan hasil analisis.
+Rekomendasi harus berhubungan langsung dengan area yang perlu diperhatikan, minat, potensi, pola belajar, dan kebutuhan anak dari jawaban.
+Gunakan rekomendasi konkret yang dapat dilakukan di rumah.
+JANGAN memberikan rekomendasi sekolah atau lembaga pendidikan tertentu.
+Gunakan heading ### 🎯 Rekomendasi Pendampingan
+Disertai bullet point rekomendasi yang spesifik.
 
 ---
 
-# PANJANG ANALISIS
-Minimal 500 kata.
-Maksimal 900 kata.
-
----
-
-# OUTPUT
-Hasil akhir harus berupa narasi konsultasi profesional yang terasa seperti ditulis langsung oleh seorang konsultan pendidikan, bukan oleh AI.
-
-Jangan menggunakan format markdown.
-Jangan menggunakan tabel.
-Jangan menggunakan bullet point.
-Jangan menggunakan heading.
-
-Hasil hanya berupa narasi utuh dari awal hingga akhir.
+# ATURAN PENTING
+- Jangan membuat narasi panjang yang mengalir.
+- Jangan menggunakan template yang sama untuk semua anak.
+- Gunakan format heading dan bullet yang terstruktur.
+- Semua area perhatian WAJIB diawali tanda ❗.
+- Semua potensi WAJIB diawali tanda 🌟.
+- Rekomendasi WAJIB menggunakan 🎯.
+- Jangan menakut-nakuti orang tua.
+- Jangan melakukan diagnosis medis atau psikologis.
+- Jangan memberikan rekomendasi sekolah.
+- Jumlah area perhatian dan potensi mengikuti temuan dari jawaban.
 
 Data Jawaban Konsultasi:
 {{jawaban_lengkap}}`;
 
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
+
+  // Auto-persist new prompt to DB if not already there (fire-and-forget, non-blocking)
+  if (!systemPromptFromDb) {
+    const newPromptPayload = {
+      id: "unified-prompt",
+      system_prompt: defaultUnifiedPrompt,
+      analysis_prompt: defaultUnifiedPrompt,
+      summary_prompt: defaultUnifiedPrompt,
+      recommendation_prompt: defaultUnifiedPrompt,
+      updated_at: new Date().toISOString()
+    };
+    supabaseAdmin.from("settings").upsert(
+      { key: "ai.unified_prompt", value: newPromptPayload as any, is_public: false },
+      { onConflict: "key" }
+    ).then(() => {
+      console.info("[AI Engine] Auto-saved new-format prompt to DB settings for future use.");
+    }).catch(() => {});
+  }
+
   const processedPrompt = mainPromptTemplate
     .replace(/{{nama_orang_tua}}/g, parentName)
     .replace(/{{nama_anak}}/g, childName || "-")
@@ -202,13 +273,13 @@ ${formattedAnswers}
 === PETUNJUK OUTPUT ===
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
 {
-  "summary": "Tuliskan narasi paragraf sapaan hangat pembuka dan gambaran umum kondisi anak (150-200 kata)",
-  "analysis": "Tuliskan narasi analisis mengalir utuh yang menghubungkan seluruh observasi kuesioner, faktor yang mempengaruhi, serta dampak & harapan perkembangan (300-500 kata)",
-  "strengths": "Narasi mengalir mengenai potensi & kekuatan utama anak tanpa bullet point",
-  "weaknesses": "Narasi mengalir mengenai hal-hal yang memerlukan perhatian & stimulasi tanpa bullet point",
-  "potential": "Narasi mengalir proyeksi minat, bakat, dan arah perkembangan anak tanpa bullet point",
-  "risk": "Narasi mengalir tantangan & dampak bila kurang pendampingan tanpa bullet point",
-  "education_recommendation": "Narasi penutup rekomendasi hangat meliputi metode belajar, lingkungan sekolah, dan parenting tanpa bullet point"
+  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
+  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur: mulai dari ## Ringkasan Awal, lalu ### ❗ area-area yang perlu diperhatikan (hanya yang benar-benar ditemukan dari jawaban, jumlah tidak ditentukan), lalu ### 🌟 potensi dan minat (hanya yang ada dari jawaban), lalu ### 🎯 Rekomendasi Pendampingan berupa bullet point konkret untuk orang tua. Jangan gunakan kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
+  "strengths": "Format markdown: Bagian 🌟 Minat & Potensi saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
+  "weaknesses": "Format markdown: Bagian ❗ Area yang Perlu Diperhatikan saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
+  "potential": "Narasi singkat proyeksi potensi anak berdasarkan jawaban (bukan template).",
+  "risk": "Narasi singkat hal utama yang perlu perhatian berdasarkan jawaban.",
+  "education_recommendation": "Format markdown: Bagian 🎯 Rekomendasi Pendampingan saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
 }
 `;
 
