@@ -648,19 +648,19 @@ export function normalizeParentRow(row: any) {
     childName = parts[1].replace(/\)$/, "").trim();
   }
 
-  // Automatic Status determination:
-  // If analysis result exists -> "Analisis AI Selesai" (unless manually set to "Sudah Dihubungi" or "Selesai")
-  // If analysis is missing -> "Menunggu Analisis"
-  // If error occurred -> "Gagal Analisis"
-  const hasAnalysisData = Boolean(row.ai_result || row.summary || row.recommendation || row.analysis);
-  const isFailed = (status && status.toLowerCase().includes("gagal")) || Boolean(row.error_message);
-  const isManualDoneOrContacted = status === "Sudah Dihubungi" || status === "Selesai" || status === "Closed" || status === "Konsultasi Selesai";
-
-  if (isFailed) {
+  // Normalize status strings according to standard values
+  if (status.toLowerCase().includes("gagal")) {
     status = "Gagal Analisis";
-  } else if (!isManualDoneOrContacted) {
-    status = hasAnalysisData ? "Analisis AI Selesai" : "Menunggu Analisis";
+  } else if (status.includes("AI Selesai") || status.includes("Selesai Dianalisis") || status === "Analisis AI Selesai") {
+    status = "Analisis AI Selesai";
+  } else if (status === "Sudah Dihubungi" || status.includes("Follow Up")) {
+    status = "Sudah Dihubungi";
+  } else if (status === "Selesai" || status === "Closed" || status.includes("Konsultasi Selesai")) {
+    status = "Selesai";
+  } else {
+    status = "Menunggu Analisis";
   }
+
 
 
   return {
@@ -781,12 +781,15 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
-      // 1. Fetch all consultation_analysis records to know which consultations are analyzed (bypasses RLS)
-      const { data: allAnalysis } = await supabaseAdmin.from("consultation_analysis").select("consultation_id");
-      const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
+      // 1. Fetch analysis records from settings table (bypasses non-existent table issues)
+      let analyzedSet = new Set<string>();
+      try {
+        const { data: allAnalysis } = await supabaseAdmin.from("settings").select("key").like("key", "analysis.%");
+        analyzedSet = new Set((allAnalysis || []).map((a: any) => a.key.replace("analysis.", "")));
+      } catch (_) {}
 
       // 2. Fetch all consultations for stats
-      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, created_at, status, parent_name, child_name, ai_result");
+      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, created_at, status, parent_name, whatsapp_number, level");
       
       const todayStr = new Date().toISOString().split("T")[0];
       let todayCount = 0;
@@ -794,20 +797,14 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       let pendingFollowUpCount = 0;
       let completedCount = 0;
 
-      const unSyncedAnalyzedIds: string[] = [];
-
       (allCons || []).forEach((item) => {
         const itemDate = new Date(item.created_at).toISOString().split("T")[0];
         if (itemDate === todayStr) todayCount++;
 
-        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
-        if (isAnalyzed && (item.status === "Menunggu Analisis AI" || item.status === "Menunggu Analisis" || item.status === "Sedang Dianalisis" || !item.status)) {
-          unSyncedAnalyzedIds.push(item.id);
-        }
-
+        const isAnalyzed = analyzedSet.has(item.id);
         const norm = normalizeParentRow({
           ...item,
-          ai_result: item.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
+          status: isAnalyzed && item.status !== "Sudah Dihubungi" && item.status !== "Selesai" ? "Analisis AI Selesai" : item.status
         });
 
         if (norm.status === "Analisis AI Selesai" || norm.status === "Sudah Dihubungi") {
@@ -819,34 +816,6 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
         }
       });
 
-      // Auto Sync & Auto-Heal:
-      // 1. Update status in consultations table for analyzed rows
-      if (unSyncedAnalyzedIds.length > 0) {
-        supabaseAdmin
-          .from("consultations")
-          .update({ status: "Analisis AI Selesai" })
-          .in("id", unSyncedAnalyzedIds)
-          .then(() => {
-            console.info(`[getConsultationsListAction] Auto-synced status for ${unSyncedAnalyzedIds.length} analyzed consultations.`);
-          })
-          .catch(() => {});
-      }
-
-      // 2. Auto-analyze any pending consultations that have no analysis record yet
-      const pendingUnAnalyzed = (allCons || []).filter((item) => {
-        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
-        const s = (item.status || "").trim();
-        return !isAnalyzed && s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai";
-      });
-
-      if (pendingUnAnalyzed.length > 0) {
-        console.info(`[getConsultationsListAction] Auto-analyzing ${pendingUnAnalyzed.length} pending consultations...`);
-        for (const item of pendingUnAnalyzed.slice(0, 10)) {
-          processConsultation({ data: item.id }).catch((err) => {
-            console.warn(`[Auto-Analyze Warning] Failed for ${item.id}:`, err);
-          });
-        }
-      }
 
 
       // 3. Build query for paginated data

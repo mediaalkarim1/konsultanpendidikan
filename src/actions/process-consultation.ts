@@ -311,44 +311,24 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
 
       } else {
         // 4. SIMPAN HASIL ANALISIS KE DATABASE
-        const analysisData = aiResult.data;
-        if (wfConfig.enable_auto_save !== false) {
-          await supabaseAdmin.from("consultation_analysis").upsert({
-            consultation_id: consultation.id,
-            summary: wfConfig.enable_ai_summary !== false ? analysisData.summary : "-",
-            analysis: analysisData.analysis,
-            strengths: analysisData.strengths,
-            weaknesses: analysisData.weaknesses,
-            potential: analysisData.potential,
-            risk: analysisData.risk,
-            education_recommendation: wfConfig.enable_ai_recommendation !== false ? analysisData.education_recommendation : "-"
-          }, { onConflict: "consultation_id" });
-        }
+        // Save analysis data safely in settings table
+        try {
+          await supabaseAdmin.from("settings").upsert({
+            key: `analysis.${consultation.id}`,
+            value: analysisData
+          }, { onConflict: "key" });
+        } catch (_) {}
 
-        // Update Status & Result on consultations table
+        // Update Status on consultations table
         try {
           await supabaseAdmin.from("consultations").update({
-            status: "Analisis AI Selesai",
-            ai_status: "Analisis AI Selesai",
-            consultation_status: "Analisis AI Selesai",
-            ai_result: analysisData.analysis,
-            summary: analysisData.summary,
-            recommendation: analysisData.education_recommendation,
-            ai_model: "Google Gemini",
-            analyzed_at: new Date().toISOString(),
-            error_message: null
+            status: "Analisis AI Selesai"
           }).eq("id", consultation.id);
-        } catch (_) {
-          try {
-            await supabaseAdmin.from("consultations").update({
-              status: "Analisis AI Selesai",
-              ai_result: analysisData.analysis
-            }).eq("id", consultation.id);
-          } catch (e2) {
-            await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", consultation.id);
-          }
+        } catch (statusErr) {
+          console.warn("[submitConsultationAction] status update error:", statusErr);
         }
       }
+
 
       // 5 & 6. NOTIFIKASI WHATSAPP ADMIN & ORANG TUA
       const dateStr = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
@@ -457,24 +437,19 @@ export const processConsultation = createServerFn({ method: "POST" })
     );
 
     if (aiResult.success && aiResult.data) {
-      await supabaseAdmin.from("consultation_analysis").upsert({
-        consultation_id: consultationId,
-        summary: aiResult.data.summary,
-        analysis: aiResult.data.analysis,
-        strengths: aiResult.data.strengths,
-        weaknesses: aiResult.data.weaknesses,
-        potential: aiResult.data.potential,
-        risk: aiResult.data.risk,
-        education_recommendation: aiResult.data.education_recommendation
-      }, { onConflict: "consultation_id" });
+      try {
+        await supabaseAdmin.from("settings").upsert({
+          key: `analysis.${consultationId}`,
+          value: aiResult.data
+        }, { onConflict: "key" });
+      } catch (_) {}
 
       await supabaseAdmin.from("consultations").update({
-        status: "Analisis AI Selesai",
-        ai_result: aiResult.data.analysis,
-        error_message: null
+        status: "Analisis AI Selesai"
       }).eq("id", consultationId);
 
       return { success: true, provider: aiResult.providerName };
+
     }
 
     return { success: false, error: aiResult.error };
