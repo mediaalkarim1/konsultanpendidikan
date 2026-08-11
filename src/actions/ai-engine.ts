@@ -93,29 +93,15 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   // 2. Fetch active prompts from DB
   let systemPromptFromDb = "";
 
-  // Helper: detect if a prompt string is the OLD narrative format (pre-Aug 2026)
-  // If old format is detected, we ignore DB and use the new hardcoded default
-  const isOldFormatPrompt = (p: string): boolean => {
+  // Helper: validate if a prompt from DB strictly matches the NEW 4-section format
+  const isNewFormatPrompt = (p: string): boolean => {
     if (!p) return false;
-    const oldMarkers = [
-      "500 kata",
-      "900 kata",
-      "narasi yang mengalir",
-      "narasi konsultasi profesional",
-      "FORMAT HASIL",
-      "GAYA PENULISAN",
-      "PANJANG ANALISIS",
-      "narasi utuh dari awal hingga akhir",
-      "Gunakan paragraf yang mengalir",
-      "bullet point",
-      "Pakar Analis Potensi",
-      "RANGKUMAN PROFIL",
-      "ANALISIS KESIAPAN",
-      "REKOMENDASI PENDIDIKAN",
-      "gaya belajar dominan",
-      "# ROLE\n"
-    ];
-    return oldMarkers.some(marker => p.includes(marker));
+    const hasRingkasan = p.includes("RINGKASAN") || p.includes("Ringkasan");
+    const hasPerhatian = p.includes("PERLU DIPERHATIKAN") || p.includes("Perlu Diperhatikan") || p.includes("❗");
+    const hasPotensi = p.includes("POTENSI") || p.includes("Potensi") || p.includes("🌟");
+    const hasRekomendasi = p.includes("REKOMENDASI") || p.includes("Rekomendasi") || p.includes("🎯");
+    const isOldNarrative = p.includes("500 kata") || p.includes("900 kata") || p.includes("narasi yang mengalir") || p.includes("narasi konsultasi");
+    return hasRingkasan && hasPerhatian && hasPotensi && hasRekomendasi && !isOldNarrative;
   };
 
   try {
@@ -127,7 +113,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
 
     if (promptSetting && (promptSetting.value as any)?.system_prompt) {
       const dbPrompt = (promptSetting.value as any).system_prompt;
-      if (!isOldFormatPrompt(dbPrompt)) {
+      if (isNewFormatPrompt(dbPrompt)) {
         systemPromptFromDb = dbPrompt;
         console.info("[AI Engine] Using prompt from settings table (new format).");
       } else {
@@ -140,7 +126,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   if (!systemPromptFromDb) {
     try {
       const { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
-      if (prompt?.system_prompt && !isOldFormatPrompt(prompt.system_prompt)) {
+      if (prompt?.system_prompt && isNewFormatPrompt(prompt.system_prompt)) {
         systemPromptFromDb = prompt.system_prompt;
         console.info("[AI Engine] Using prompt from ai_prompts table (new format).");
       } else if (prompt?.system_prompt) {
@@ -152,11 +138,10 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   // Auto-update DB in background if no valid new-format prompt was found
   // This writes the new prompt to DB so future calls use DB (avoids code dependency)
   if (!systemPromptFromDb) {
-    console.info("[AI Engine] No new-format prompt in DB — will auto-save new prompt to settings.");
+    console.info("[AI Engine] No new-format prompt in DB — auto-saving new prompt to settings.");
   }
 
   const defaultUnifiedPrompt = DEFAULT_UNIFIED_PROMPT;
-
 
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
 
@@ -200,25 +185,16 @@ ${formattedAnswers}
 === PETUNJUK OUTPUT ===
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
-<<<<<<< HEAD
   "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur: mulai dari ## Ringkasan Awal, lalu ### ❗ area-area yang perlu diperhatikan (hanya yang benar-benar ditemukan dari jawaban, jumlah tidak ditentukan), lalu ### 🌟 potensi dan minat (hanya yang ada dari jawaban), lalu ### 🎯 Rekomendasi Pendampingan berupa bullet point konkret untuk orang tua. Jangan gunakan kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
-  "strengths": "Format markdown: Bagian 🌟 Minat & Potensi saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
-  "weaknesses": "Format markdown: Bagian ❗ Area yang Perlu Diperhatikan saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
-  "potential": "Narasi singkat proyeksi potensi anak berdasarkan jawaban (bukan template).",
-  "risk": "Narasi singkat hal utama yang perlu perhatian berdasarkan jawaban.",
-  "education_recommendation": "Format markdown: Bagian 🎯 Rekomendasi Pendampingan saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
-=======
-  "summary": "RINGKASAN AWAL: 1-2 paragraf pendek berdasarkan keseluruhan jawaban (gambaran umum, kecenderungan, kekuatan menonjol, hal utama yang perlu diperhatikan). Tanpa narasi panjang.",
-  "weaknesses": "AREA YANG PERLU DIPERHATIKAN: daftar temuan nyata dari jawaban. Setiap area diawali '❗ ' + judul area spesifik pada barisnya sendiri, lalu baris berikutnya penjelasan singkat. Pisahkan tiap area dengan baris kosong. Jumlah area mengikuti temuan (boleh 2, boleh 10). Jangan pakai kategori tetap.",
-  "potential": "MINAT & POTENSI: setiap potensi diawali '🌟 ' + nama potensi pada barisnya sendiri, lalu baris penjelasan singkat berdasarkan jawaban. Pisahkan dengan baris kosong.",
-  "education_recommendation": "REKOMENDASI: diawali '🎯 Rekomendasi Pendampingan' lalu daftar rekomendasi konkret untuk orang tua di rumah, terkait langsung dengan area perhatian dan potensi di atas. Jangan memberi rekomendasi untuk sekolah.",
-  "analysis": "Gabungan lengkap keempat bagian di atas berurutan: ringkasan, lalu semua baris ❗, lalu semua baris 🌟, lalu bagian 🎯. Tanpa narasi tambahan.",
-  "strengths": "Sama dengan isi MINAT & POTENSI.",
-  "risk": "Sama dengan isi AREA YANG PERLU DIPERHATIKAN."
->>>>>>> ffb2e7377024e42c2692b7a4ec6db9d658e3c930
+  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (setiap area diawali ### ❗ [Nama Area] dari jawaban), lalu ## 3. 🌟 MINAT & POTENSI (setiap potensi diawali ### 🌟 [Nama Potensi]), lalu ## 4. 🎯 REKOMENDASI (diawali ### 🎯 Rekomendasi Pendampingan berupa bullet point untuk orang tua di rumah). Jangan pakai kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
+  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
+  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
+  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI.",
+  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
+  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
 }
 `;
+
 
   try {
     let rawResponseText = "";
