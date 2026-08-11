@@ -36,18 +36,24 @@ export const Route = createFileRoute("/admin/konsultasi")({
 });
 
 const STATUS_OPTIONS = [
-  { value: "Menunggu Analisis AI", label: "Menunggu Analisis AI", color: "bg-amber-100 text-amber-800 border-amber-300" },
-  { value: "Menunggu Analisis", label: "Menunggu Analisis", color: "bg-amber-100 text-amber-800 border-amber-300" },
-  { value: "Sedang Dianalisis", label: "Sedang Dianalisis", color: "bg-blue-100 text-blue-800 border-blue-300" },
-  { value: "Analisis AI Selesai", label: "Analisis AI Selesai", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  { value: "Selesai Dianalisis", label: "Selesai Dianalisis", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  { value: "Menunggu Follow Up Konsultan", label: "Menunggu Follow Up", color: "bg-teal-100 text-teal-800 border-teal-300" },
-  { value: "Sudah Dihubungi", label: "Sudah Dihubungi", color: "bg-indigo-100 text-indigo-800 border-indigo-300" },
-  { value: "Konsultasi Selesai", label: "Konsultasi Selesai", color: "bg-zinc-100 text-zinc-800 border-zinc-300" },
-  { value: "Closed", label: "Closed", color: "bg-zinc-100 text-zinc-800 border-zinc-300" },
-  { value: "Gagal Analisis AI", label: "Gagal Analisis AI", color: "bg-red-100 text-red-800 border-red-300" },
-  { value: "Gagal Analisis", label: "Gagal Analisis", color: "bg-red-100 text-red-800 border-red-300" },
+  { value: "Menunggu Analisis", label: "Menunggu Analisis", color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300" },
+  { value: "Analisis AI Selesai", label: "Analisis AI Selesai", color: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" },
+  { value: "Sudah Dihubungi", label: "Sudah Dihubungi", color: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300" },
+  { value: "Selesai", label: "Selesai", color: "bg-zinc-100 text-zinc-800 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-300" },
+  { value: "Gagal Analisis", label: "Gagal Analisis", color: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300" },
 ];
+
+function getStatusInfo(status?: string) {
+  if (!status) return STATUS_OPTIONS[0];
+  const s = status.trim();
+  if (s.includes("Menunggu") || s.includes("Sedang")) return STATUS_OPTIONS[0];
+  if (s.includes("AI Selesai") || s.includes("Selesai Dianalisis")) return STATUS_OPTIONS[1];
+  if (s.includes("Dihubungi") || s.includes("Follow Up")) return STATUS_OPTIONS[2];
+  if (s === "Selesai" || s.includes("Konsultasi Selesai") || s === "Closed") return STATUS_OPTIONS[3];
+  if (s.includes("Gagal")) return STATUS_OPTIONS[4];
+  return STATUS_OPTIONS.find((opt) => opt.value === s) || STATUS_OPTIONS[0];
+}
+
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
@@ -152,13 +158,21 @@ function KonsultasiPage() {
     if (debouncedSearch) {
       query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
     }
-    if (statusFilter) query = query.eq("status", statusFilter);
+    if (statusFilter) {
+      if (statusFilter === "Menunggu Analisis") query = query.in("status", ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"]);
+      else if (statusFilter === "Analisis AI Selesai") query = query.in("status", ["Analisis AI Selesai", "Selesai Dianalisis"]);
+      else if (statusFilter === "Sudah Dihubungi") query = query.in("status", ["Sudah Dihubungi", "Menunggu Follow Up Konsultan"]);
+      else if (statusFilter === "Selesai") query = query.in("status", ["Selesai", "Konsultasi Selesai", "Closed"]);
+      else if (statusFilter === "Gagal Analisis") query = query.in("status", ["Gagal Analisis", "Gagal Analisis AI"]);
+      else query = query.eq("status", statusFilter);
+    }
     if (levelFilter) query = query.eq("level", levelFilter as "tksd" | "smp" | "sma");
     if (dateFilter) {
       const startDate = `${dateFilter}T00:00:00.000Z`;
       const endDate = `${dateFilter}T23:59:59.999Z`;
       query = query.gte("created_at", startDate).lte("created_at", endDate);
     }
+
 
     const { data: cols, count, error } = await query
       .order("created_at", { ascending: false })
@@ -455,7 +469,7 @@ function KonsultasiPage() {
                 </tr>
               ) : (
                 data.map((row) => {
-                  const statusInfo = STATUS_OPTIONS.find((s) => s.value === row.status) || STATUS_OPTIONS[0];
+                  const statusInfo = getStatusInfo(row.status);
 
                   return (
                     <tr key={row.id} className="transition-colors hover:bg-muted/50">
@@ -478,7 +492,7 @@ function KonsultasiPage() {
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          value={row.status}
+                          value={statusInfo.value}
                           onChange={(e) => handleStatusChange(row.id, e.target.value)}
                           className={`rounded-full px-2.5 py-1 text-xs font-semibold outline-none border cursor-pointer ${statusInfo.color}`}
                         >
@@ -487,6 +501,7 @@ function KonsultasiPage() {
                           ))}
                         </select>
                       </td>
+
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button

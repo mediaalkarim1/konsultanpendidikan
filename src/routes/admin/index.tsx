@@ -45,12 +45,14 @@ function DashboardPage() {
 
     data.forEach((row) => {
       total++;
-      if (row.status === "new") countNew++;
-      else if (row.status === "analyzed") countAnalyzed++;
-      else if (row.status === "contacted") countContacted++;
-      else if (row.status === "done") countDone++;
+      const s = (row.status || "").trim();
+      if (s.includes("Menunggu") || s.includes("Sedang") || s === "new") countNew++;
+      else if (s.includes("AI Selesai") || s.includes("Selesai Dianalisis") || s === "analyzed") countAnalyzed++;
+      else if (s.includes("Dihubungi") || s.includes("Follow Up") || s === "contacted") countContacted++;
+      else if (s === "Selesai" || s.includes("Konsultasi Selesai") || s === "Closed" || s === "done") countDone++;
       
       const dateObj = new Date(row.created_at);
+
       if (dateObj >= today) countToday++;
       
       // Format for chart (e.g. "DD MMM")
