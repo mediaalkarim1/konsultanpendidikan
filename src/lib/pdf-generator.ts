@@ -294,7 +294,6 @@ Secara umum, kekuatan yang menonjol tampak pada ${potentials.length} hal, sement
     risk: concernsText,
     education_recommendation: recommendation
   };
-
-  };
 }
+
 
