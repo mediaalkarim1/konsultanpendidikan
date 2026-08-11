@@ -79,8 +79,8 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
         id: "default-ai-engine",
         provider_name: "EduKonsul AI Engine",
         provider_key: "lovable",
-        api_key: process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
-        base_url: "https://ai-gateway.lovable.dev/v1",
+        api_key: process.env.LOVABLE_API_KEY || process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto",
+        base_url: "https://ai.gateway.lovable.dev/v1",
         model: "google/gemini-2.5-flash",
         temperature: 0.7,
         max_tokens: 2048,
@@ -213,11 +213,11 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
 
     } else {
       // OpenAI / Lovable Gateway / OpenRouter / DeepSeek / Groq / Mistral (Standard OpenAI format)
-      let endpoint = `${baseUrl || (provider.provider_key === "lovable" ? "https://ai-gateway.lovable.dev/v1" : "https://api.openai.com/v1")}/chat/completions`;
+      let endpoint = `${baseUrl || (provider.provider_key === "lovable" ? "https://ai.gateway.lovable.dev/v1" : "https://api.openai.com/v1")}/chat/completions`;
       
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const effectiveKey = (provider.provider_key === "lovable" && (!key || key.includes("auto"))) 
-        ? (process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto") 
+        ? (process.env.LOVABLE_API_KEY || process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto") 
         : key;
 
       if (effectiveKey) headers["Authorization"] = `Bearer ${effectiveKey}`;
