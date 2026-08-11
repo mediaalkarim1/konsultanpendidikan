@@ -223,38 +223,75 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
   const parentDisplay = parentName || "Orang Tua";
 
-  let parsedAnswersText = "";
-  if (formattedAnswers && formattedAnswers.trim()) {
-    const items = formattedAnswers.split("\n\n").map(item => {
+  type QA = { q: string; a: string };
+  const qa: QA[] = (formattedAnswers || "")
+    .split("\n\n")
+    .map((item) => {
       const lines = item.split("\n");
-      const q = lines[0]?.replace(/^P:\s*/, "") || "";
-      const a = lines[1]?.replace(/^J:\s*/, "") || "";
-      return `mengenai ${q.toLowerCase()}, orang tua menyampaikan bahwa ${a.toLowerCase()}`;
-    });
-    parsedAnswersText = items.join(", serta ");
+      return {
+        q: (lines[0] || "").replace(/^P:\s*/, "").trim(),
+        a: (lines[1] || "").replace(/^J:\s*/, "").trim()
+      };
+    })
+    .filter((x) => x.q || x.a);
+
+  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat)/i;
+  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah)/i;
+
+  const shorten = (t: string, max = 90) => (t.length > max ? t.slice(0, max).trim() + "..." : t);
+  const lower = (t: string) => (t ? t.charAt(0).toLowerCase() + t.slice(1) : t);
+
+  const concerns: string[] = [];
+  const potentials: string[] = [];
+
+  for (const item of qa) {
+    if (!item.a) continue;
+    const topic = shorten(item.q.replace(/\?$/, ""));
+    if (NEGATIVE.test(item.a)) {
+      concerns.push(
+        `❗ ${topic}\nDari jawaban orang tua (${lower(shorten(item.a, 120))}), bagian ini terlihat masih membutuhkan pendampingan yang konsisten.`
+      );
+    } else if (POSITIVE.test(item.a)) {
+      potentials.push(
+        `🌟 ${topic}\nJawaban orang tua menunjukkan ${lower(shorten(item.a, 120))}, sehingga ini menjadi kekuatan yang dapat terus dikembangkan.`
+      );
+    }
   }
 
-  const p1_sapaan = `Ayah Bunda ${parentDisplay}, terima kasih telah meluangkan waktu untuk mengisi formulir konsultasi ini. Dari jawaban yang diberikan, kami melihat beberapa gambaran mengenai kondisi dan perkembangan Ananda ${nameDisplay} pada jenjang ${jenjangLabel}. Sebagaimana kita ketahui bersama, setiap anak berkembang dengan ritme keunikannya sendiri, dan perhatian hangat yang Ayah Bunda berikan merupakan fondasi awal yang sangat berharga bagi tumbuh kembang Ananda secara menyeluruh.`;
+  if (concerns.length === 0 && qa.length > 0) {
+    concerns.push(
+      `❗ Konsistensi rutinitas belajar\nBelum terlihat kendala menonjol dari jawaban, namun menjaga ritme belajar harian tetap perlu diperhatikan.`
+    );
+  }
+  if (potentials.length === 0 && qa.length > 0) {
+    potentials.push(
+      `🌟 Keterbukaan terhadap pendampingan\nDari jawaban yang diberikan, Ananda ${nameDisplay} masih responsif terhadap arahan orang tua.`
+    );
+  }
 
-  const p2_gambaran_potensi = `Secara umum, Ananda ${nameDisplay} menunjukkan profil anak yang memiliki rasa ingin tahu yang besar dan antusiasme tinggi ketika dihadapkan pada hal-hal baru yang menarik perhatiannya. Potensi yang sudah sangat terlihat adalah daya tangkapnya yang responsif terhadap stimulasi visual serta pembelajaran berbasis pengalaman praktis. Ketika diberikan ruang untuk berinteraksi langsung dan mengeksplorasi ide-idenya, Ananda mampu menunjukkan fokus yang baik dan mengekspresikan pemahamannya dengan penuh percaya diri.`;
+  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan jawaban yang diberikan mengenai Ananda ${nameDisplay} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki kecenderungan belajar dan kebiasaan tersendiri yang khas.
 
-  const p3_perhatian_dan_hubungan = `Meskipun demikian, ada beberapa hal yang masih memerlukan perhatian dan pendampingan yang sabar di rumah maupun di sekolah. Berdasarkan analisis keterkaitan antara jawaban yang disampaikan, tampak bahwa ${parsedAnswersText || "kondisi keseharian anak menunjukkan perlunya penyelarasan ritme belajar dan pengelolaan fokus"}. Terlihat hubungan yang erat antara suasana lingkungan belajar dengan tingkat daya tahan konsentrasi Ananda. Ketika suasana belajar dirasakan kurang bervariasi atau terlalu menuntut hafalan kaku, energi dan fokus Ananda cenderung lebih cepat teralih. Hal ini merupakan dinamika yang sangat wajar bagi anak usia berkembang dan bukan menunjukkan suatu kendala permanen.`;
+Secara umum, kekuatan yang menonjol tampak pada ${potentials.length} hal, sementara terdapat ${concerns.length} hal utama yang perlu mendapat perhatian dan pendampingan di rumah.`;
 
-  const p4_faktor_dampak = `Faktor utama yang kemungkinan mempengaruhi kondisi Ananda ${nameDisplay} saat ini adalah kebutuhan akan variasi metode belajar yang dinamis serta ritme pendampingan emosional yang konsisten. Apabila kondisi ini tidak mendapatkan pendampingan yang tepat sejak dini, anak berisiko merasa kurang dipahami, mengalami penurunan motivasi mandiri, atau cepat merasa jenuh saat menghadapi tantangan akademis yang lebih kompleks. Namun sebaliknya, apabila diberikan pendekatan yang sesuai dengan tipe belajarnya, Ananda akan tumbuh menjadi pembelajar yang tangguh, kreatif, dan mandiri.`;
+  const concernsText = concerns.join("\n\n");
+  const potentialsText = potentials.join("\n\n");
 
-  const p5_harapan_dan_rekomendasi = `Harapan perkembangan Ananda ${nameDisplay} ke depan sangatlah cerah apabila mendapatkan stimulasi yang mendukung. Kami merekomendasikan agar orang tua dan sekolah bekerja sama menciptakan lingkungan belajar yang kaya akan eksplorasi interaktif, memanfaatkan media visual, serta memberikan dorongan positif atas setiap usaha kecil yang ditunjukkan anak. Pembiasaan jadwal harian yang fleksibel namun konsisten di rumah juga akan membantu Ananda melatih kedisiplinan diri tanpa merasa tertekan.`;
+  const recommendation = `🎯 Rekomendasi Pendampingan
 
-  const p6_penutup = `Melalui pendampingan yang konsisten, komunikasi yang baik di rumah, serta lingkungan belajar yang mendukung, kami yakin potensi Ananda ${nameDisplay} dapat berkembang secara optimal. Setiap anak memiliki keunikan dan waktu berkembang yang berbeda, sehingga proses ini perlu dijalani dengan penuh kesabaran.`;
+- Dampingi Ananda ${nameDisplay} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
+- Kaitkan aktivitas belajar dengan minat dan potensi yang sudah terlihat agar anak lebih terlibat.
+- Beri apresiasi pada setiap usaha, bukan hanya pada hasil akhirnya.
+- Sepakati rutinitas harian yang sederhana dan realistis bersama anak.`;
 
-  const fullNarrative = `${p1_sapaan}\n\n${p2_gambaran_potensi}\n\n${p3_perhatian_dan_hubungan}\n\n${p4_faktor_dampak}\n\n${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`;
+  const fullNarrative = `${summary}\n\n${concernsText}\n\n${potentialsText}\n\n${recommendation}`;
 
   return {
-    summary: p1_sapaan,
+    summary,
     analysis: fullNarrative,
-    strengths: p2_gambaran_potensi,
-    weaknesses: p3_perhatian_dan_hubungan,
-    potential: p4_faktor_dampak,
-    risk: p4_faktor_dampak,
-    education_recommendation: `${p5_harapan_dan_rekomendasi}\n\n${p6_penutup}`
+    strengths: potentialsText,
+    weaknesses: concernsText,
+    potential: potentialsText,
+    risk: concernsText,
+    education_recommendation: recommendation
   };
 }
