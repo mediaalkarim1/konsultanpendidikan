@@ -113,10 +113,13 @@ function KonsultasiPage() {
 
   async function fetchStats() {
     try {
-      const { data: allCons } = await supabase.from("consultations").select("id, created_at, status");
+      const { data: allCons } = await supabase.from("consultations").select("id, created_at, status, ai_result");
+      const { data: allAnalysis } = await (supabase as any).from("consultation_analysis").select("consultation_id");
       if (!allCons) return;
 
+      const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
       const todayStr = new Date().toISOString().split("T")[0];
+
       let todayCount = 0;
       let pendingAiCount = 0;
       let pendingFollowUpCount = 0;
@@ -126,13 +129,19 @@ function KonsultasiPage() {
         const itemDate = new Date(item.created_at).toISOString().split("T")[0];
         if (itemDate === todayStr) todayCount++;
 
-        const s = item.status || "";
-        if (s.includes("Menunggu Analisis") || s.includes("Sedang Dianalisis")) {
-          pendingAiCount++;
-        } else if (s.includes("Analisis AI Selesai") || s.includes("Selesai Dianalisis") || s.includes("Follow Up")) {
+        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
+        const normalized = normalizeParentRow({
+          ...item,
+          ai_result: item.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
+        });
+
+        const s = normalized.status;
+        if (s === "Analisis AI Selesai" || s === "Sudah Dihubungi") {
           pendingFollowUpCount++;
-        } else if (s.includes("Sudah Dihubungi") || s.includes("Selesai") || s.includes("Closed")) {
+        } else if (s === "Selesai") {
           completedCount++;
+        } else {
+          pendingAiCount++;
         }
       });
 
@@ -173,13 +182,31 @@ function KonsultasiPage() {
       query = query.gte("created_at", startDate).lte("created_at", endDate);
     }
 
-
     const { data: cols, count, error } = await query
       .order("created_at", { ascending: false })
       .range(from, to);
 
     if (!error && cols) {
-      const normalized = cols.map(normalizeParentRow);
+      const colIds = cols.map((c) => c.id);
+      let analyzedSet = new Set<string>();
+      if (colIds.length > 0) {
+        const { data: analysisRows } = await (supabase as any)
+          .from("consultation_analysis")
+          .select("consultation_id")
+          .in("consultation_id", colIds);
+        if (analysisRows) {
+          analyzedSet = new Set(analysisRows.map((a: any) => a.consultation_id));
+        }
+      }
+
+      const normalized = cols.map((row) => {
+        const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
+        return normalizeParentRow({
+          ...row,
+          ai_result: row.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
+        });
+      });
+
       setData(normalized);
       setTotal(count || normalized.length);
     } else {
@@ -187,6 +214,7 @@ function KonsultasiPage() {
     }
     setLoading(false);
   }
+
 
   const totalPages = Math.ceil(total / itemsPerPage);
 
