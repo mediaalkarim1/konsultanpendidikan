@@ -81,6 +81,7 @@ function KonsultasiPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -187,6 +188,26 @@ function KonsultasiPage() {
     } catch (e: any) {
       toast.error("Gagal mengubah status: " + e.message);
       fetchData();
+    }
+  }
+
+  async function handleReAnalyze(id: string) {
+    if (regeneratingId) return;
+    if (!confirm("Jalankan analisis ulang AI untuk data konsultasi ini? Hasil analisis lama akan diperbarui.")) return;
+    setRegeneratingId(id);
+    try {
+      const res = await reGenerateAnalysisAction({ data: { consultationId: id, email: userEmail || "admin" } });
+      if (res.success) {
+        toast.success(`Analisis ulang selesai via ${res.provider || "AI Provider"}`);
+      } else {
+        toast.error("Gagal analisis ulang: " + (res.error || "Error AI Engine"));
+      }
+      fetchData();
+      fetchStats();
+    } catch (e: any) {
+      toast.error("Gagal analisis ulang: " + e.message);
+    } finally {
+      setRegeneratingId(null);
     }
   }
 
@@ -500,6 +521,25 @@ function KonsultasiPage() {
                               <>
                                 <FileText className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                 <span>Download PDF</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => handleReAnalyze(row.id)}
+                            disabled={regeneratingId === row.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                            title="Jalankan Analisis Ulang AI"
+                          >
+                            {regeneratingId === row.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                <span>Menganalisis...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                                <span>Analisis Ulang</span>
                               </>
                             )}
                           </button>
