@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
-import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow } from "@/actions/admin-actions";
+import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction } from "@/actions/admin-actions";
 import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult } from "@/lib/pdf-generator";
+
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,
@@ -112,108 +113,38 @@ function KonsultasiPage() {
   }, [debouncedSearch, statusFilter, levelFilter, dateFilter, page]);
 
   async function fetchStats() {
-    try {
-      const { data: allCons } = await supabase.from("consultations").select("id, created_at, status, ai_result");
-      const { data: allAnalysis } = await (supabase as any).from("consultation_analysis").select("consultation_id");
-      if (!allCons) return;
-
-      const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
-      const todayStr = new Date().toISOString().split("T")[0];
-
-      let todayCount = 0;
-      let pendingAiCount = 0;
-      let pendingFollowUpCount = 0;
-      let completedCount = 0;
-
-      allCons.forEach((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
-        if (itemDate === todayStr) todayCount++;
-
-        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
-        const normalized = normalizeParentRow({
-          ...item,
-          ai_result: item.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
-        });
-
-        const s = normalized.status;
-        if (s === "Analisis AI Selesai" || s === "Sudah Dihubungi") {
-          pendingFollowUpCount++;
-        } else if (s === "Selesai") {
-          completedCount++;
-        } else {
-          pendingAiCount++;
-        }
-      });
-
-      setStats({
-        total: allCons.length,
-        today: todayCount,
-        pendingAi: pendingAiCount,
-        pendingFollowUp: pendingFollowUpCount,
-        completed: completedCount
-      });
-    } catch (e) {
-      console.warn("Stats fetch error:", e);
-    }
+    // Handled directly inside getConsultationsListAction
   }
 
   async function fetchData() {
     setLoading(true);
-    const from = (page - 1) * itemsPerPage;
-    const to = from + itemsPerPage - 1;
-
-    let query = supabase.from("consultations").select("*", { count: "exact" });
-
-    if (debouncedSearch) {
-      query = query.or(`parent_name.ilike.%${debouncedSearch}%,whatsapp_number.ilike.%${debouncedSearch}%`);
-    }
-    if (statusFilter) {
-      if (statusFilter === "Menunggu Analisis") query = query.in("status", ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"]);
-      else if (statusFilter === "Analisis AI Selesai") query = query.in("status", ["Analisis AI Selesai", "Selesai Dianalisis"]);
-      else if (statusFilter === "Sudah Dihubungi") query = query.in("status", ["Sudah Dihubungi", "Menunggu Follow Up Konsultan"]);
-      else if (statusFilter === "Selesai") query = query.in("status", ["Selesai", "Konsultasi Selesai", "Closed"]);
-      else if (statusFilter === "Gagal Analisis") query = query.in("status", ["Gagal Analisis", "Gagal Analisis AI"]);
-      else query = query.eq("status", statusFilter);
-    }
-    if (levelFilter) query = query.eq("level", levelFilter as "tksd" | "smp" | "sma");
-    if (dateFilter) {
-      const startDate = `${dateFilter}T00:00:00.000Z`;
-      const endDate = `${dateFilter}T23:59:59.999Z`;
-      query = query.gte("created_at", startDate).lte("created_at", endDate);
-    }
-
-    const { data: cols, count, error } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (!error && cols) {
-      const colIds = cols.map((c) => c.id);
-      let analyzedSet = new Set<string>();
-      if (colIds.length > 0) {
-        const { data: analysisRows } = await (supabase as any)
-          .from("consultation_analysis")
-          .select("consultation_id")
-          .in("consultation_id", colIds);
-        if (analysisRows) {
-          analyzedSet = new Set(analysisRows.map((a: any) => a.consultation_id));
+    try {
+      const res = await getConsultationsListAction({
+        data: {
+          page,
+          limit: itemsPerPage,
+          search: debouncedSearch,
+          status: statusFilter,
+          level: levelFilter,
+          date: dateFilter
         }
-      }
-
-      const normalized = cols.map((row) => {
-        const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
-        return normalizeParentRow({
-          ...row,
-          ai_result: row.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
-        });
       });
 
-      setData(normalized);
-      setTotal(count || normalized.length);
-    } else {
-      toast.error("Gagal mengambil data konsultasi: " + (error?.message || "Error server"));
+      if (res.success && res.data) {
+        setData(res.data as any);
+        setTotal(res.count);
+        if (res.stats) setStats(res.stats);
+      } else {
+        toast.error("Gagal mengambil data konsultasi: " + (res.error || "Error server"));
+      }
+    } catch (e: any) {
+      console.error("fetchData exception:", e);
+      toast.error("Error server: " + e.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
+
 
 
   const totalPages = Math.ceil(total / itemsPerPage);

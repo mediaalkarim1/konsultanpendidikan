@@ -778,4 +778,113 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
     }
   });
 
+// --- Consultation Management Server Action (Bypasses Client RLS) ---
+export const getConsultationsListAction = createServerFn({ method: "POST" })
+  .validator((payload: { page?: number; limit?: number; search?: string; status?: string; level?: string; date?: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { page = 1, limit = 10, search = "", status = "", level = "", date = "" } = ctx.data;
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
 
+      // 1. Fetch all consultation_analysis records to know which consultations are analyzed (bypasses RLS)
+      const { data: allAnalysis } = await supabaseAdmin.from("consultation_analysis").select("consultation_id");
+      const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
+
+      // 2. Fetch all consultations for stats
+      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, created_at, status, parent_name, child_name, ai_result");
+      
+      const todayStr = new Date().toISOString().split("T")[0];
+      let todayCount = 0;
+      let pendingAiCount = 0;
+      let pendingFollowUpCount = 0;
+      let completedCount = 0;
+
+      const unSyncedAnalyzedIds: string[] = [];
+
+      (allCons || []).forEach((item) => {
+        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+        if (itemDate === todayStr) todayCount++;
+
+        const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
+        if (isAnalyzed && (item.status === "Menunggu Analisis AI" || item.status === "Menunggu Analisis" || item.status === "Sedang Dianalisis" || !item.status)) {
+          unSyncedAnalyzedIds.push(item.id);
+        }
+
+        const norm = normalizeParentRow({
+          ...item,
+          ai_result: item.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
+        });
+
+        if (norm.status === "Analisis AI Selesai" || norm.status === "Sudah Dihubungi") {
+          pendingFollowUpCount++;
+        } else if (norm.status === "Selesai") {
+          completedCount++;
+        } else {
+          pendingAiCount++;
+        }
+      });
+
+      // Auto Sync DB: Update status in consultations table for analyzed rows
+      if (unSyncedAnalyzedIds.length > 0) {
+        supabaseAdmin
+          .from("consultations")
+          .update({ status: "Analisis AI Selesai" })
+          .in("id", unSyncedAnalyzedIds)
+          .then(() => {
+            console.info(`[getConsultationsListAction] Auto-synced status for ${unSyncedAnalyzedIds.length} analyzed consultations.`);
+          })
+          .catch(() => {});
+      }
+
+      // 3. Build query for paginated data
+      let query = supabaseAdmin.from("consultations").select("*", { count: "exact" });
+
+      if (search) {
+        query = query.or(`parent_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+      }
+      if (status) {
+        if (status === "Menunggu Analisis") query = query.in("status", ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"]);
+        else if (status === "Analisis AI Selesai") query = query.in("status", ["Analisis AI Selesai", "Selesai Dianalisis"]);
+        else if (status === "Sudah Dihubungi") query = query.in("status", ["Sudah Dihubungi", "Menunggu Follow Up Konsultan"]);
+        else if (status === "Selesai") query = query.in("status", ["Selesai", "Konsultasi Selesai", "Closed"]);
+        else if (status === "Gagal Analisis") query = query.in("status", ["Gagal Analisis", "Gagal Analisis AI"]);
+        else query = query.eq("status", status);
+      }
+      if (level) query = query.eq("level", level as any);
+      if (date) {
+        query = query.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+      }
+
+      const { data: cols, count, error } = await query
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const normalizedData = (cols || []).map((row) => {
+        const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
+        return normalizeParentRow({
+          ...row,
+          ai_result: row.ai_result || (isAnalyzed ? "ANALYZED_DONE" : null)
+        });
+      });
+
+      return {
+        success: true,
+        data: normalizedData,
+        count: count || normalizedData.length,
+        stats: {
+          total: (allCons || []).length,
+          today: todayCount,
+          pendingAi: pendingAiCount,
+          pendingFollowUp: pendingFollowUpCount,
+          completed: completedCount
+        }
+      };
+    } catch (e: any) {
+      console.error("getConsultationsListAction exception:", e);
+      return { success: false, error: e.message, data: [], count: 0, stats: { total: 0, today: 0, pendingAi: 0, pendingFollowUp: 0, completed: 0 } };
+    }
+  });
