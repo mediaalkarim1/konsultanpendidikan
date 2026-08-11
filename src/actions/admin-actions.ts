@@ -639,21 +639,21 @@ export const saveWaProviderConfigAction = createServerFn({ method: "POST" })
     return { success: true };
   });
 
-// Helper to normalize Parent & Child data across varying database schemas
 export function normalizeParentRow(row: any) {
   if (!row) return row;
 
   let parentName = row.parent_name || row.name || "";
-  let childName = row.child_name || "";
+  let childName = (row.child_name && row.child_name !== "-") ? row.child_name : "";
   let whatsappNumber = row.whatsapp_number || row.parent_phone || row.phone || "";
   let level = row.level || row.education_level || "tksd";
 
-  // If child_name is missing or empty, attempt to extract it from parent_name if saved as "Parent (Anak: Child)"
-  if (!childName && typeof parentName === "string" && parentName.includes(" (Anak: ")) {
+  // If child_name is missing, empty, or '-', attempt to extract it from parent_name if saved as "Parent (Anak: Child)"
+  if ((!childName || childName === "-") && typeof parentName === "string" && parentName.includes(" (Anak: ")) {
     const parts = parentName.split(" (Anak: ");
     parentName = parts[0].trim();
     childName = parts[1].replace(/\)$/, "").trim();
   }
+
 
   return {
     ...row,

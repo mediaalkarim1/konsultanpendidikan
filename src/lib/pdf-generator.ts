@@ -220,8 +220,22 @@ export type AiAnalysisResult = {
 
 export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
   const jenjangLabel = level === "tksd" ? "TK & SD" : level === "smp" ? "SMP" : "SMA";
-  const nameDisplay = childName && childName !== "-" ? childName : "Ananda";
-  const parentDisplay = parentName || "Orang Tua";
+  
+  // Clean up parentName and extract childName if encoded as "Parent (Anak: Child)"
+  let cleanParentName = (parentName || "Orang Tua").trim();
+  let cleanChildName = (childName && childName !== "-" ? childName : "").trim();
+
+  if (cleanParentName.includes("(Anak:")) {
+    const match = cleanParentName.match(/^(.*?)\s*\(Anak:\s*([^)]+)\)/i);
+    if (match) {
+      cleanParentName = match[1].trim();
+      if (!cleanChildName) cleanChildName = match[2].trim();
+    }
+  }
+
+  const nameDisplay = cleanChildName || "Ananda";
+  const parentDisplay = cleanParentName || "Orang Tua";
+  const childPhrase = cleanChildName ? `Ananda ${cleanChildName}` : "Ananda";
 
   type QA = { q: string; a: string };
   const qa: QA[] = (formattedAnswers || "")
@@ -233,7 +247,7 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
         a: (lines[1] || "").replace(/^J:\s*/, "").trim()
       };
     })
-    .filter((x) => x.q || x.a);
+    .filter((x) => (x.q || x.a) && x.a !== "-");
 
   const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat)/i;
   const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah)/i;
@@ -245,7 +259,7 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   const potentials: string[] = [];
 
   for (const item of qa) {
-    if (!item.a) continue;
+    if (!item.a || item.a === "-") continue;
     const topic = shorten(item.q.replace(/\?$/, ""));
     if (NEGATIVE.test(item.a)) {
       concerns.push(
@@ -268,33 +282,30 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     }
   }
 
-
-  if (concerns.length === 0 && qa.length > 0) {
+  if (concerns.length === 0) {
     concerns.push(
-      `❗ Konsistensi rutinitas belajar\nBelum terlihat kendala menonjol dari jawaban, namun menjaga ritme belajar harian tetap perlu diperhatikan.`
+      `❗ Rutinitas & Konsistensi Belajar\nBerdasarkan profil perkembangan jenjang ${jenjangLabel}, ${childPhrase} membutuhkan pendampingan yang konsisten dan penguatan kebiasaan harian.`
     );
   }
-  if (potentials.length === 0 && qa.length > 0) {
+  if (potentials.length === 0) {
     potentials.push(
-      `🌟 Keterbukaan terhadap pendampingan\nDari jawaban yang diberikan, Ananda ${nameDisplay} masih responsif terhadap arahan orang tua.`
+      `🌟 Kemampuan Adaptasi & Minat Belajar\n${childPhrase} memiliki potensi berkembang yang positif jika didukung dengan media belajar yang tepat dan motivasi keluarga.`
     );
   }
 
-  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan jawaban yang diberikan mengenai Ananda ${nameDisplay} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki kecenderungan belajar dan kebiasaan tersendiri yang khas.
-
-Secara umum, kekuatan yang menonjol tampak pada ${potentials.length} hal, sementara terdapat ${concerns.length} hal utama yang perlu mendapat perhatian dan pendampingan di rumah.`;
+  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan informasi yang disampaikan mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki keunikan belajar serta potensi yang dapat didukung secara optimal di rumah.\n\nSecara umum, terdapat beberapa kekuatan yang menonjol sekaligus area utama yang perlu mendapat pendampingan hangat dari keluarga.`;
 
   const concernsText = concerns.join("\n\n");
   const potentialsText = potentials.join("\n\n");
 
   const recommendation = `🎯 Rekomendasi Pendampingan
 
-- Dampingi Ananda ${nameDisplay} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
+- Dampingi ${childPhrase} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
 - Kaitkan aktivitas belajar dengan minat dan potensi yang sudah terlihat agar anak lebih terlibat.
-- Beri apresiasi pada setiap usaha, bukan hanya pada hasil akhirnya.
-- Sepakati rutinitas harian yang sederhana dan realistis bersama anak.`;
+- Beri apresiasi pada setiap usaha yang ditunjukkan ${nameDisplay}, bukan hanya pada hasil akhirnya.
+- Sepakati rutinitas harian yang sederhana dan realistis bersama anak di rumah.`;
 
-  const fullNarrative = `${summary}\n\n${concernsText}\n\n${potentialsText}\n\n${recommendation}`;
+  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${concernsText}\n\n## 3. 🌟 MINAT & POTENSI\n\n${potentialsText}\n\n## 4. 🎯 REKOMENDASI PENDAMPINGAN\n\n${recommendation}`;
 
   return {
     summary,
@@ -306,5 +317,6 @@ Secara umum, kekuatan yang menonjol tampak pada ${potentials.length} hal, sement
     education_recommendation: recommendation
   };
 }
+
 
 
