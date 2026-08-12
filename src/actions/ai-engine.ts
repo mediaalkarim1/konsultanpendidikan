@@ -365,6 +365,8 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
   }
 }
 
+import { sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
+
 function parseAiJsonResponse(text: string): AiAnalysisResult {
   try {
     // Clean codeblock formatting if present
@@ -373,25 +375,29 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
-    const composed = [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation]
-      .filter((v: any) => typeof v === "string" && v.trim())
-      .join("\n\n");
+    const rawSummary = obj.summary || "Analisis telah selesai disusun.";
+    const rawAnalysis = obj.analysis || [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation].filter((v: any) => typeof v === "string" && v.trim()).join("\n\n") || text;
+    const rawStrengths = obj.strengths || obj.potential || "-";
+    const rawWeaknesses = obj.weaknesses || "-";
+    const rawPotential = obj.potential || "-";
+    const rawRisk = obj.risk || obj.weaknesses || "-";
+    const rawRec = typeof obj.education_recommendation === "string"
+      ? obj.education_recommendation 
+      : JSON.stringify(obj.education_recommendation, null, 2) || "-";
 
     return {
-      summary: obj.summary || "Analisis telah selesai disusun.",
-      analysis: obj.analysis || composed || text,
-      strengths: obj.strengths || obj.potential || "-",
-      weaknesses: obj.weaknesses || "-",
-      potential: obj.potential || "-",
-      risk: obj.risk || obj.weaknesses || "-",
-      education_recommendation: typeof obj.education_recommendation === "string" 
-        ? obj.education_recommendation 
-        : JSON.stringify(obj.education_recommendation, null, 2) || "-"
+      summary: sanitizeAnalysisMarkdown(rawSummary),
+      analysis: sanitizeAnalysisMarkdown(rawAnalysis),
+      strengths: sanitizeAnalysisMarkdown(rawStrengths),
+      weaknesses: sanitizeAnalysisMarkdown(rawWeaknesses),
+      potential: sanitizeAnalysisMarkdown(rawPotential),
+      risk: sanitizeAnalysisMarkdown(rawRisk),
+      education_recommendation: sanitizeAnalysisMarkdown(rawRec)
     };
   } catch (e) {
     return {
       summary: "Hasil analisis telah digenerate.",
-      analysis: text,
+      analysis: sanitizeAnalysisMarkdown(text),
       strengths: "Dapat diamati dari laporan analisis.",
       weaknesses: "Dapat diamati dari laporan analisis.",
       potential: "Dapat diamati dari laporan analisis.",

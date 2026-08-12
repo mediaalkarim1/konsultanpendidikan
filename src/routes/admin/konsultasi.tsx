@@ -754,13 +754,13 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
         setAnalysis(effectiveAnalysis);
         setEditForm({
-          summary: effectiveAnalysis.summary || "",
-          analysis: effectiveAnalysis.analysis || "",
-          strengths: effectiveAnalysis.strengths || "",
-          weaknesses: effectiveAnalysis.weaknesses || "",
-          potential: effectiveAnalysis.potential || "",
-          risk: effectiveAnalysis.risk || "",
-          education_recommendation: effectiveAnalysis.education_recommendation || ""
+          summary: sanitizeAnalysisMarkdown(effectiveAnalysis.summary || ""),
+          analysis: sanitizeAnalysisMarkdown(effectiveAnalysis.analysis || ""),
+          strengths: sanitizeAnalysisMarkdown(effectiveAnalysis.strengths || ""),
+          weaknesses: sanitizeAnalysisMarkdown(effectiveAnalysis.weaknesses || ""),
+          potential: sanitizeAnalysisMarkdown(effectiveAnalysis.potential || ""),
+          risk: sanitizeAnalysisMarkdown(effectiveAnalysis.risk || ""),
+          education_recommendation: sanitizeAnalysisMarkdown(effectiveAnalysis.education_recommendation || "")
         });
       }
     } catch (e) {
@@ -797,7 +797,15 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
       const res = await updateAnalysisAction({
         data: {
           consultationId: consultId,
-          analysisData: editForm,
+          analysisData: {
+            summary: sanitizeAnalysisMarkdown(editForm.summary),
+            analysis: sanitizeAnalysisMarkdown(editForm.analysis),
+            strengths: sanitizeAnalysisMarkdown(editForm.strengths),
+            weaknesses: sanitizeAnalysisMarkdown(editForm.weaknesses),
+            potential: sanitizeAnalysisMarkdown(editForm.potential),
+            risk: sanitizeAnalysisMarkdown(editForm.risk),
+            education_recommendation: sanitizeAnalysisMarkdown(editForm.education_recommendation)
+          },
           email: userEmail || "admin"
         }
       });
@@ -829,29 +837,8 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
   const handleCopy = () => {
     if (!data) return;
-    const rawMarkdown = analysis?.analysis || data.ai_result || "";
+    const parsed = parseReportSections(analysis, data.ai_result);
     
-    // Parse 4 sections dynamically
-    let sSummary = analysis?.summary || "";
-    let sWeaknesses = analysis?.weaknesses && analysis.weaknesses !== "-" ? analysis.weaknesses : "";
-    let sStrengths = analysis?.strengths && analysis.strengths !== "-" ? analysis.strengths : "";
-    let sRec = analysis?.education_recommendation && analysis.education_recommendation !== "-" ? analysis.education_recommendation : "";
-
-    if (!sWeaknesses && rawMarkdown) {
-      const match = rawMarkdown.match(/(?:##?\s*(?:2\.\s*)?AREA YANG PERLU DIPERHATIKAN|##?\s*❗[\s\S]*?Area yang Perlu Diperhatikan)([\s\S]*?)(?=## 3|## 4|\n# |$)/i);
-      if (match) sWeaknesses = match[1].trim();
-    }
-
-    if (!sStrengths && rawMarkdown) {
-      const match = rawMarkdown.match(/(?:##?\s*(?:3\.\s*)?MINAT & POTENSI|##?\s*🌟[\s\S]*?Minat & Potensi)([\s\S]*?)(?=## 4|\n# |$)/i);
-      if (match) sStrengths = match[1].trim();
-    }
-
-    if (!sRec && rawMarkdown) {
-      const match = rawMarkdown.match(/(?:##?\s*(?:4\.\s*)?REKOMENDASI|##?\s*🎯[\s\S]*?Rekomendasi)([\s\S]*?)(?=$)/i);
-      if (match) sRec = match[1].trim();
-    }
-
     const text = `=== LAPORAN EVALUASI & REKOMENDASI EDUKONSUL ===
 Nama Orang Tua: ${data.parent_name}
 Nama Anak: ${data.child_name || "-"}
@@ -859,16 +846,16 @@ Nomor WhatsApp: ${data.whatsapp_number}
 Jenjang: ${LEVEL_LABELS[data.level] || data.level}
 
 1. RINGKASAN AWAL:
-${sSummary || "-"}
+${parsed.summary}
 
 2. AREA YANG PERLU DIPERHATIKAN:
-${sWeaknesses || "-"}
+${parsed.concerns.map(c => `• ${c.title}${c.desc ? `: ${c.desc}` : ""}`).join("\n")}
 
 3. MINAT & POTENSI:
-${sStrengths || "-"}
+${parsed.potentials.map(p => `• ${p.title}${p.desc ? `: ${p.desc}` : ""}`).join("\n")}
 
-4. REKOMENDASI PENDAMPINGAN:
-${sRec || "-"}
+4. REKOMENDASI PENDAMPINGAN RUMAH:
+${parsed.recommendations.map(r => `• ${r.title}${r.desc ? `: ${r.desc}` : ""}`).join("\n")}
 `;
     navigator.clipboard.writeText(text);
     toast.success("Hasil analisis (4 bagian) berhasil disalin.");
@@ -876,9 +863,10 @@ ${sRec || "-"}
 
   const handleSendWaManual = () => {
     if (!data) return;
+    const parsed = parseReportSections(analysis, data.ai_result);
     const cleanNumber = data.whatsapp_number.replace(/[^0-9]/g, "");
     const formattedNum = cleanNumber.startsWith("0") ? "62" + cleanNumber.slice(1) : cleanNumber;
-    const text = `Assalamu'alaikum Ibu/Bapak ${data.parent_name},\n\nHasil analisis tes potensi EduKonsul untuk jenjang ${LEVEL_LABELS[data.level]} telah selesai.\n\nBerikut ringkasan singkatnya:\n${analysis?.summary || "Silakan hubungi kami untuk info lebih lanjut."}\n\nTerima kasih.`;
+    const text = `Assalamu'alaikum Ibu/Bapak ${data.parent_name},\n\nHasil analisis tes potensi EduKonsul untuk jenjang ${LEVEL_LABELS[data.level]} telah selesai.\n\nBerikut ringkasan singkatnya:\n${parsed.summary}\n\nTerima kasih.`;
     window.open(`https://wa.me/${formattedNum}?text=${encodeURIComponent(text)}`, "_blank");
   };
 

@@ -283,27 +283,37 @@ export const reGenerateAnalysisAction = createServerFn({ method: "POST" })
     return res;
   });
 
+import { sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
+
 export const updateAnalysisAction = createServerFn({ method: "POST" })
   .validator((payload: { consultationId: string; analysisData: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
     const { consultationId, analysisData, email } = ctx.data;
 
+    const sSummary = sanitizeAnalysisMarkdown(analysisData.summary);
+    const sAnalysis = sanitizeAnalysisMarkdown(analysisData.analysis);
+    const sStrengths = sanitizeAnalysisMarkdown(analysisData.strengths);
+    const sWeaknesses = sanitizeAnalysisMarkdown(analysisData.weaknesses);
+    const sPotential = sanitizeAnalysisMarkdown(analysisData.potential || analysisData.strengths);
+    const sRisk = sanitizeAnalysisMarkdown(analysisData.risk || analysisData.weaknesses);
+    const sRec = sanitizeAnalysisMarkdown(analysisData.education_recommendation);
+
     const { error } = await supabaseAdmin.from("consultation_analysis").upsert({
       consultation_id: consultationId,
-      summary: analysisData.summary,
-      analysis: analysisData.analysis,
-      strengths: analysisData.strengths,
-      weaknesses: analysisData.weaknesses,
-      potential: analysisData.potential,
-      risk: analysisData.risk,
-      education_recommendation: analysisData.education_recommendation
+      summary: sSummary,
+      analysis: sAnalysis,
+      strengths: sStrengths,
+      weaknesses: sWeaknesses,
+      potential: sPotential,
+      risk: sRisk,
+      education_recommendation: sRec
     }, { onConflict: "consultation_id" });
 
     if (error) throw error;
 
     await supabaseAdmin.from("consultations").update({
-      ai_result: analysisData.analysis
+      ai_result: sAnalysis
     }).eq("id", consultationId);
 
     await logActivityInternal(email, "EDIT_AI_ANALYSIS", { consultation_id: consultationId });
@@ -796,12 +806,70 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
 
 // --- Bulk Sync & Auto-Generate Statuses Action ---
 
+// --- Clean Database Markdown Action ---
+export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "POST" })
+  .validator((payload: { email: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      let cleanedAnalysisCount = 0;
+      let cleanedConsultationsCount = 0;
+
+      // 1. Clean consultation_analysis table
+      const { data: analysisRows } = await supabaseAdmin.from("consultation_analysis").select("*");
+      if (analysisRows) {
+        for (const row of analysisRows) {
+          const hasMarkdownHash = /#{1,6}/.test(
+            (row.summary || "") + (row.analysis || "") + (row.weaknesses || "") + (row.strengths || "") + (row.education_recommendation || "")
+          );
+
+          if (hasMarkdownHash) {
+            await supabaseAdmin.from("consultation_analysis").update({
+              summary: sanitizeAnalysisMarkdown(row.summary),
+              analysis: sanitizeAnalysisMarkdown(row.analysis),
+              weaknesses: sanitizeAnalysisMarkdown(row.weaknesses),
+              strengths: sanitizeAnalysisMarkdown(row.strengths),
+              potential: sanitizeAnalysisMarkdown(row.potential || row.strengths),
+              risk: sanitizeAnalysisMarkdown(row.risk || row.weaknesses),
+              education_recommendation: sanitizeAnalysisMarkdown(row.education_recommendation)
+            }).eq("consultation_id", row.consultation_id);
+            cleanedAnalysisCount++;
+          }
+        }
+      }
+
+      // 2. Clean consultations table ai_result
+      const { data: consultationRows } = await supabaseAdmin.from("consultations").select("id, ai_result").not("ai_result", "is", null);
+      if (consultationRows) {
+        for (const row of consultationRows) {
+          if (row.ai_result && /#{1,6}/.test(row.ai_result)) {
+            await supabaseAdmin.from("consultations").update({
+              ai_result: sanitizeAnalysisMarkdown(row.ai_result)
+            }).eq("id", row.id);
+            cleanedConsultationsCount++;
+          }
+        }
+      }
+
+      await logActivityInternal(ctx.data.email || "admin", "SANITIZE_DATABASE_MARKDOWN", { cleanedAnalysisCount, cleanedConsultationsCount });
+      return { success: true, cleanedAnalysisCount, cleanedConsultationsCount };
+    } catch (e: any) {
+      console.error("sanitizeDatabaseAnalysisMarkdownAction error:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
 export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST" })
   .validator((payload: { email: string }) => payload)
   .handler(async (ctx) => {
     try {
       const supabaseAdmin = getAdminSupabase();
       const { email } = ctx.data;
+
+      // First run DB Markdown sanitizer
+      try {
+        await sanitizeDatabaseAnalysisMarkdownAction({ data: { email } });
+      } catch (_) {}
 
       const { data: allCons } = await supabaseAdmin.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, status, ai_result");
       const { data: allAnalysis } = await supabaseAdmin.from("consultation_analysis").select("consultation_id");

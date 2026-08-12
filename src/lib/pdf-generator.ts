@@ -55,9 +55,13 @@ export function sanitizeAnalysisMarkdown(text: string): string {
   return text
     // Strip Markdown heading hashes (#, ##, ###, ####, etc.) at the start of any line
     .replace(/^[ \t]*#{1,6}[ \t]*/gm, "")
+    // Remove isolated Markdown heading hashes after newlines/carriage returns
+    .replace(/[\r\n]+[ \t]*#{1,6}[ \t]*/g, "\n")
     // Remove bold **text** or __text__ syntax
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/__(.*?)__/g, "$1")
+    // Absolute safety fallback: strip any remaining stray hash symbols (#)
+    .replace(/#{1,6}/g, "")
     .trim();
 }
 
@@ -73,6 +77,8 @@ export function cleanHeadingTitle(title: string): string {
     .replace(/^\d+[\.\)]\s*/, "")
     // Remove trailing colon
     .replace(/:$/, "")
+    // Remove any remaining stray hashes
+    .replace(/#{1,6}/g, "")
     .trim();
 }
 
