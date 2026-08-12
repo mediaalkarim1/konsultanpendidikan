@@ -206,7 +206,8 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
     const model = provider.model?.trim() || "gpt-4o-mini";
     const baseUrl = (provider.base_url?.trim() || "").replace(/\/+$/, "");
     const temp = Number(provider.temperature) || 0.7;
-    const maxTokens = Number(provider.max_tokens) || 2048;
+    // Analisis butuh minimal 5 area + 3 potensi + 5 rekomendasi → butuh ruang token lebih besar
+    const maxTokens = Math.max(Number(provider.max_tokens) || 0, 4096);
 
     if (provider.provider_key === "gemini") {
       // Google Gemini API
