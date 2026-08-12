@@ -251,6 +251,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           if (opts) opts.forEach((o: any) => { optionsMap[o.id] = o.option_text; });
         }
 
+        formattedAnswers = answers.map((a: any) => {
           let qText = (a as any).question_text || (a as any).question || questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id];
           if (!qText || qText === "Pertanyaan Kuesioner" || qText === "Pertanyaan") {
             qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
@@ -260,6 +261,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
           const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAns);
           const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns && rawAns !== "-" ? rawAns : "-"));
           return `P: ${qText}\nJ: ${aText}`;
+        }).join("\n\n");
       }
 
       // Update status to Sedang Dianalisis

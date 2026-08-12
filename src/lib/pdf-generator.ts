@@ -775,6 +775,19 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     }
   }
 
+  // Safety Net: If both lists are empty but QA exists, extract positive findings from QA
+  if (potentialsList.length === 0 && concernsList.length === 0 && qa.length > 0) {
+    qa.forEach((item) => {
+      if (item.a && item.a !== "-") {
+        const cleanAns = item.a.length > 50 ? item.a.slice(0, 47) + "..." : item.a;
+        potentialsList.push({
+          title: `Observasi Positif pada Aspek "${cleanAns}"`,
+          desc: `Jawaban orang tua mencatat: "${item.a}". Informasi ini menjadi basis positif pendampingan anak di rumah.`
+        });
+      }
+    });
+  }
+
   // Generate recommendations ONLY linked directly to identified findings
   const recommendationsList: string[] = [];
   concernsList.forEach((c) => {
