@@ -249,63 +249,60 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     })
     .filter((x) => (x.q || x.a) && x.a !== "-");
 
-  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat)/i;
-  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah)/i;
+  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat|kadang)/i;
+  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah|sering)/i;
 
-  const shorten = (t: string, max = 90) => (t.length > max ? t.slice(0, max).trim() + "..." : t);
+  const shorten = (t: string, max = 110) => (t.length > max ? t.slice(0, max).trim() + "..." : t);
   const lower = (t: string) => (t ? t.charAt(0).toLowerCase() + t.slice(1) : t);
+  const topicOf = (q: string) => shorten(q.replace(/\?$/, "").replace(/^(apakah|bagaimana|seberapa|apa)\s+/i, ""), 80);
 
   const concerns: string[] = [];
   const potentials: string[] = [];
+  const recommendations: string[] = [];
 
   for (const item of qa) {
     if (!item.a || item.a === "-") continue;
-    const topic = shorten(item.q.replace(/\?$/, ""));
+    const topic = topicOf(item.q);
+    const ans = lower(shorten(item.a));
+
     if (NEGATIVE.test(item.a)) {
       concerns.push(
-        `❗ ${topic}\nDari jawaban orang tua (${lower(shorten(item.a, 120))}), bagian ini terlihat masih membutuhkan pendampingan yang konsisten.`
+        `❗ ${topic} masih perlu diperkuat\nOrang tua menjawab "${ans}" pada bagian ini, sehingga kondisi tersebut perlu mendapat pendampingan yang lebih terarah di rumah.`
+      );
+      recommendations.push(
+        `🎯 Dampingi anak pada bagian "${topic}"\nKarena jawaban orang tua menyebut "${ans}", mulailah dengan langkah kecil yang spesifik pada situasi tersebut dan amati perubahannya setiap pekan.`
       );
     } else if (POSITIVE.test(item.a)) {
       potentials.push(
-        `🌟 ${topic}\nJawaban orang tua menunjukkan ${lower(shorten(item.a, 120))}, sehingga ini menjadi kekuatan yang dapat terus dikembangkan.`
+        `🌟 ${topic}\nJawaban orang tua menyebut "${ans}", dan hal ini menjadi kekuatan nyata yang dapat dijadikan pintu masuk pembelajaran.`
+      );
+      recommendations.push(
+        `🎯 Gunakan "${topic}" sebagai pintu masuk belajar\nKarena anak menunjukkan "${ans}", kaitkan materi atau kebiasaan baru dengan hal tersebut agar anak lebih mudah terlibat.`
       );
     } else {
-      if (concerns.length <= potentials.length) {
-        concerns.push(
-          `❗ ${topic}\nBerdasarkan jawaban orang tua (${lower(shorten(item.a, 120))}), aspek ini dapat menjadi perhatian dalam pendampingan harian.`
-        );
-      } else {
-        potentials.push(
-          `🌟 ${topic}\nJawaban orang tua mencatat ${lower(shorten(item.a, 120))}, yang menjadi bagian dari keunikan dan potensi anak.`
-        );
-      }
+      concerns.push(
+        `❗ ${topic} perlu diperhatikan lebih dekat\nJawaban orang tua ("${ans}") menunjukkan kondisi yang belum stabil pada bagian ini sehingga perlu diamati dalam keseharian.`
+      );
+      recommendations.push(
+        `🎯 Amati pola anak pada "${topic}"\nCatat selama satu minggu situasi yang berkaitan dengan "${ans}" untuk melihat kapan anak paling mudah dan paling sulit menjalaninya.`
+      );
     }
   }
 
-  if (concerns.length === 0) {
-    concerns.push(
-      `❗ Rutinitas & Konsistensi Belajar\nBerdasarkan profil perkembangan jenjang ${jenjangLabel}, ${childPhrase} membutuhkan pendampingan yang konsisten dan penguatan kebiasaan harian.`
-    );
-  }
-  if (potentials.length === 0) {
-    potentials.push(
-      `🌟 Kemampuan Adaptasi & Minat Belajar\n${childPhrase} memiliki potensi berkembang yang positif jika didukung dengan media belajar yang tepat dan motivasi keluarga.`
-    );
-  }
+  const dedupe = (arr: string[]) => Array.from(new Set(arr));
+  const concernsList = dedupe(concerns);
+  const potentialsList = dedupe(potentials);
+  const recommendationList = dedupe(recommendations);
 
-  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan informasi yang disampaikan mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki keunikan belajar serta potensi yang dapat didukung secara optimal di rumah.\n\nSecara umum, terdapat beberapa kekuatan yang menonjol sekaligus area utama yang perlu mendapat pendampingan hangat dari keluarga.`;
+  const summary = qa.length
+    ? `Ayah Bunda ${parentDisplay}, dari ${qa.length} jawaban yang disampaikan mengenai ${childPhrase}, terlihat pola yang khas: ${lower(shorten(qa[0].a, 120))}${qa[1] ? `, serta ${lower(shorten(qa[1].a, 120))}` : ""}.\n\nDari keseluruhan jawaban, terdapat ${potentialsList.length} kekuatan yang menonjol dan ${concernsList.length} kondisi yang perlu diperhatikan dalam pendampingan sehari-hari di rumah.`
+    : `Ayah Bunda ${parentDisplay}, belum ada jawaban assessment yang dapat dianalisis untuk ${childPhrase}. Silakan lengkapi formulir agar analisis dapat disusun berdasarkan kondisi anak.`;
 
-  const concernsText = concerns.join("\n\n");
-  const potentialsText = potentials.join("\n\n");
+  const concernsText = concernsList.join("\n\n") || "❗ Data jawaban belum cukup\nBelum ada jawaban yang dapat dijadikan dasar temuan.";
+  const potentialsText = potentialsList.join("\n\n") || "🌟 Data jawaban belum cukup\nBelum ada jawaban yang dapat dijadikan dasar potensi.";
+  const recommendation = recommendationList.join("\n\n") || "🎯 Lengkapi jawaban assessment\nAgar rekomendasi dapat disusun sesuai kondisi anak, lengkapi seluruh pertanyaan pada formulir.";
 
-  const recommendation = `🎯 Rekomendasi Pendampingan
-
-- Dampingi ${childPhrase} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
-- Kaitkan aktivitas belajar dengan minat dan potensi yang sudah terlihat agar anak lebih terlibat.
-- Beri apresiasi pada setiap usaha yang ditunjukkan ${nameDisplay}, bukan hanya pada hasil akhirnya.
-- Sepakati rutinitas harian yang sederhana dan realistis bersama anak di rumah.`;
-
-  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${concernsText}\n\n## 3. 🌟 MINAT & POTENSI\n\n${potentialsText}\n\n## 4. 🎯 REKOMENDASI PENDAMPINGAN\n\n${recommendation}`;
+  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${concernsText}\n\n## 3. 🌟 MINAT & POTENSI\n\n${potentialsText}\n\n## 4. 🎯 REKOMENDASI\n\n${recommendation}`;
 
   return {
     summary,
@@ -317,6 +314,7 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     education_recommendation: recommendation
   };
 }
+
 
 
 
