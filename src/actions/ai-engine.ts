@@ -1,5 +1,5 @@
 import { generateFallbackAnalysisResult, type AiAnalysisResult } from "../lib/pdf-generator";
-import { DEFAULT_UNIFIED_PROMPT } from "../lib/ai-prompt-default";
+import { DEFAULT_UNIFIED_PROMPT, PROMPT_VERSION_MARKER } from "../lib/ai-prompt-default";
 import { getAdminSupabase } from "../lib/supabase-admin";
 
 
