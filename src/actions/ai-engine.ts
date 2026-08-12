@@ -138,22 +138,43 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
 
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
 
-  // Auto-persist new prompt to DB if not already there (fire-and-forget, non-blocking)
-  if (!systemPromptFromDb) {
-    const newPromptPayload = {
-      id: "unified-prompt",
-      system_prompt: defaultUnifiedPrompt,
-      analysis_prompt: defaultUnifiedPrompt,
-      summary_prompt: defaultUnifiedPrompt,
-      recommendation_prompt: defaultUnifiedPrompt,
-      updated_at: new Date().toISOString()
-    };
-    supabaseAdmin.from("settings").upsert(
-      { key: "ai.unified_prompt", value: newPromptPayload as any, is_public: false },
-      { onConflict: "key" }
-    ).then(() => {
-      console.info("[AI Engine] Auto-saved new-format prompt to DB settings for future use.");
-    }).catch(() => {});
+  let jenjangGuidance = "";
+  const normalizedLevel = (level || "").toLowerCase().trim();
+  if (normalizedLevel === "sma") {
+    jenjangGuidance = `
+=== GUIDELINES SPESIFIK ANALISIS JENJANG SMA ===
+- Subjek adalah siswa SMA (persiapan perguruan tinggi & karier masa depan).
+- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
+  * Kebingungan menentukan jurusan kuliah / belum memiliki tujuan hidup yang jelas
+  * Keterbatasan portofolio karya, pengalaman proyek nyata, atau aktivitas organisasi
+  * Manajemen waktu mandiri, kedisiplinan belajar, dan literasi keuangan
+  * Kebutuhan penguasaan Bahasa Inggris aktif & digital skill masa depan
+  * Keterlibatan dalam karya / kewirausahaan
+  * Tekanan persiapan kelulusan dan seleksi masuk kampus
+- DILARANG MEMAKSAKAN temuan generik seperti "❗ Rutinitas & Konsistensi Belajar" KECUALI jika jawaban orang tua memang eksplisit menunjukkan kendala tersebut.
+`;
+  } else if (normalizedLevel === "smp") {
+    jenjangGuidance = `
+=== GUIDELINES SPESIFIK ANALISIS JENJANG SMP ===
+- Subjek adalah remaja jenjang SMP (fase eksplorasi bakat & identitas remaja).
+- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
+  * Durasi gawai / game online / media sosial & dampaknya pada fokus belajar
+  * Kebiasaan menunda pekerjaan (prokrastinasi) & disiplin belajar mandiri
+  * Kepercayaan diri menyampaikan pendapat & pola komunikasi keluarga
+  * Daya tahan problem solving saat menghadapi tugas atau tantangan sulit
+  * Pengaruh lingkungan sebaya & kejelasan gambaran minat cita-cita awal
+`;
+  } else if (normalizedLevel === "tksd") {
+    jenjangGuidance = `
+=== GUIDELINES SPESIFIK ANALISIS JENJANG TK & SD ===
+- Subjek adalah anak usia dini / sekolah dasar (fase pembentukan karakter & tumbuh kembang).
+- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
+  * Durasi screen time gawai & reaksi emosional saat gawai disudahi (menangis/marah/rewel)
+  * Kemandirian harian (apakah terbiasa sendiri atau masih dibantu orang tua)
+  * Respon saat hadapi kesulitan (mencoba sendiri vs mudah menyerah/menangis)
+  * Adaptasi sosial dan kemampuan berteman dengan anak lain
+  * Karakter utama (akhlak, adab, mandiri, percaya diri) & stimulasi visual/bermain
+`;
   }
 
   const processedPrompt = mainPromptTemplate
@@ -163,43 +184,51 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
     .replace(/{{jawaban_lengkap}}/g, formattedAnswers);
 
   const fullUserPrompt = `
-=== INSTRUKSI PROMPT ADMIN ===
+=== INSTRUKSI PROMPT UTAMA ===
 ${processedPrompt}
+
+${jenjangGuidance}
 
 === DATA KONSULTASI KLIEN ===
 Nama Orang Tua: ${parentName}
 Nama Anak: ${childName || "-"}
-Jenjang: ${level}
+Jenjang: ${level.toUpperCase()}
 Nomor WhatsApp: ${whatsappNumber}
 
-=== JAWABAN KUESIONER ===
+=== JAWABAN KUESIONER LENGKAP ===
 ${formattedAnswers}
 
-=== PETUNJUK OUTPUT ===
+=== PETUNJUK FORMAT OUTPUT ===
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
   "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak yang benar-benar berasal dari jawaban orang tua. Dilarang kalimat pembuka generik.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (MINIMAL 5 POIN, setiap area diawali ### ❗ [Nama Temuan Spesifik Dari Jawaban]), lalu ## 3. 🌟 MINAT & POTENSI (MINIMAL 3 POIN, setiap potensi diawali ### 🌟 [Nama Potensi Spesifik]), lalu ## 4. 🎯 REKOMENDASI (MINIMAL 5 POIN, setiap poin diawali ### 🎯 [Judul Rekomendasi Spesifik Rumah]). Dilarang template generik.",
+  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (MINIMAL 5 POIN jika didukung jawaban, setiap area diawali ### ❗ [Nama Temuan Spesifik Dari Jawaban]), lalu ## 3. 🌟 MINAT & POTENSI (MINIMAL 3 POIN, setiap potensi diawali ### 🌟 [Nama Potensi Spesifik]), lalu ## 4. 🎯 REKOMENDASI PENDAMPINGAN RUMAH (MINIMAL 5 POIN, setiap poin diawali ### 🎯 [Judul Rekomendasi Spesifik Rumah]). Dilarang template generik.",
   "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja (Minimal 3 poin) — setiap potensi menggunakan ### 🌟 [Nama Potensi Spesifik] diikuti penjelasan singkat berdasarkan bukti jawaban orang tua.",
-  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja (Minimal 5 poin) — setiap area menggunakan ### ❗ [Nama Temuan Spesifik Dari Jawaban] diikuti penjelasan 1-3 kalimat.",
+  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Temuan Spesifik Dari Jawaban] diikuti penjelasan 1-3 kalimat.",
   "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI (Minimal 3 poin).",
-  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN (Minimal 5 poin).",
-  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja (Minimal 5 poin) — berupa rekomendasi konkret untuk pendampingan rumah. Dilarang rekomendasi sekolah."
+  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
+  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI PENDAMPINGAN RUMAH saja (Minimal 5 poin) — berupa rekomendasi konkret untuk pendampingan rumah. Dilarang rekomendasi sekolah."
 }
 `;
 
-
   try {
     let rawResponseText = "";
-    const key = provider.api_key?.trim() || "";
-    const model = provider.model?.trim() || "gpt-4o-mini";
+    const key = provider.api_key?.trim() || geminiEnvKey || "";
+    const model = provider.model?.trim() || "gemini-1.5-flash";
     const baseUrl = (provider.base_url?.trim() || "").replace(/\/+$/, "");
     const temp = Number(provider.temperature) || 0.7;
     const maxTokens = Number(provider.max_tokens) || 2048;
 
-    if (provider.provider_key === "gemini") {
-      // Google Gemini API
-      const geminiUrl = `${baseUrl || "https://generativelanguage.googleapis.com/v1beta/models"}/${model}:generateContent?key=${key}`;
+    if (provider.provider_key === "gemini" || key.startsWith("AIzaSy")) {
+      // Google Gemini API (Direct)
+      // Clean model name: remove google/ prefix if present
+      let cleanModel = model.replace(/^google\//, "");
+      // Map legacy or unsupported model names to stable Gemini models if needed
+      if (cleanModel.includes("3.5") || cleanModel.includes("3.1")) {
+        cleanModel = "gemini-2.5-flash";
+      }
+
+      const geminiUrl = `${baseUrl || "https://generativelanguage.googleapis.com/v1beta/models"}/${cleanModel}:generateContent?key=${key}`;
       const res = await fetch(geminiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,8 +244,31 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
       });
 
       const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error?.message || "Google Gemini API error");
-      rawResponseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!res.ok) {
+        // Fallback retry with gemini-1.5-flash if model name was rejected
+        if (cleanModel !== "gemini-1.5-flash") {
+          console.warn(`[Gemini API] Retry with gemini-1.5-flash due to error: ${resData.error?.message}`);
+          const retryUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+          const retryRes = await fetch(retryUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: fullUserPrompt }] }],
+              generationConfig: { temperature: temp, maxOutputTokens: maxTokens }
+            })
+          });
+          const retryData = await retryRes.json();
+          if (retryRes.ok) {
+            rawResponseText = retryData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          } else {
+            throw new Error(retryData.error?.message || resData.error?.message || "Google Gemini API error");
+          }
+        } else {
+          throw new Error(resData.error?.message || "Google Gemini API error");
+        }
+      } else {
+        rawResponseText = resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      }
 
     } else if (provider.provider_key === "claude") {
       // Anthropic Claude API
