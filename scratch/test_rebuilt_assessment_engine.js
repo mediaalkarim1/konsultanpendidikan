@@ -4,6 +4,25 @@ console.log("==================================================");
 console.log("REBUILT ASSESSMENT ENGINE — CONTRAST & EVIDENCE TEST SUITE");
 console.log("==================================================");
 
+const BANNED_PHRASES = [
+  "potensi positif pada aspek",
+  "permasalahan pada aspek",
+  "perhatian spesifik pada aspek",
+  "observasi jawaban",
+  "pendampingan terarah pada",
+  "pengayaan potensi"
+];
+
+function containsBannedPhrase(data) {
+  const jsonStr = JSON.stringify(data || {}).toLowerCase();
+  for (const phrase of BANNED_PHRASES) {
+    if (jsonStr.includes(phrase)) {
+      return phrase;
+    }
+  }
+  return null;
+}
+
 async function runRebuiltEngineTests() {
   try {
     let failed = false;
@@ -30,11 +49,15 @@ J: Menggambar, mewarnai, atau kreasi tangan dan seni visual`;
       console.log("Potentials:", res1.data.potentials.map(p => p.title));
       console.log("Recommendations:", res1.data.recommendations.map(r => r.title));
 
-      if (res1.data.attentionAreas.some(a => a.title.toLowerCase().includes("screen time") || a.title.toLowerCase().includes("emosi"))) {
+      const banned = containsBannedPhrase(res1.data);
+      if (banned) {
+        console.error(`❌ FAIL: Test 1 output contained banned copy-paste phrase "${banned}"!`);
+        failed = true;
+      } else if (res1.data.attentionAreas.some(a => a.title.toLowerCase().includes("screen time") || a.title.toLowerCase().includes("emosi"))) {
         console.error("❌ FAIL: Test 1 contained false gadget/emotion concerns!");
         failed = true;
       } else {
-        console.log("✅ CHECK 1 PASSED: Zero false template concerns in Test 1.");
+        console.log("✅ CHECK 1 PASSED: Zero copy-paste titles and zero false template concerns in Test 1.");
       }
     } else {
       console.error("❌ FAIL: Test 1 engine execution failed:", res1.error);
@@ -63,11 +86,15 @@ J: Teknologi, game development, sains, atau coding`;
       console.log("Potentials:", res2.data.potentials.map(p => p.title));
       console.log("Recommendations:", res2.data.recommendations.map(r => r.title));
 
-      if (res2.data.attentionAreas.length === 0) {
+      const banned = containsBannedPhrase(res2.data);
+      if (banned) {
+        console.error(`❌ FAIL: Test 2 output contained banned copy-paste phrase "${banned}"!`);
+        failed = true;
+      } else if (res2.data.attentionAreas.length === 0) {
         console.error("❌ FAIL: Test 2 failed to extract expected time management concern!");
         failed = true;
       } else {
-        console.log("✅ CHECK 2 PASSED: Test 2 extracted actual time management concern.");
+        console.log("✅ CHECK 2 PASSED: Test 2 extracted actual time management concern with clean interpreted titles.");
       }
     } else {
       console.error("❌ FAIL: Test 2 engine execution failed:", res2.error);
@@ -116,7 +143,7 @@ J: Sering menunda-nunda dan belajar dengan metode SKS (Sistem Kebut Semalam)`;
     }
 
     if (!failed) {
-      console.log("\n🎉 ALL REBUILT ASSESSMENT ENGINE TESTS PASSED PERFECTLY!");
+      console.log("\n🎉 ALL REBUILT ASSESSMENT ENGINE TESTS PASSED PERFECTLY WITH ZERO BANNED PHRASES!");
     } else {
       process.exit(1);
     }

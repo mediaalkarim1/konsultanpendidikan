@@ -1,4 +1,4 @@
-import { generateFallbackAnalysisResult, type AiAnalysisResult } from "../lib/pdf-generator";
+import { type AiAnalysisResult } from "../lib/pdf-generator";
 import { DEFAULT_UNIFIED_PROMPT } from "../lib/ai-prompt-default";
 import { getAdminSupabase } from "../lib/supabase-admin";
 
@@ -333,8 +333,8 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
   } catch (err: any) {
     console.warn(`[AI Engine Notice] (${provider?.provider_name} API unavailable, using smart analysis engine):`, err?.message || err);
     
-    // Smart Fallback Engine: Return high-quality comprehensive analysis result
-    const fallbackResult = generateFallbackAnalysisResult(parentName, childName, level, formattedAnswers);
+    // Smart Fallback Engine: Return high-quality interpreted analysis result
+    const fallbackResult = generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
     return {
       success: true,
       providerName: `${provider?.provider_name || "AI Engine"} (Smart Engine)`,
@@ -456,6 +456,220 @@ export type CleanAnalysisJson = {
   recommendations: { title: string; description: string; basedOn: string }[];
 };
 
+// ====================================================================
+// SEMANTIC KEYWORD INTERPRETER — Interprets parent answers into
+// natural professional titles instead of copy-pasting raw answers
+// ====================================================================
+
+type SemanticMapping = {
+  keywords: RegExp;
+  title: string;
+  category: "positive" | "concern";
+  recTitle: string;
+  recDesc: (childName: string) => string;
+};
+
+const SEMANTIC_MAPPINGS: SemanticMapping[] = [
+  // --- POSITIVE indicators ---
+  { keywords: /menggambar|mewarnai|melukis|kreasi|seni\s*visual|craft/i, title: "Minat pada Aktivitas Kreatif", category: "positive", recTitle: "Kembangkan Aktivitas Kreatif", recDesc: (c) => `Berikan kesempatan kepada ${c} untuk menggambar, mewarnai, atau membuat karya sederhana secara rutin.` },
+  { keywords: /mandiri.*alat|menyiapkan.*sendiri|merapikan.*sendiri|mandiri.*belajar/i, title: "Kemandirian dalam Kegiatan Harian", category: "positive", recTitle: "Pertahankan Kemandirian", recDesc: (c) => `Berikan kesempatan kepada ${c} untuk menyiapkan perlengkapannya sendiri dan berikan apresiasi atas usahanya.` },
+  { keywords: /video\s*edukasi|konten\s*edukasi|belajar.*online|aplikasi.*belajar/i, title: "Ketertarikan pada Konten Edukatif", category: "positive", recTitle: "Fasilitasi Konten Edukatif Berkualitas", recDesc: (c) => `Dampingi ${c} memilih konten edukatif yang sesuai dengan minatnya dan diskusikan isi konten bersama.` },
+  { keywords: /kurang.*1\s*jam|di\s*bawah.*1\s*jam|tidak.*banyak.*hp|didampingi.*gawai|terbatas.*layar/i, title: "Pengelolaan Perangkat Digital yang Terarah", category: "positive", recTitle: "Apresiasi Kebiasaan Digital Sehat", recDesc: (c) => `Pertahankan pola penggunaan perangkat digital yang sudah baik dan berikan apresiasi kepada ${c}.` },
+  { keywords: /mantap.*jurusan|sudah.*pilih.*jurusan|tahu.*jurusan|yakin.*jurusan|sudah.*tujuan/i, title: "Kejelasan Arah Pendidikan", category: "positive", recTitle: "Dukung Perencanaan Pendidikan", recDesc: (c) => `Dukung ${c} dengan informasi dan pengalaman yang memperkuat pilihan pendidikannya.` },
+  { keywords: /aktif.*organisasi|memimpin|lomba|sertifikat|portofolio|prestasi/i, title: "Keaktifan dalam Kegiatan Terstruktur", category: "positive", recTitle: "Dukung Keterlibatan dalam Kegiatan", recDesc: (c) => `Dorong ${c} untuk terus aktif dalam kegiatan yang mengasah kepemimpinan dan keterampilan sosial.` },
+  { keywords: /teratur.*jadwal|disiplin.*belajar|jadwal.*rapi|mengelola.*waktu.*baik/i, title: "Kedisiplinan dalam Manajemen Waktu", category: "positive", recTitle: "Pertahankan Rutinitas Belajar", recDesc: (c) => `Apresiasi kebiasaan belajar teratur ${c} dan bantu mempertahankan konsistensinya.` },
+  { keywords: /teknologi|coding|programming|robotik|game\s*dev|sains|komputer/i, title: "Minat pada Bidang Teknologi & Sains", category: "positive", recTitle: "Fasilitasi Eksplorasi Teknologi", recDesc: (c) => `Berikan akses dan kesempatan kepada ${c} untuk mengeksplorasi bidang teknologi yang diminatinya.` },
+  { keywords: /olahraga|sepak\s*bola|basket|renang|bela\s*diri|atletik|futsal/i, title: "Minat pada Aktivitas Fisik & Olahraga", category: "positive", recTitle: "Dukung Aktivitas Fisik", recDesc: (c) => `Fasilitasi ${c} untuk rutin berlatih olahraga yang diminatinya.` },
+  { keywords: /musik|bernyanyi|bermain.*musik|alat\s*musik|piano|gitar|drum/i, title: "Minat pada Seni Musik", category: "positive", recTitle: "Kembangkan Bakat Musik", recDesc: (c) => `Berikan kesempatan kepada ${c} untuk berlatih musik dan mengeksplorasi instrumen yang diminatinya.` },
+  { keywords: /membaca|buku|cerita|dongeng|literasi|perpustakaan/i, title: "Minat pada Kegiatan Literasi", category: "positive", recTitle: "Dukung Kebiasaan Membaca", recDesc: (c) => `Sediakan buku-buku yang sesuai dengan minat ${c} dan ciptakan waktu membaca bersama.` },
+  { keywords: /mudah\s*berteman|supel|adaptasi.*baik|percaya\s*diri.*tinggi|berani.*tampil/i, title: "Kemampuan Sosial yang Baik", category: "positive", recTitle: "Dukung Keterampilan Sosial", recDesc: (c) => `Berikan kesempatan kepada ${c} untuk berinteraksi dalam berbagai lingkungan sosial.` },
+  { keywords: /antusias|semangat|excited|bersemangat|senang.*sekolah|rajin/i, title: "Antusiasme dalam Belajar", category: "positive", recTitle: "Pertahankan Semangat Belajar", recDesc: (c) => `Apresiasi semangat belajar ${c} dan ciptakan suasana belajar yang menyenangkan di rumah.` },
+  // --- CONCERN indicators ---
+  { keywords: /menunda|prokrastinasi|tunda|SKS.*kebut|larut\s*malam/i, title: "Manajemen Waktu Belajar", category: "concern", recTitle: "Bantu Pengaturan Jadwal Belajar", recDesc: (c) => `Bantu ${c} membuat jadwal belajar harian yang realistis dan dampingi secara bertahap untuk membangun konsistensi.` },
+  { keywords: /frustrasi|menyerah|kehilangan.*motivasi|putus\s*asa|malas/i, title: "Ketahanan dalam Menghadapi Tantangan", category: "concern", recTitle: "Bangun Ketahanan Belajar", recDesc: (c) => `Dampingi ${c} saat menghadapi kesulitan dan ajarkan bahwa proses belajar membutuhkan ketekunan bertahap.` },
+  { keywords: /bingung.*jurusan|belum.*gambaran|belum.*tahu.*jurusan|belum.*pilih/i, title: "Eksplorasi Minat & Arah Pendidikan", category: "concern", recTitle: "Dampingi Eksplorasi Minat", recDesc: (c) => `Ajak ${c} berdiskusi santai tentang bidang yang menarik dan fasilitasi pengalaman eksplorasi berbagai bidang.` },
+  { keywords: /belum.*portofolio|belum.*organisasi|belum.*proyek|belum.*terlibat/i, title: "Pengalaman Kegiatan di Luar Kelas", category: "concern", recTitle: "Dorong Keterlibatan dalam Kegiatan", recDesc: (c) => `Dorong ${c} untuk mulai mencoba satu kegiatan yang sesuai minatnya, meski dalam skala kecil.` },
+  { keywords: /6\s*jam|lebih\s*dari.*jam|hampir\s*setiap\s*waktu|kecanduan.*hp|berlebih.*layar/i, title: "Pengelolaan Durasi Penggunaan Gawai", category: "concern", recTitle: "Atur Batas Penggunaan Gawai", recDesc: (c) => `Sepakati bersama ${c} batas waktu penggunaan gawai harian dan ciptakan aktivitas alternatif yang menarik.` },
+  { keywords: /menangis|marah|rewel|tantrum|emosi.*meledak/i, title: "Transisi Antaraktivitas & Regulasi Emosi", category: "concern", recTitle: "Dampingi Transisi Aktivitas", recDesc: (c) => `Berikan sinyal dan waktu transisi yang cukup saat ${c} harus beralih dari satu aktivitas ke aktivitas lain.` },
+  { keywords: /kurang\s*percaya\s*diri|pemalu|malu|takut.*tampil|takut.*salah/i, title: "Kepercayaan Diri dalam Berinteraksi", category: "concern", recTitle: "Bangun Rasa Percaya Diri", recDesc: (c) => `Berikan pujian spesifik dan kesempatan tampil dalam lingkup kecil agar ${c} membangun kepercayaan diri secara bertahap.` },
+  { keywords: /sulit.*berteman|menarik\s*diri|pendiam.*sekali|susah.*adaptasi/i, title: "Adaptasi Sosial dengan Teman Sebaya", category: "concern", recTitle: "Fasilitasi Interaksi Sosial", recDesc: (c) => `Ciptakan kesempatan bermain atau belajar bersama teman agar ${c} lebih nyaman bersosialisasi.` },
+  { keywords: /belum.*mandiri|masih.*harus.*diminta|perlu.*diarahkan|belum.*bisa.*sendiri/i, title: "Kemandirian dalam Kegiatan Harian", category: "concern", recTitle: "Latih Kemandirian Bertahap", recDesc: (c) => `Berikan tanggung jawab kecil yang sesuai usia ${c} dan berikan apresiasi saat berhasil menyelesaikannya.` },
+];
+
+/**
+ * Interpret a raw parent answer into a meaningful professional title + category.
+ * Returns null if no meaningful interpretation can be made (demographic/neutral answer).
+ */
+function interpretAnswer(answer: string, question: string): { title: string; description: string; category: "positive" | "concern"; recTitle: string; recDesc: (childName: string) => string } | null {
+  const lowerA = answer.toLowerCase();
+
+  // Skip demographic / trivial answers
+  if (/^(\d+\s*tahun|ya|tidak|mungkin|belum sekolah|tk\s*[ab]|sd|smp|sma)$/i.test(answer.trim())) return null;
+  if (answer.trim().length < 5 || answer === "-") return null;
+
+  for (const mapping of SEMANTIC_MAPPINGS) {
+    if (mapping.keywords.test(lowerA)) {
+      return {
+        title: mapping.title,
+        description: "", // Will be filled contextually
+        category: mapping.category,
+        recTitle: mapping.recTitle,
+        recDesc: mapping.recDesc,
+      };
+    }
+  }
+
+  // Generic positive/negative classification for unmapped answers
+  const isNegative = /(belum|sulit|kurang|jarang|menunda|menangis|marah|keberatan|terkendala|kesulitan|bingung|tidak pernah|terbeban)/i.test(lowerA);
+  if (isNegative) {
+    // Derive a clean title from the question text
+    const cleanQ = question.replace(/^(bagaimana|apa|seberapa|apakah)\s+/i, "").replace(/\?$/, "").trim();
+    const shortQ = cleanQ.length > 50 ? cleanQ.slice(0, 47) + "..." : cleanQ;
+    return {
+      title: `Pendampingan pada ${shortQ.charAt(0).toUpperCase() + shortQ.slice(1)}`,
+      description: "",
+      category: "concern",
+      recTitle: `Pendampingan Bertahap`,
+      recDesc: (c) => `Dampingi ${c} secara bertahap dan komunikatif pada aspek ini.`,
+    };
+  }
+
+  // Generic positive
+  const cleanQ = question.replace(/^(bagaimana|apa|seberapa|apakah)\s+/i, "").replace(/\?$/, "").trim();
+  const shortQ = cleanQ.length > 50 ? cleanQ.slice(0, 47) + "..." : cleanQ;
+  return {
+    title: `${shortQ.charAt(0).toUpperCase() + shortQ.slice(1)}`,
+    description: "",
+    category: "positive",
+    recTitle: `Dukung Perkembangan Positif`,
+    recDesc: (c) => `Terus dukung dan fasilitasi ${c} pada aspek ini.`,
+  };
+}
+
+/**
+ * BANNED PHRASES — titles must never contain these.
+ */
+const BANNED_TITLE_PHRASES = [
+  "potensi positif pada aspek",
+  "permasalahan pada aspek",
+  "perhatian spesifik pada aspek",
+  "observasi jawaban",
+  "pendampingan terarah pada",
+  "pengayaan potensi",
+  "modal kekuatan positif",
+  "optimalkan potensi",
+];
+
+/**
+ * Validate that a title is NOT a copy-paste of the answer.
+ * Returns true if the title passes validation (is NOT copy-paste).
+ */
+function validateTitleNotCopyPaste(title: string, evidence: string): boolean {
+  if (!title || !evidence) return true;
+  const lowerTitle = title.toLowerCase().trim();
+  const lowerEvidence = evidence.toLowerCase().trim();
+
+  // Check banned phrases
+  for (const banned of BANNED_TITLE_PHRASES) {
+    if (lowerTitle.includes(banned)) return false;
+  }
+
+  // Check if title is essentially the same as evidence (>60% overlap)
+  if (lowerEvidence.length > 10 && lowerTitle.length > 10) {
+    // Check if title starts with the evidence or vice versa
+    if (lowerTitle.includes(lowerEvidence.slice(0, 30)) || lowerEvidence.includes(lowerTitle.slice(0, 30))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Generate interpreted analysis from formatted answers — ZERO copy-paste.
+ * This function interprets the meaning of answers, NOT copies them.
+ */
+export function generateInterpretedAnalysis(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
+  const jenjangLabel = level === "tksd" ? "TK & SD" : level === "smp" ? "SMP" : "SMA";
+  const nameDisplay = (childName && childName !== "-") ? childName : "Ananda";
+  const childPhrase = (childName && childName !== "-") ? `Ananda ${childName}` : "Ananda";
+
+  type QA = { q: string; a: string };
+  const qa: QA[] = (formattedAnswers || "")
+    .split("\n\n")
+    .map((item) => {
+      const lines = item.split("\n");
+      return {
+        q: (lines[0] || "").replace(/^P:\s*/, "").trim(),
+        a: (lines[1] || "").replace(/^J:\s*/, "").trim()
+      };
+    })
+    .filter((x) => x.q && x.a && x.a !== "-");
+
+  const seenTitles = new Set<string>();
+  const concernsList: { title: string; desc: string }[] = [];
+  const potentialsList: { title: string; desc: string }[] = [];
+  const recommendationsList: { title: string; desc: string }[] = [];
+
+  for (const item of qa) {
+    const interpreted = interpretAnswer(item.a, item.q);
+    if (!interpreted) continue;
+    if (seenTitles.has(interpreted.title)) continue;
+    seenTitles.add(interpreted.title);
+
+    // Build natural description that interprets the answer (not copies it)
+    const desc = interpreted.category === "concern"
+      ? `${childPhrase} membutuhkan pendampingan lebih lanjut pada aspek ini berdasarkan kondisi yang disampaikan orang tua.`
+      : `${childPhrase} menunjukkan kondisi positif pada aspek ini berdasarkan jawaban orang tua.`;
+
+    if (interpreted.category === "concern") {
+      concernsList.push({ title: interpreted.title, desc });
+      recommendationsList.push({ title: interpreted.recTitle, desc: interpreted.recDesc(nameDisplay) });
+    } else {
+      potentialsList.push({ title: interpreted.title, desc });
+      recommendationsList.push({ title: interpreted.recTitle, desc: interpreted.recDesc(nameDisplay) });
+    }
+  }
+
+  // Build summary as bullet points
+  const summaryPoints: string[] = [];
+  if (potentialsList.length > 0) {
+    summaryPoints.push(`• ${childPhrase} menunjukkan potensi positif pada: ${potentialsList.map(p => p.title).join(", ")}.`);
+  }
+  if (concernsList.length > 0) {
+    summaryPoints.push(`• Area yang memerlukan pendampingan: ${concernsList.map(c => c.title).join(", ")}.`);
+  }
+  if (summaryPoints.length === 0) {
+    summaryPoints.push(`• Berdasarkan jawaban kuesioner, ${childPhrase} menunjukkan perkembangan sesuai tahap jenjang ${jenjangLabel}.`);
+  }
+
+  const summary = summaryPoints.join("\n");
+
+  const formattedConcerns = concernsList.length > 0
+    ? concernsList.map((c, i) => `❗ ${String(i + 1).padStart(2, '0')}. ${c.title}\n${c.desc}`).join("\n\n")
+    : "Tidak ditemukan area utama yang perlu mendapat perhatian khusus berdasarkan jawaban yang diberikan.";
+
+  const formattedPotentials = potentialsList.length > 0
+    ? potentialsList.map((p, i) => `🌟 ${String(i + 1).padStart(2, '0')}. ${p.title}\n${p.desc}`).join("\n\n")
+    : "-";
+
+  const formattedRecommendations = recommendationsList.length > 0
+    ? recommendationsList.map((r, i) => `🎯 ${String(i + 1).padStart(2, '0')}. ${r.title}\n${r.desc}`).join("\n\n")
+    : "-";
+
+  const fullNarrative = `RINGKASAN AWAL\n\n${summary}\n\nAREA YANG PERLU DIPERHATIKAN\n\n${formattedConcerns}\n\nMINAT & POTENSI\n\n${formattedPotentials}\n\nREKOMENDASI PENDAMPINGAN RUMAH\n\n${formattedRecommendations}`;
+
+  return {
+    summary,
+    analysis: fullNarrative,
+    strengths: formattedPotentials,
+    weaknesses: formattedConcerns,
+    potential: formattedPotentials,
+    risk: formattedConcerns,
+    education_recommendation: formattedRecommendations
+  };
+}
+
 export async function runCleanAiAnalysisEngine(
   parentName: string,
   childName: string,
@@ -477,39 +691,60 @@ JAWABAN ORANG TUA AKTUAL:
 ${formattedAnswers}
 
 ATURAN STRUKTURAL ABSOLUT:
-1. DILARANG MENGGUNAKAN TEMPLATE DEFAULT.
-2. DILARANG MEMBUAT MATERI PALSU ATAU DAFTAR MASALAH OTOMATIS BERDASARKAN JENJANG.
-3. SETIAP FINDING WAJIB MEMILIKI BUKTI (EVIDENCE) DARI JAWABAN ORANG TUA DI ATAS.
-4. JIKA JAWABAN POSITIF (MISAL: BEBAS MASALAH GAWAI / SUDAH MANDIRI / SUDAH TAHU JURUSAN), DILARANG MEMBUATNYA MENJADI AREA MASALAH.
-5. Kembalikan HANYA format JSON berikut tanpa teks pendahuluan:
+1. DILARANG MENGGUNAKAN TEMPLATE DEFAULT BERDASARKAN JENJANG.
+2. DILARANG MEMBUAT MATERI PALSU ATAU DAFTAR MASALAH OTOMATIS.
+3. SETIAP FINDING WAJIB MEMILIKI BUKTI (EVIDENCE) DARI JAWABAN.
+4. JIKA JAWABAN POSITIF, DILARANG MEMBUATNYA MENJADI AREA MASALAH.
+5. DILARANG menggunakan potongan jawaban orang tua sebagai judul/title.
+6. Title/judul harus berupa INTERPRETASI PROFESIONAL, bukan kutipan jawaban.
+
+ATURAN JUDUL (TITLE) — SANGAT PENTING:
+- DILARANG menggunakan frasa: "Potensi Positif pada Aspek", "Permasalahan pada Aspek", "Observasi Jawaban"
+- DILARANG mengcopy jawaban sebagai judul. Contoh SALAH: title = "Memakai HP 1 jam sehari..."
+- Title harus berupa INTERPRETASI BERMAKNA. Contoh BENAR: "Minat pada Aktivitas Kreatif", "Kemandirian", "Manajemen Waktu Belajar"
+
+CONTOH TRANSFORMASI:
+- Jawaban: "Memakai HP 1 jam sehari untuk video edukasi mewarnai"
+  → title: "Ketertarikan pada Aktivitas Visual" (BUKAN "Memakai HP 1 jam...")
+- Jawaban: "Anak sangat mandiri menyiapkan alat tulis sendiri"
+  → title: "Kemandirian dalam Kegiatan Harian" (BUKAN "Anak sangat mandiri...")
+- Jawaban: "Sering menunda tugas sampai larut malam"
+  → title: "Manajemen Waktu Belajar" (BUKAN "Sering menunda tugas...")
+
+ATURAN BAHASA:
+- Bahasa Indonesia yang sederhana, profesional, dan hangat
+- Penjelasan setiap poin: 1-2 kalimat saja
+- Gunakan nama anak (${childName}) dalam penjelasan
+
+Kembalikan HANYA format JSON berikut tanpa teks pendahuluan:
 
 {
   "summary": [
     {
-      "title": "Judul poin ringkasan",
-      "description": "Penjelasan ringkas berbasis bukti",
-      "evidence": "Kutipan / ringkasan jawaban orang tua"
+      "title": "Judul interpretasi ringkasan",
+      "description": "Penjelasan ringkas 1-2 kalimat",
+      "evidence": "Ringkasan jawaban orang tua yang menjadi dasar"
     }
   ],
   "attentionAreas": [
     {
-      "title": "Judul area yang perlu diperhatikan",
-      "description": "Penjelasan tantangan / perhatian berbasis bukti",
-      "evidence": "Kutipan / ringkasan jawaban orang tua"
+      "title": "Judul interpretasi area perhatian (BUKAN potongan jawaban)",
+      "description": "Penjelasan 1-2 kalimat menggunakan nama anak",
+      "evidence": "Ringkasan jawaban yang menjadi dasar"
     }
   ],
   "potentials": [
     {
-      "title": "Judul minat atau potensi positif",
-      "description": "Penjelasan potensi positif berbasis bukti",
-      "evidence": "Kutipan / ringkasan jawaban orang tua"
+      "title": "Judul interpretasi minat/potensi (BUKAN potongan jawaban)",
+      "description": "Penjelasan 1-2 kalimat menggunakan nama anak",
+      "evidence": "Ringkasan jawaban yang menjadi dasar"
     }
   ],
   "recommendations": [
     {
-      "title": "Judul rekomendasi pendampingan rumah",
-      "description": "Langkah aksi pendampingan konkret di rumah",
-      "basedOn": "Judul potensi atau area perhatian yang menjadi acuan"
+      "title": "Judul rekomendasi tindakan",
+      "description": "Langkah konkret untuk orang tua",
+      "basedOn": "Nama area perhatian atau potensi terkait"
     }
   ]
 }`;
@@ -556,20 +791,18 @@ ATURAN STRUKTURAL ABSOLUT:
       }
     }
 
-    // If remote API unavailable, run local evidence parser derived 100% from formattedAnswers
+    // If remote API unavailable, use local semantic interpreter
     if (!jsonResultText) {
-      console.info("[runCleanAiAnalysisEngine]: AI Remote API unavailable, using local evidence parser.");
+      console.info("[runCleanAiAnalysisEngine]: AI Remote API unavailable, using local semantic interpreter.");
+      const childPhrase = (childName && childName !== "-") ? `Ananda ${childName}` : "Ananda";
+      const nameDisplay = (childName && childName !== "-") ? childName : "Ananda";
+
       const blocks = formattedAnswers.split("\n\n").filter(b => b.includes("P:"));
       const summaryItems: { title: string; description: string; evidence: string }[] = [];
       const attentionItems: { title: string; description: string; evidence: string }[] = [];
       const potentialItems: { title: string; description: string; evidence: string }[] = [];
       const recommendationItems: { title: string; description: string; basedOn: string }[] = [];
-
-      summaryItems.push({
-        title: `Pemetaan Karakteristik Belajar ${childName}`,
-        description: `Berdasarkan ${blocks.length} poin jawaban kuesioner yang disampaikan ${parentName}, ananda menunjukkan gambaran kondisi perkembangan khas jenjang ${level.toUpperCase()}.`,
-        evidence: `Jawaban kuesioner orang tua (${parentName})`
-      });
+      const seenTitles = new Set<string>();
 
       for (const block of blocks) {
         const pMatch = block.match(/P:\s*(.*?)(?=\nJ:|$)/s);
@@ -579,44 +812,49 @@ ATURAN STRUKTURAL ABSOLUT:
 
         if (!aText || aText === "-") continue;
 
-        const lowerA = aText.toLowerCase();
+        const interpreted = interpretAnswer(aText, qText);
+        if (!interpreted) continue;
+        if (seenTitles.has(interpreted.title)) continue;
+        seenTitles.add(interpreted.title);
 
-        // Check negative indicator
-        const isNeg = /menunda|frustrasi|menyerah|bingung|6 jam|terbeban|terkendala|kesulitan/i.test(lowerA);
-        const isPos = /mandiri|mantap|menggambar|mewarnai|lukis|teratur|aktif|juara|teknologi|olahraga/i.test(lowerA);
-
-        const shortAns = aText.length > 55 ? aText.slice(0, 52) + "..." : aText;
-
-        if (isNeg) {
-          const itemTitle = `Perhatian Spesifik pada Aspek "${qText.length > 40 ? qText.slice(0, 37) + '...' : qText}"`;
+        if (interpreted.category === "concern") {
           attentionItems.push({
-            title: itemTitle,
-            description: `Jawaban orang tua mencatat: "${aText}". Aspek ini memerlukan pendampingan terstruktur di rumah.`,
+            title: interpreted.title,
+            description: `${childPhrase} membutuhkan pendampingan lebih lanjut pada aspek ini.`,
             evidence: aText
           });
           recommendationItems.push({
-            title: `Pendampingan Terarah pada "${shortAns}"`,
-            description: `Bantu ${childName} dengan rutinitas harian bertahap dan komunikasi hangat untuk mengatasi kendala ini.`,
-            basedOn: itemTitle
+            title: interpreted.recTitle,
+            description: interpreted.recDesc(nameDisplay),
+            basedOn: interpreted.title
           });
         } else {
-          const itemTitle = `Potensi Positif pada "${qText.length > 40 ? qText.slice(0, 37) + '...' : qText}"`;
           potentialItems.push({
-            title: itemTitle,
-            description: `Jawaban orang tua menunjukkan: "${aText}". Hal ini menjadi modal kekuatan positif yang sangat baik untuk dioptimalkan.`,
+            title: interpreted.title,
+            description: `${childPhrase} menunjukkan kondisi positif pada aspek ini.`,
             evidence: aText
           });
           recommendationItems.push({
-            title: `Pengayaan Potensi "${shortAns}"`,
-            description: `Fasilitasi ${childName} dengan ruang eksplorasi lebih luas dan apresiasi spesifik untuk mengasah potensi ini.`,
-            basedOn: itemTitle
+            title: interpreted.recTitle,
+            description: interpreted.recDesc(nameDisplay),
+            basedOn: interpreted.title
           });
         }
+      }
 
+      // Build summary from findings
+      if (potentialItems.length > 0) {
         summaryItems.push({
-          title: `Observasi Jawaban: ${shortAns}`,
-          description: `Orang tua mencatat respon anak: "${aText}".`,
-          evidence: aText
+          title: "Potensi Positif",
+          description: `${childPhrase} menunjukkan potensi pada: ${potentialItems.map(p => p.title).join(", ")}.`,
+          evidence: "Jawaban kuesioner orang tua"
+        });
+      }
+      if (attentionItems.length > 0) {
+        summaryItems.push({
+          title: "Area Pendampingan",
+          description: `Area yang perlu pendampingan: ${attentionItems.map(a => a.title).join(", ")}.`,
+          evidence: "Jawaban kuesioner orang tua"
         });
       }
 
@@ -636,10 +874,11 @@ ATURAN STRUKTURAL ABSOLUT:
     const parsed: CleanAnalysisJson = JSON.parse(cleanJsonStr);
 
     // Validate Evidence Rule: Remove any item where evidence/basedOn is missing
-    const validSummary = (parsed.summary || []).filter(s => s.title && s.evidence && s.evidence.trim() !== "");
-    const validAttentionAreas = (parsed.attentionAreas || []).filter(a => a.title && a.evidence && a.evidence.trim() !== "");
-    const validPotentials = (parsed.potentials || []).filter(p => p.title && p.evidence && p.evidence.trim() !== "");
-    const validRecommendations = (parsed.recommendations || []).filter(r => r.title && r.basedOn && r.basedOn.trim() !== "");
+    // ALSO apply anti-copy-paste validation on titles
+    const validSummary = (parsed.summary || []).filter(s => s.title && s.evidence && s.evidence.trim() !== "" && validateTitleNotCopyPaste(s.title, s.evidence));
+    const validAttentionAreas = (parsed.attentionAreas || []).filter(a => a.title && a.evidence && a.evidence.trim() !== "" && validateTitleNotCopyPaste(a.title, a.evidence));
+    const validPotentials = (parsed.potentials || []).filter(p => p.title && p.evidence && p.evidence.trim() !== "" && validateTitleNotCopyPaste(p.title, p.evidence));
+    const validRecommendations = (parsed.recommendations || []).filter(r => r.title && r.basedOn && r.basedOn.trim() !== "" && validateTitleNotCopyPaste(r.title, r.basedOn));
 
     if (validSummary.length === 0 && validPotentials.length === 0 && validAttentionAreas.length === 0) {
       return { success: false, error: "Analisis belum dapat dibuat. Silakan coba kembali." };
