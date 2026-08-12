@@ -175,18 +175,29 @@ Nomor WhatsApp: ${whatsappNumber}
 === JAWABAN KUESIONER ===
 ${formattedAnswers}
 
-=== PETUNJUK OUTPUT ===
+=== PETUNJUK OUTPUT (WAJIB DIPATUHI) ===
+Sebelum menulis, baca ulang SETIAP pasangan pertanyaan-jawaban di atas dan catat pola nyatanya.
+Aturan wajib:
+- "weaknesses" berisi MINIMAL 5 poin ❗ (lebih banyak bila temuan memang lebih banyak), masing-masing spesifik dan bersumber dari jawaban.
+- "potential" berisi MINIMAL 3 poin 🌟 yang spesifik.
+- "education_recommendation" berisi MINIMAL 5 poin 🎯 yang terhubung langsung dengan poin ❗/🌟 di atas.
+- Judul poin harus mendeskripsikan kondisi (mis. "❗ Fokus mudah menurun saat aktivitas terasa monoton"), BUKAN nama kategori (mis. "❗ Konsentrasi").
+- Setiap penjelasan wajib merujuk isi jawaban orang tua (parafrase konkret), bukan kalimat umum.
+- DILARANG kalimat seperti "memiliki potensi berkembang yang positif", "membutuhkan pendampingan yang konsisten", "berikan motivasi kepada anak", "bangun rutinitas yang konsisten" tanpa penjelasan spesifik dari jawaban.
+- DILARANG menyimpulkan berdasarkan jenjang. DILARANG merekomendasikan sekolah/lembaga. DILARANG diagnosis.
+
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
-  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (setiap area diawali ### ❗ [Nama Area] dari jawaban), lalu ## 3. 🌟 MINAT & POTENSI (setiap potensi diawali ### 🌟 [Nama Potensi]), lalu ## 4. 🎯 REKOMENDASI (diawali ### 🎯 Rekomendasi Pendampingan berupa bullet point untuk orang tua di rumah). Jangan pakai kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
-  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
-  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
-  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI.",
-  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
-  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
+  "summary": "RINGKASAN AWAL maksimal 2 paragraf: pola utama yang terlihat, kekuatan yang muncul, dan kondisi yang perlu diperhatikan — semuanya berdasarkan jawaban aktual anak ini.",
+  "weaknesses": "MINIMAL 5 blok. Setiap blok: baris '❗ [temuan spesifik]' lalu baris penjelasan 1-3 kalimat berbasis jawaban. Pisahkan antar blok dengan baris kosong.",
+  "potential": "MINIMAL 3 blok. Setiap blok: baris '🌟 [minat/kemampuan/karakter spesifik]' lalu baris penjelasan berbasis jawaban. Pisahkan dengan baris kosong.",
+  "education_recommendation": "MINIMAL 5 blok. Setiap blok: baris '🎯 [rekomendasi spesifik]' lalu baris penjelasan cara orang tua melakukannya di rumah, terkait langsung dengan poin ❗/🌟 di atas.",
+  "strengths": "Sama persis dengan isi potential.",
+  "risk": "Sama persis dengan isi weaknesses.",
+  "analysis": "Gabungan berurutan: '## 1. RINGKASAN AWAL' + summary, '## 2. ❗ AREA YANG PERLU DIPERHATIKAN' + weaknesses, '## 3. 🌟 MINAT & POTENSI' + potential, '## 4. 🎯 REKOMENDASI' + education_recommendation. Tanpa narasi tambahan."
 }
 `;
+
 
 
   try {
