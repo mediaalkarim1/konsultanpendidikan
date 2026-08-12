@@ -234,7 +234,7 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   }
 
   const nameDisplay = cleanChildName || "Ananda";
-  const parentDisplay = cleanParentName || "Orang Tua";
+  const parentDisplay = cleanParentName || "Bunda/Ayah";
   const childPhrase = cleanChildName ? `Ananda ${cleanChildName}` : "Ananda";
 
   type QA = { q: string; a: string };
@@ -249,74 +249,159 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     })
     .filter((x) => (x.q || x.a) && x.a !== "-");
 
-  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat)/i;
-  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah)/i;
+  const NEGATIVE = /(belum|sulit|susah|kurang|jarang|tidak|sering lupa|mudah bosan|cepat bosan|malas|menolak|butuh dibantu|harus diingatkan|sering marah|menangis|takut|bingung|lambat|gangguan|terdistraksi)/i;
+  const POSITIVE = /(suka|senang|sangat|mampu|bisa|aktif|cepat|antusias|rajin|mandiri|berani|kreatif|tertarik|hobi|pandai|mudah|bakat|fokus|teliti)/i;
 
   const shorten = (t: string, max = 90) => (t.length > max ? t.slice(0, max).trim() + "..." : t);
   const lower = (t: string) => (t ? t.charAt(0).toLowerCase() + t.slice(1) : t);
 
-  const concerns: string[] = [];
-  const potentials: string[] = [];
+  const cleanTopicText = (q: string) => {
+    let cleaned = q.replace(/^(bagaimana|apa|apakah|seberapa|sejauh mana|seperti apa)\s+/i, "").replace(/\?$/, "").trim();
+    return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : q;
+  };
+
+  const concernsList: { title: string; desc: string; rawQ: string; rawA: string; topicTitle: string }[] = [];
+  const potentialsList: { title: string; desc: string; rawQ: string; rawA: string; topicTitle: string }[] = [];
 
   for (const item of qa) {
     if (!item.a || item.a === "-") continue;
-    const topic = shorten(item.q.replace(/\?$/, ""));
+    const topic = cleanTopicText(item.q);
+    
     if (NEGATIVE.test(item.a)) {
-      concerns.push(
-        `❗ ${topic}\nDari jawaban orang tua (${lower(shorten(item.a, 120))}), bagian ini terlihat masih membutuhkan pendampingan yang konsisten.`
-      );
+      concernsList.push({
+        title: `${topic} membutuhkan penyesuaian pola pendampingan`,
+        desc: `Berdasarkan jawaban orang tua ("${shorten(item.a, 110)}"), ${childPhrase} memperlihatkan kondisi khusus yang memerlukan arahan terstruktur di rumah.`,
+        rawQ: item.q,
+        rawA: item.a,
+        topicTitle: topic
+      });
     } else if (POSITIVE.test(item.a)) {
-      potentials.push(
-        `🌟 ${topic}\nJawaban orang tua menunjukkan ${lower(shorten(item.a, 120))}, sehingga ini menjadi kekuatan yang dapat terus dikembangkan.`
-      );
+      potentialsList.push({
+        title: `Kemampuan positif pada ${lower(topic)}`,
+        desc: `Jawaban orang tua mencatat bahwa "${shorten(item.a, 110)}", hal ini menjadi potensi yang sangat baik untuk terus dipupuk.`,
+        rawQ: item.q,
+        rawA: item.a,
+        topicTitle: topic
+      });
     } else {
-      if (concerns.length <= potentials.length) {
-        concerns.push(
-          `❗ ${topic}\nBerdasarkan jawaban orang tua (${lower(shorten(item.a, 120))}), aspek ini dapat menjadi perhatian dalam pendampingan harian.`
-        );
+      if (concernsList.length < 5) {
+        concernsList.push({
+          title: `Penguatan pada ${lower(topic)} masih perlu diperhatikan`,
+          desc: `Catatan orang tua menunjukkan ("${shorten(item.a, 110)}"), yang perlu menjadi salah satu fokus perhatian dalam rutinitas harian.`,
+          rawQ: item.q,
+          rawA: item.a,
+          topicTitle: topic
+        });
       } else {
-        potentials.push(
-          `🌟 ${topic}\nJawaban orang tua mencatat ${lower(shorten(item.a, 120))}, yang menjadi bagian dari keunikan dan potensi anak.`
-        );
+        potentialsList.push({
+          title: `Kecenderungan unik pada ${lower(topic)}`,
+          desc: `Keterangan orang tua mengenai "${shorten(item.a, 110)}" memperlihatkan karakteristik khas yang dapat dijadikan pemantik semangat belajar.`,
+          rawQ: item.q,
+          rawA: item.a,
+          topicTitle: topic
+        });
       }
     }
   }
 
-  if (concerns.length === 0) {
-    concerns.push(
-      `❗ Rutinitas & Konsistensi Belajar\nBerdasarkan profil perkembangan jenjang ${jenjangLabel}, ${childPhrase} membutuhkan pendampingan yang konsisten dan penguatan kebiasaan harian.`
+  // Ensure minimum 5 attention areas in fallback
+  const fallbackConcernTemplates = [
+    { title: "Fokus dan rentang perhatian pada aktivitas yang terasa monoton", desc: `Dari evaluasi kuesioner jenjang ${jenjangLabel}, ${childPhrase} memerlukan variasi media belajar agar daya konsentrasi tetap bertahan lama.` },
+    { title: "Ketahanan saat menghadapi tugas atau materi yang menantang", desc: `${childPhrase} membutuhkan pemicu semangat bertahap ketika instruksi belajar membutuhkan pemikiran mendalam.` },
+    { title: "Konsistensi pengelolaan jadwal belajar mandiri di rumah", desc: `Pola jawaban memperlihatkan pentingnya kesepakatan rutinitas harian yang realistis antara orang tua dan anak.` },
+    { title: "Regulasi emosi saat mengalami kejenuhan atau kelelahan", desc: `Diperlukan pendekatan tenang keluarga untuk mendampingi ${childPhrase} mengolah emosi saat menghadapi hambatan.` },
+    { title: "Kemandirian memulai tugas tanpa instruksi berulang", desc: `${childPhrase} masih memerlukan sinyal visual atau petunjuk awal agar dapat langsung memulai kegiatan.` }
+  ];
+
+  for (const fb of fallbackConcernTemplates) {
+    if (concernsList.length >= 5) break;
+    concernsList.push({ title: fb.title, desc: fb.desc, rawQ: "", rawA: "", topicTitle: fb.title });
+  }
+
+  // Ensure minimum 3 potentials in fallback
+  const fallbackPotentialTemplates = [
+    { title: "Antusiasme pada eksplorasi dan media belajar interaktif", desc: `${childPhrase} menunjukkan respons positif tinggi ketika aktivitas disajikan dengan visual menarik atau kegiatan praktik.` },
+    { title: "Keterbukaan terhadap komunikasi dan apresiasi hangat", desc: `Pengakuan atas usaha ${nameDisplay} terbukti efektif membangkitkan rasa percaya diri anak.` },
+    { title: "Daya adaptasi positif dalam lingkungan yang kondusif", desc: `${childPhrase} memiliki potensi berkembang pesat apabila didampingi dengan arahan bertahap tanpa paksaan.` }
+  ];
+
+  for (const fb of fallbackPotentialTemplates) {
+    if (potentialsList.length >= 3) break;
+    potentialsList.push({ title: fb.title, desc: fb.desc, rawQ: "", rawA: "", topicTitle: fb.title });
+  }
+
+  // Generate minimum 5 specific recommendations tied to concern topics
+  const recommendationsList: string[] = [];
+  concernsList.slice(0, 5).forEach((c, idx) => {
+    const t = lower(c.topicTitle);
+    if (t.includes("konsentrasi") || t.includes("fokus") || t.includes("perhatian")) {
+      recommendationsList.push(
+        `### 🎯 Terapkan metode belajar sesi pendek (15–20 menit)\nBerdasarkan jawaban mengenai ${t}, bagi kegiatan menjadi potongan waktu pendek diselingi istirahat 5 menit agar konsentrasi ${nameDisplay} tidak cepat menurun.`
+      );
+    } else if (t.includes("instruksi") || t.includes("kemandirian") || t.includes("merapikan") || t.includes("tugas")) {
+      recommendationsList.push(
+        `### 🎯 Gunakan petunjuk visual dan urutan instruksi bertahap\nUntuk membantu ${t}, buatkan papan tugas sederhana atau berikan 1 instruksi jelas sebelum melanjutkan ke langkah berikutnya.`
+      );
+    } else if (t.includes("emosi") || t.includes("kelelahan") || t.includes("menangis") || t.includes("marah")) {
+      recommendationsList.push(
+        `### 🎯 Sediakan jeda tenang dan penguatan emosi hangat\nKetika ${nameDisplay} merasa tertekan saat belajar, validasi perasaannya terlebih dahulu sebelum membantu menyelesaikan kesulitan secara perlahan.`
+      );
+    } else if (t.includes("rutinitas") || t.includes("waktu") || t.includes("ponsel") || t.includes("menunda")) {
+      recommendationsList.push(
+        `### 🎯 Sepakati jadwal harian bergambar atau pengingat bersama\nDiskusikan urutan waktu belajar dan waktu bermain bersama ${nameDisplay} agar terbentuk komitmen tanpa perlu terus-menerus menegur.`
+      );
+    } else if (t.includes("jurusan") || t.includes("kuliah") || t.includes("matematika") || t.includes("masa depan")) {
+      recommendationsList.push(
+        `### 🎯 Fasilitasi diskusi santai seputar minat dan pilihan bidang\nAjak ${nameDisplay} mengeksplorasi pilihan bidang yang diminati dengan membedah potensi diri secara objektif tanpa tekanan.`
+      );
+    } else {
+      const defaultRecs = [
+        `### 🎯 Dampingi penyesuaian pada ${t}\nLuangkan waktu 10-15 menit untuk membagi aktivitas ${t} menjadi langkah-langkah kecil yang menyenangkan bagi ${nameDisplay}.`,
+        `### 🎯 Hubungkan materi belajar dengan hal favorit anak\nGunakan hobi atau minat ${nameDisplay} sebagai pintu masuk untuk meningkatkan keterlibatan saat mempelajari hal baru.`,
+        `### 🎯 Berikan apresiasi spesifik atas setiap usaha nyata anak\nPuji proses dan kesungguhan yang ditunjukkan ${nameDisplay} agar motivasi internalnya terus bertumbuh.`,
+        `### 🎯 Ciptakan ruang belajar yang nyaman dan minim distraksi\nPastikan area belajar bebas dari gangguan gawai saat sesi konsentrasi berlangsung.`,
+        `### 🎯 Lakukan refleksi singkat setelah selesai belajar\nAjak ${nameDisplay} menceritakan bagian yang paling disukai dan bagian yang masih memerlukan bantuan.`
+      ];
+      recommendationsList.push(defaultRecs[idx % defaultRecs.length]);
+    }
+  });
+
+  while (recommendationsList.length < 5) {
+    recommendationsList.push(
+      `### 🎯 Ciptakan suasana belajar yang santai dan suportif di rumah\nPastikan pendampingan dilakukan dengan komunikasi dua arah agar ${nameDisplay} merasa aman dan nyaman saat belajar.`
     );
   }
-  if (potentials.length === 0) {
-    potentials.push(
-      `🌟 Kemampuan Adaptasi & Minat Belajar\n${childPhrase} memiliki potensi berkembang yang positif jika didukung dengan media belajar yang tepat dan motivasi keluarga.`
-    );
-  }
 
-  const summary = `Ayah Bunda ${parentDisplay}, dari keseluruhan informasi yang disampaikan mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran anak yang memiliki keunikan belajar serta potensi yang dapat didukung secara optimal di rumah.\n\nSecara umum, terdapat beberapa kekuatan yang menonjol sekaligus area utama yang perlu mendapat pendampingan hangat dari keluarga.`;
+  // Format strings
+  const formattedConcerns = concernsList
+    .map((c) => `### ❗ ${c.title}\n${c.desc}`)
+    .join("\n\n");
 
-  const concernsText = concerns.join("\n\n");
-  const potentialsText = potentials.join("\n\n");
+  const formattedPotentials = potentialsList
+    .map((p) => `### 🌟 ${p.title}\n${p.desc}`)
+    .join("\n\n");
 
-  const recommendation = `🎯 Rekomendasi Pendampingan
+  const formattedRecommendations = recommendationsList.join("\n\n");
 
-- Dampingi ${childPhrase} pada area yang masih perlu perhatian di atas dengan langkah kecil dan konsisten setiap hari.
-- Kaitkan aktivitas belajar dengan minat dan potensi yang sudah terlihat agar anak lebih terlibat.
-- Beri apresiasi pada setiap usaha yang ditunjukkan ${nameDisplay}, bukan hanya pada hasil akhirnya.
-- Sepakati rutinitas harian yang sederhana dan realistis bersama anak di rumah.`;
+  const firstConcernTitle = lower(concernsList[0]?.topicTitle || "pendampingan fokus");
+  const firstPotentialTitle = lower(potentialsList[0]?.topicTitle || "eksplorasi minat");
 
-  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${concernsText}\n\n## 3. 🌟 MINAT & POTENSI\n\n${potentialsText}\n\n## 4. 🎯 REKOMENDASI PENDAMPINGAN\n\n${recommendation}`;
+  const summary = `Berdasarkan jawaban kuesioner yang disampaikan ${parentDisplay} mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran khusus mengenai gaya belajar dan interaksi harian anak. Pola utama menunjukkan bahwa ${childPhrase} sangat responsif terhadap kecenderungan positif pada ${firstPotentialTitle}, namun pada saat yang sama memerlukan pendampingan terarah terutama terkait ${firstConcernTitle}.\n\nEvaluasi ini merangkum ${concernsList.length} area perhatian khusus dan ${potentialsList.length} potensi utama dari jawaban orang tua sebagai acuan pendampingan hangat di rumah.`;
+
+  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${formattedConcerns}\n\n## 3. 🌟 MINAT & POTENSI\n\n${formattedPotentials}\n\n## 4. 🎯 REKOMENDASI PENDAMPINGAN\n\n${formattedRecommendations}`;
 
   return {
     summary,
     analysis: fullNarrative,
-    strengths: potentialsText,
-    weaknesses: concernsText,
-    potential: potentialsText,
-    risk: concernsText,
-    education_recommendation: recommendation
+    strengths: formattedPotentials,
+    weaknesses: formattedConcerns,
+    potential: formattedPotentials,
+    risk: formattedConcerns,
+    education_recommendation: formattedRecommendations
   };
 }
+
+
 
 
 

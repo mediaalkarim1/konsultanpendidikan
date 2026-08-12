@@ -178,13 +178,13 @@ ${formattedAnswers}
 === PETUNJUK OUTPUT ===
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
-  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (setiap area diawali ### ❗ [Nama Area] dari jawaban), lalu ## 3. 🌟 MINAT & POTENSI (setiap potensi diawali ### 🌟 [Nama Potensi]), lalu ## 4. 🎯 REKOMENDASI (diawali ### 🎯 Rekomendasi Pendampingan berupa bullet point untuk orang tua di rumah). Jangan pakai kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
-  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
-  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
-  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI.",
-  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
-  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
+  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak yang benar-benar berasal dari jawaban orang tua. Dilarang kalimat pembuka generik.",
+  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (MINIMAL 5 POIN, setiap area diawali ### ❗ [Nama Temuan Spesifik Dari Jawaban]), lalu ## 3. 🌟 MINAT & POTENSI (MINIMAL 3 POIN, setiap potensi diawali ### 🌟 [Nama Potensi Spesifik]), lalu ## 4. 🎯 REKOMENDASI (MINIMAL 5 POIN, setiap poin diawali ### 🎯 [Judul Rekomendasi Spesifik Rumah]). Dilarang template generik.",
+  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja (Minimal 3 poin) — setiap potensi menggunakan ### 🌟 [Nama Potensi Spesifik] diikuti penjelasan singkat berdasarkan bukti jawaban orang tua.",
+  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja (Minimal 5 poin) — setiap area menggunakan ### ❗ [Nama Temuan Spesifik Dari Jawaban] diikuti penjelasan 1-3 kalimat.",
+  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI (Minimal 3 poin).",
+  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN (Minimal 5 poin).",
+  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja (Minimal 5 poin) — berupa rekomendasi konkret untuk pendampingan rumah. Dilarang rekomendasi sekolah."
 }
 `;
 
