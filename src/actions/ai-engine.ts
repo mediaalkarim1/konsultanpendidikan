@@ -86,16 +86,16 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   // 2. Fetch active prompts from DB
   let systemPromptFromDb = "";
 
-  // Helper: validate if a prompt from DB strictly matches the NEW 4-section format
+  // Helper: validate if a prompt from DB matches the CURRENT (v3-spesifik) format.
+  // Older prompts (narrative or generic 4-section) are ignored so the new logic always wins.
   const isNewFormatPrompt = (p: string): boolean => {
     if (!p) return false;
-    const hasRingkasan = p.includes("RINGKASAN") || p.includes("Ringkasan");
-    const hasPerhatian = p.includes("PERLU DIPERHATIKAN") || p.includes("Perlu Diperhatikan") || p.includes("❗");
-    const hasPotensi = p.includes("POTENSI") || p.includes("Potensi") || p.includes("🌟");
-    const hasRekomendasi = p.includes("REKOMENDASI") || p.includes("Rekomendasi") || p.includes("🎯");
+    if (p.includes(PROMPT_VERSION_MARKER)) return true;
+    const hasSpecificityRules = /MINIMAL 5/i.test(p) && /PRINSIP ANALISIS/i.test(p);
     const isOldNarrative = p.includes("500 kata") || p.includes("900 kata") || p.includes("narasi yang mengalir") || p.includes("narasi konsultasi");
-    return hasRingkasan && hasPerhatian && hasPotensi && hasRekomendasi && !isOldNarrative;
+    return hasSpecificityRules && !isOldNarrative;
   };
+
 
   try {
     const { data: promptSetting } = await supabaseAdmin
