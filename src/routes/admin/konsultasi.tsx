@@ -29,7 +29,8 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
 import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction, bulkSyncConsultationStatusesAction } from "@/actions/admin-actions";
-import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult } from "@/lib/pdf-generator";
+import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult, parseReportSections } from "@/lib/pdf-generator";
+import { Lightbulb, Target, ShieldCheck, Compass } from "lucide-react";
 
 
 
@@ -1022,36 +1023,182 @@ ${sRec || "-"}
                   </div>
                 </form>
               ) : (
-                /* View Mode 4 Bagian Utama */
-                <div className="space-y-4 text-sm">
-                  {/* 1. Ringkasan Awal */}
-                  <div className="rounded-lg bg-card p-3 border">
-                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">1. Ringkasan Awal</h4>
-                    <p className="whitespace-pre-wrap">{analysis?.summary || "Belum ada ringkasan."}</p>
-                  </div>
+                /* View Mode: Card-Based Professional Report Layout */
+                (() => {
+                  const parsed = parseReportSections(analysis, data.ai_result);
+                  return (
+                    <div className="space-y-6 text-sm">
+                      {/* HEADER LAPORAN / COVER */}
+                      <div className="rounded-2xl bg-gradient-to-r from-[#075E63] to-[#0B7A75] p-6 text-white shadow-md">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-emerald-200">Sekolah Alam Al-Karim</p>
+                            <h2 className="text-2xl font-extrabold tracking-tight">EDUKONSUL</h2>
+                            <p className="text-xs text-emerald-100 mt-1">Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak</p>
+                          </div>
+                          <div className="rounded-full bg-white/20 backdrop-blur-md px-4 py-1.5 border border-white/30 text-xs font-extrabold tracking-wider uppercase text-white shadow-inner">
+                            JENJANG {LEVEL_LABELS[data.level] || data.level}
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* 2. Area yang Perlu Diperhatikan */}
-                  <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 border border-amber-200">
-                    <h4 className="font-semibold text-xs text-amber-700 uppercase tracking-wider mb-1">2. ❗ Area yang Perlu Diperhatikan</h4>
-                    <p className="whitespace-pre-wrap text-amber-900 dark:text-amber-300">
-                      {analysis?.weaknesses && analysis.weaknesses !== "-" ? analysis.weaknesses : (analysis?.analysis || data.ai_result || "-")}
-                    </p>
-                  </div>
+                      {/* 1. RINGKASAN AWAL CARD */}
+                      <div className="rounded-2xl border border-emerald-200 bg-[#E8F5F3]/60 dark:bg-emerald-950/20 p-5 shadow-sm space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200/60 pb-2">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-[#075E63] dark:text-emerald-300 flex items-center gap-1.5">
+                            <Compass className="h-4 w-4 text-[#0B7A75]" /> Ringkasan Awal Evaluasi
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                            {parsed.concerns[0]?.title && (
+                              <span className="rounded-md bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 font-bold px-2 py-0.5 border border-amber-200">
+                                Fokus: {parsed.concerns[0].title.substring(0, 30)}...
+                              </span>
+                            )}
+                            {parsed.potentials[0]?.title && (
+                              <span className="rounded-md bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 border border-emerald-200">
+                                Potensi: {parsed.potentials[0].title.substring(0, 30)}...
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <p className="whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                          {parsed.summary}
+                        </p>
+                      </div>
 
-                  {/* 3. Minat & Potensi */}
-                  <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-3 border border-emerald-200">
-                    <h4 className="font-semibold text-xs text-emerald-700 uppercase tracking-wider mb-1">3. 🌟 Minat & Potensi</h4>
-                    <p className="whitespace-pre-wrap text-emerald-900 dark:text-emerald-300">
-                      {analysis?.strengths && analysis.strengths !== "-" ? analysis.strengths : (analysis?.potential || "-")}
-                    </p>
-                  </div>
+                      {/* 2. AREA YANG PERLU DIPERHATIKAN (ATTENTION AREA CARDS) */}
+                      {parsed.concerns.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 border-b border-amber-200 pb-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                            <h4 className="font-extrabold text-sm text-amber-900 dark:text-amber-200 uppercase tracking-wider">
+                              Area yang Perlu Diperhatikan ({parsed.concerns.length})
+                            </h4>
+                          </div>
+                          <div className="space-y-3">
+                            {parsed.concerns.map((c, idx) => (
+                              <div key={idx} className="relative rounded-xl border border-amber-200/80 bg-amber-50/40 dark:bg-amber-950/20 p-4 shadow-sm hover:shadow transition-all pl-5 overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500" />
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center justify-center rounded-md bg-amber-600 text-white text-[11px] font-bold px-2 py-0.5">
+                                      {String(idx + 1).padStart(2, '0')}
+                                    </span>
+                                    <h5 className="font-bold text-amber-950 dark:text-amber-200 text-sm">
+                                      {c.title}
+                                    </h5>
+                                  </div>
+                                </div>
+                                {c.desc && (
+                                  <p className="mt-2 text-xs text-slate-700 dark:text-slate-300 leading-relaxed pl-7">
+                                    {c.desc}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                  {/* 4. Rekomendasi Pendampingan */}
-                  <div className="rounded-lg bg-card p-3 border border-brand/40">
-                    <h4 className="font-semibold text-xs text-brand uppercase tracking-wider mb-1">4. 🎯 Rekomendasi Pendampingan</h4>
-                    <p className="whitespace-pre-wrap">{analysis?.education_recommendation || "-"}</p>
-                  </div>
-                </div>
+                      {/* 3. MINAT & POTENSI (POTENTIALS CARDS GRID) */}
+                      {parsed.potentials.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 border-b border-emerald-200 pb-2">
+                            <Sparkles className="h-5 w-5 text-emerald-600 shrink-0" />
+                            <h4 className="font-extrabold text-sm text-emerald-900 dark:text-emerald-200 uppercase tracking-wider">
+                              Minat & Potensi Unggulan ({parsed.potentials.length})
+                            </h4>
+                          </div>
+                          <div className="grid gap-3.5 md:grid-cols-2">
+                            {parsed.potentials.map((p, idx) => (
+                              <div key={idx} className="relative rounded-xl border border-emerald-200/80 bg-emerald-50/40 dark:bg-emerald-950/20 p-4 shadow-sm hover:shadow transition-all pl-5 overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500" />
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="inline-flex items-center justify-center rounded-md bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider">
+                                    POTENSI {String(idx + 1).padStart(2, '0')}
+                                  </span>
+                                </div>
+                                <h5 className="font-bold text-emerald-950 dark:text-emerald-200 text-sm">
+                                  {p.title}
+                                </h5>
+                                {p.desc && (
+                                  <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+                                    {p.desc}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 4. REKOMENDASI PENDAMPINGAN (ACTION PLAN CARDS) */}
+                      {parsed.recommendations.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 border-b border-sky-200 pb-2">
+                            <Lightbulb className="h-5 w-5 text-sky-600 shrink-0" />
+                            <div>
+                              <h4 className="font-extrabold text-sm text-[#075E63] dark:text-sky-200 uppercase tracking-wider">
+                                Rekomendasi Pendampingan Rumah ({parsed.recommendations.length})
+                              </h4>
+                              <p className="text-[11px] text-muted-foreground">Action Plan Praktis Pendampingan Orang Tua di Rumah</p>
+                            </div>
+                          </div>
+                          <div className="space-y-3">
+                            {parsed.recommendations.map((r, idx) => (
+                              <div key={idx} className="relative rounded-xl border border-sky-200/80 bg-sky-50/40 dark:bg-sky-950/20 p-4 shadow-sm hover:shadow transition-all pl-5 overflow-hidden">
+                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-sky-500" />
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="inline-flex items-center justify-center rounded-md bg-sky-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider">
+                                    ACTION {String(idx + 1).padStart(2, '0')}
+                                  </span>
+                                  <h5 className="font-bold text-[#075E63] dark:text-sky-200 text-sm">
+                                    {r.title}
+                                  </h5>
+                                </div>
+                                {r.desc && (
+                                  <p className="mt-1.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed pl-1">
+                                    {r.desc}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 5. FOKUS PENDAMPINGAN UTAMA */}
+                      {parsed.mainPriorities.length > 0 && (
+                        <div className="rounded-xl border border-teal-200 bg-[#E8F5F3]/80 dark:bg-teal-950/30 p-4 space-y-2 shadow-sm">
+                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-[#075E63] dark:text-teal-300 flex items-center gap-1.5">
+                            <Target className="h-4 w-4 text-[#0B7A75]" /> Fokus Pendampingan Utama
+                          </h4>
+                          <div className="grid gap-2 sm:grid-cols-3 pt-1">
+                            {parsed.mainPriorities.map((prio, i) => (
+                              <div key={i} className="flex items-center gap-2 rounded-lg bg-white/80 dark:bg-slate-900/60 p-2.5 border border-teal-200/60 text-xs font-bold text-slate-800 dark:text-slate-200">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#075E63] text-white text-[10px]">
+                                  {i + 1}
+                                </span>
+                                <span className="line-clamp-2">{prio}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* OFFICIAL FOOTER */}
+                      <div className="pt-4 border-t border-border flex flex-wrap items-center justify-between text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <ShieldCheck className="h-4 w-4 text-[#0B7A75]" />
+                          <span>Dokumen Laporan Resmi EduKonsul — Sekolah Alam Al-Karim</span>
+                        </div>
+                        <div>
+                          Ref: <span className="font-mono font-bold">#{data.id.substring(0, 8).toUpperCase()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
               )}
             </div>
 

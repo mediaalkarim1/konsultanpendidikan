@@ -17,6 +17,115 @@ export type Consultation = {
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
+export function sanitizeTextForPdf(str: string): string {
+  if (!str) return "";
+  return str
+    .replace(/❗/g, "")
+    .replace(/🌟/g, "")
+    .replace(/🎯/g, "")
+    .replace(/✦/g, "")
+    .replace(/★/g, "")
+    .replace(/❌/g, "")
+    .replace(/✅/g, "")
+    .replace(/⚠️/g, "")
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
+    .replace(/[\u{2600}-\u{26FF}]/gu, "")
+    .replace(/[\u{2700}-\u{27BF}]/gu, "")
+    .replace(/[\u{200B}-\u{200D}\u{FEFF}]/g, "")
+    .replace(/[^\x00-\x7F\xA0-\xFF]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export type ParsedReportSectionItem = {
+  title: string;
+  desc: string;
+};
+
+export type ParsedReportData = {
+  summary: string;
+  concerns: ParsedReportSectionItem[];
+  potentials: ParsedReportSectionItem[];
+  recommendations: ParsedReportSectionItem[];
+  mainPriorities: string[];
+};
+
+export function parseReportSections(analysis: any, fallbackMarkdownText?: string): ParsedReportData {
+  const parseBlocks = (text: string): ParsedReportSectionItem[] => {
+    if (!text || text === "-") return [];
+    const items: ParsedReportSectionItem[] = [];
+
+    const rawBlocks = text.split(/(?=###?\s*)/g);
+    for (const block of rawBlocks) {
+      const trimmed = block.trim();
+      if (!trimmed) continue;
+
+      const matchHeading = trimmed.match(/^###?\s*(?:[❗🌟🎯✦\*\-\d\.\s]+)?([^\n]+)\n([\s\S]*)$/);
+      if (matchHeading) {
+        let title = matchHeading[1].replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
+        let desc = matchHeading[2].trim();
+        title = title.replace(/\*\*/g, "").replace(/^\[!\]\s*/, "").replace(/^\[\+\]\s*/, "").replace(/^\[\*\]\s*/, "").trim();
+        desc = desc.replace(/\*\*/g, "").trim();
+        if (title) items.push({ title, desc });
+      } else {
+        const lines = trimmed.split("\n");
+        let title = lines[0].replace(/^[#\*❗🌟🎯✦\-\d\.\s]+/, "").trim();
+        const desc = lines.slice(1).join("\n").replace(/\*\*/g, "").trim();
+        if (title && title.length > 3) {
+          items.push({ title, desc });
+        }
+      }
+    }
+    return items;
+  };
+
+  let summary = (analysis?.summary || "").trim();
+  let weaknessesText = (analysis?.weaknesses && analysis.weaknesses !== "-") ? analysis.weaknesses : "";
+  let strengthsText = (analysis?.strengths && analysis.strengths !== "-") ? analysis.strengths : (analysis?.potential || "");
+  let recText = (analysis?.education_recommendation && analysis.education_recommendation !== "-") ? analysis.education_recommendation : "";
+
+  const fullText = analysis?.analysis || fallbackMarkdownText || "";
+
+  if (!weaknessesText && fullText) {
+    const match = fullText.match(/(?:##?\s*(?:2\.\s*)?AREA YANG PERLU DIPERHATIKAN|##?\s*❗[\s\S]*?Area yang Perlu Diperhatikan)([\s\S]*?)(?=## 3|## 4|\n# |$)/i);
+    if (match) weaknessesText = match[1].trim();
+  }
+
+  if (!strengthsText && fullText) {
+    const match = fullText.match(/(?:##?\s*(?:3\.\s*)?MINAT & POTENSI|##?\s*🌟[\s\S]*?Minat & Potensi)([\s\S]*?)(?=## 4|\n# |$)/i);
+    if (match) strengthsText = match[1].trim();
+  }
+
+  if (!recText && fullText) {
+    const match = fullText.match(/(?:##?\s*(?:4\.\s*)?REKOMENDASI|##?\s*🎯[\s\S]*?Rekomendasi)([\s\S]*?)(?=$)/i);
+    if (match) recText = match[1].trim();
+  }
+
+  const concerns = parseBlocks(weaknessesText);
+  const potentials = parseBlocks(strengthsText);
+  const recommendations = parseBlocks(recText);
+
+  const mainPriorities: string[] = [];
+  concerns.slice(0, 3).forEach(c => {
+    if (c.title && !mainPriorities.includes(c.title)) mainPriorities.push(c.title);
+  });
+  if (mainPriorities.length < 3) {
+    recommendations.slice(0, 3).forEach(r => {
+      if (r.title && !mainPriorities.includes(r.title) && mainPriorities.length < 3) {
+        mainPriorities.push(r.title);
+      }
+    });
+  }
+
+  return {
+    summary: summary || "Ringkasan evaluasi hasil assessment konsultan pendidikan anak.",
+    concerns,
+    potentials,
+    recommendations,
+    mainPriorities
+  };
+}
+
 export async function handleDownloadPdfForConsultation(
   item: Consultation,
   onStart?: () => void,
@@ -26,13 +135,10 @@ export async function handleDownloadPdfForConsultation(
     if (onStart) onStart();
     toast.info(`Menyiapkan Laporan PDF Resmi untuk ${item.parent_name}...`);
 
-    // Dynamic import jsPDF for SSR safety
     const { jsPDF } = await import("jspdf");
-
-    // Yield to main UI thread so spinner renders immediately
     await new Promise((r) => setTimeout(r, 60));
 
-    // Fetch answers
+    // Fetch consultation answers & options
     const { data: answers } = await supabase
       .from("consultation_answers")
       .select("*, questions(question_text)")
@@ -59,150 +165,390 @@ export async function handleDownloadPdfForConsultation(
     const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
     const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
 
-    const narrativeText = analysisData?.analysis || (item as any).ai_result || dynamicNarrative.analysis;
+    const parsedData = parseReportSections(analysisData || { summary: dynamicNarrative.summary, analysis: (item as any).ai_result || dynamicNarrative.analysis, weaknesses: dynamicNarrative.weaknesses, strengths: dynamicNarrative.strengths, education_recommendation: dynamicNarrative.education_recommendation }, (item as any).ai_result || dynamicNarrative.analysis);
+
     const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
     const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
+    const refIdShort = item.id.substring(0, 8).toUpperCase();
+    const childDisplayName = item.child_name && item.child_name !== "-" ? item.child_name : "Ananda";
 
-    // Native jsPDF document creation
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4"
     });
 
-    const pageWidth = doc.internal.pageSize.getWidth(); // 210 mm
-    const pageHeight = doc.internal.pageSize.getHeight(); // 297 mm
-    const margin = 15;
-    const maxTextWidth = pageWidth - margin * 2; // 180 mm
+    const pageWidth = doc.internal.pageSize.getWidth(); // 210
+    const pageHeight = doc.internal.pageSize.getHeight(); // 297
+    const margin = 14;
+    const contentWidth = pageWidth - margin * 2; // 182
 
-    // 1. Top Green Decorative Bar
-    doc.setFillColor(4, 120, 87); // Emerald 700 (#047857)
-    doc.rect(0, 0, pageWidth, 5, "F");
+    // Helper for checking smart page break
+    let yPos = 14;
 
-    // Kop Surat Header
+    const checkPageBreak = (neededH: number) => {
+      if (yPos + neededH > pageHeight - 22) {
+        doc.addPage();
+        yPos = 18;
+        return true;
+      }
+      return false;
+    };
+
+    // --- 1. TOP HEADER COVER ---
+    // Top Bar Deep Aqua (#075E63)
+    doc.setFillColor(7, 94, 99);
+    doc.rect(0, 0, pageWidth, 6, "F");
+
+    // Title Block
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(4, 120, 87);
-    doc.text("SEKOLAH ALAM AL-KARIM — EDUKONSUL", margin, 17);
+    doc.setFontSize(13);
+    doc.setTextColor(7, 94, 99);
+    doc.text("SEKOLAH ALAM AL-KARIM — EDUKONSUL", margin, 15);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(71, 85, 105);
-    doc.text("Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak", margin, 23);
-
-    // Right Side Metadata
-    doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
-    doc.setTextColor(6, 95, 70);
-    doc.text(`JENJANG: ${levelLabel}`, pageWidth - margin - 40, 17);
-    doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 116, 139);
-    doc.text(`Ref ID: #${item.id.substring(0, 8)}`, pageWidth - margin - 40, 23);
+    doc.text("Laporan Evaluasi & Rekomendasi Konsultan Pendidikan Anak", margin, 20);
+
+    // Badge Pill Right Side
+    const badgeW = 42;
+    const badgeX = pageWidth - margin - badgeW;
+    doc.setFillColor(11, 122, 117); // Ocean #0B7A75
+    doc.roundedRect(badgeX, 10, badgeW, 10, 2, 2, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`JENJANG ${levelLabel}`, badgeX + badgeW / 2, 16.5, { align: "center" });
 
     // Divider Line
-    doc.setDrawColor(5, 150, 105);
+    doc.setDrawColor(11, 122, 117);
     doc.setLineWidth(0.4);
-    doc.line(margin, 27, pageWidth - margin, 27);
+    doc.line(margin, 23, pageWidth - margin, 23);
 
-    // 2. Data Card Section
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin, 31, maxTextWidth, 24, 2, 2, "FD");
+    // --- 2. PARTICIPANT DATA CARD ---
+    yPos = 26;
+    doc.setFillColor(248, 250, 252); // #F8FAFC
+    doc.setDrawColor(226, 232, 240); // #E2E8F0
+    doc.roundedRect(margin, yPos, contentWidth, 24, 2, 2, "FD");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(4, 120, 87);
-    doc.text("DATA ORANG TUA", margin + 5, 37);
-    doc.text("DATA ANAK & EVALUASI", margin + 95, 37);
+    doc.setFontSize(7.5);
+    doc.setTextColor(7, 94, 99);
+    doc.text("DATA ORANG TUA", margin + 5, yPos + 6);
+    doc.text("DATA ANAK & EVALUASI", margin + 95, yPos + 6);
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Nama Orang Tua : ${item.parent_name}`, margin + 5, 44);
-    doc.text(`Nomor WhatsApp : ${item.whatsapp_number}`, margin + 5, 50);
-
-    doc.text(`Nama Anak          : ${item.child_name || "-"}`, margin + 95, 44);
-    doc.text(`Tanggal Evaluasi : ${dateStr}`, margin + 95, 50);
-
-    // 3. Section Title
-    let yPos = 63;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
-    doc.setTextColor(4, 120, 87);
-    doc.text("LAPORAN HASIL ANALISIS & REKOMENDASI KONSULTAN", margin, yPos);
-    yPos += 3;
-    doc.setDrawColor(203, 213, 225);
-    doc.setLineWidth(0.3);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 7;
-
-    // 4. Narrative Paragraphs
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
+    doc.setFontSize(8.5);
     doc.setTextColor(51, 65, 85);
+    doc.text(`Nama Orang Tua : ${sanitizeTextForPdf(item.parent_name)}`, margin + 5, yPos + 12);
+    doc.text(`Nomor WhatsApp : ${sanitizeTextForPdf(item.whatsapp_number)}`, margin + 5, yPos + 18);
 
-    const paragraphs = narrativeText.split("\n\n");
+    doc.text(`Nama Anak          : ${sanitizeTextForPdf(childDisplayName)}`, margin + 95, yPos + 12);
+    doc.text(`Tanggal Evaluasi : ${dateStr} (Ref: #${refIdShort})`, margin + 95, yPos + 18);
 
-    for (const para of paragraphs) {
-      if (!para.trim()) continue;
-      const lines = doc.splitTextToSize(para.trim(), maxTextWidth);
-      const neededHeight = lines.length * 5;
+    yPos += 30;
 
-      // Auto page break check
-      if (yPos + neededHeight > pageHeight - 28) {
-        doc.addPage();
-        yPos = 20;
+    // --- 3. RINGKASAN AWAL CARD ---
+    const cleanSummary = sanitizeTextForPdf(parsedData.summary);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    const summaryLines = doc.splitTextToSize(cleanSummary, contentWidth - 10);
+    const summaryCardH = 16 + summaryLines.length * 4.2;
 
-        // Header line on new page
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Laporan Evaluasi Ananda ${item.child_name || item.parent_name} (Sambungan)`, margin, yPos - 5);
+    doc.setFillColor(232, 245, 243); // #E8F5F3
+    doc.setDrawColor(11, 122, 117);
+    doc.roundedRect(margin, yPos, contentWidth, summaryCardH, 2, 2, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(7, 94, 99);
+    doc.text("RINGKASAN AWAL EVALUASI", margin + 5, yPos + 7);
+
+    // Highlight pills if available
+    let pillOffsetX = margin + 65;
+    if (parsedData.concerns[0]?.title) {
+      const p1Text = `Fokus: ${sanitizeTextForPdf(parsedData.concerns[0].title.substring(0, 30))}`;
+      doc.setFillColor(254, 215, 170); // Warm orange
+      doc.roundedRect(pillOffsetX, yPos + 3, 50, 5, 1, 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.5);
+      doc.setTextColor(124, 45, 18);
+      doc.text(p1Text, pillOffsetX + 25, yPos + 6.5, { align: "center" });
+      pillOffsetX += 53;
+    }
+    if (parsedData.potentials[0]?.title) {
+      const p2Text = `Potensi: ${sanitizeTextForPdf(parsedData.potentials[0].title.substring(0, 30))}`;
+      doc.setFillColor(167, 243, 208); // Emerald light
+      doc.roundedRect(pillOffsetX, yPos + 3, 50, 5, 1, 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6.5);
+      doc.setTextColor(6, 95, 70);
+      doc.text(p2Text, pillOffsetX + 25, yPos + 6.5, { align: "center" });
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(51, 65, 85);
+    doc.text(summaryLines, margin + 5, yPos + 13, { lineHeightFactor: 1.4 });
+
+    yPos += summaryCardH + 7;
+
+    // --- 4. AREA YANG PERLU DIPERHATIKAN ---
+    if (parsedData.concerns.length > 0) {
+      checkPageBreak(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(234, 88, 12); // #EA580C
+      doc.text("1. AREA YANG PERLU DIPERHATIKAN", margin, yPos);
+      yPos += 2;
+      doc.setDrawColor(254, 215, 170);
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      parsedData.concerns.forEach((c, idx) => {
+        const cleanTitle = sanitizeTextForPdf(c.title);
+        const cleanDesc = sanitizeTextForPdf(c.desc);
+
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(9.5);
+        doc.setFontSize(8.5);
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 16);
+        const cardH = 11 + descLines.length * 4.2;
+
+        checkPageBreak(cardH + 4);
+
+        // Card fill & border
+        doc.setFillColor(255, 248, 246); // #FFF8F6
+        doc.setDrawColor(254, 215, 170); // #FED7AA
+        doc.roundedRect(margin, yPos, contentWidth, cardH, 2, 2, "FD");
+
+        // Left vertical accent bar
+        doc.setFillColor(234, 88, 12);
+        doc.rect(margin, yPos, 2, cardH, "F");
+
+        // Number Badge Box
+        const numStr = String(idx + 1).padStart(2, "0");
+        doc.setFillColor(234, 88, 12);
+        doc.roundedRect(margin + 4, yPos + 3, 7, 5, 1, 1, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7);
+        doc.setTextColor(255, 255, 255);
+        doc.text(numStr, margin + 7.5, yPos + 6.5, { align: "center" });
+
+        // Title
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(124, 45, 18);
+        doc.text(cleanTitle, margin + 14, yPos + 6.5);
+
+        // Description
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
         doc.setTextColor(51, 65, 85);
+        doc.text(descLines, margin + 6, yPos + 12, { lineHeightFactor: 1.4 });
+
+        yPos += cardH + 4;
+      });
+      yPos += 3;
+    }
+
+    // --- 5. MINAT & POTENSI ---
+    if (parsedData.potentials.length > 0) {
+      checkPageBreak(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(5, 150, 105); // #059669
+      doc.text("2. MINAT & POTENSI UNGGULAN", margin, yPos);
+      yPos += 2;
+      doc.setDrawColor(167, 243, 208);
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      parsedData.potentials.forEach((p, idx) => {
+        const cleanTitle = sanitizeTextForPdf(p.title);
+        const cleanDesc = sanitizeTextForPdf(p.desc);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 16);
+        const cardH = 11 + descLines.length * 4.2;
+
+        checkPageBreak(cardH + 4);
+
+        // Card fill & border
+        doc.setFillColor(240, 253, 244); // #F0FDF4
+        doc.setDrawColor(167, 243, 208); // #A7F3D0
+        doc.roundedRect(margin, yPos, contentWidth, cardH, 2, 2, "FD");
+
+        // Left vertical accent bar
+        doc.setFillColor(5, 150, 105);
+        doc.rect(margin, yPos, 2, cardH, "F");
+
+        // Number Badge Box
+        const badgeTag = `POTENSI ${String(idx + 1).padStart(2, "0")}`;
+        doc.setFillColor(5, 150, 105);
+        doc.roundedRect(margin + 4, yPos + 3, 18, 5, 1, 1, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text(badgeTag, margin + 13, yPos + 6.5, { align: "center" });
+
+        // Title
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(6, 95, 70);
+        doc.text(cleanTitle, margin + 25, yPos + 6.5);
+
+        // Description
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        doc.text(descLines, margin + 6, yPos + 12, { lineHeightFactor: 1.4 });
+
+        yPos += cardH + 4;
+      });
+      yPos += 3;
+    }
+
+    // --- 6. REKOMENDASI PENDAMPINGAN ---
+    if (parsedData.recommendations.length > 0) {
+      checkPageBreak(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(2, 132, 199); // #0284C7
+      doc.text("3. REKOMENDASI PENDAMPINGAN RUMAH (ACTION PLAN)", margin, yPos);
+      yPos += 2;
+      doc.setDrawColor(186, 230, 253);
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      parsedData.recommendations.forEach((r, idx) => {
+        const cleanTitle = sanitizeTextForPdf(r.title);
+        const cleanDesc = sanitizeTextForPdf(r.desc);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        const descLines = doc.splitTextToSize(cleanDesc, contentWidth - 16);
+        const cardH = 11 + descLines.length * 4.2;
+
+        checkPageBreak(cardH + 4);
+
+        // Card fill & border
+        doc.setFillColor(240, 249, 255); // #F0F9FF
+        doc.setDrawColor(186, 230, 253); // #BAE6FD
+        doc.roundedRect(margin, yPos, contentWidth, cardH, 2, 2, "FD");
+
+        // Left vertical accent bar
+        doc.setFillColor(2, 132, 199);
+        doc.rect(margin, yPos, 2, cardH, "F");
+
+        // Number Badge Box
+        const badgeTag = `ACTION ${String(idx + 1).padStart(2, "0")}`;
+        doc.setFillColor(2, 132, 199);
+        doc.roundedRect(margin + 4, yPos + 3, 18, 5, 1, 1, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text(badgeTag, margin + 13, yPos + 6.5, { align: "center" });
+
+        // Title
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(7, 94, 99);
+        doc.text(cleanTitle, margin + 25, yPos + 6.5);
+
+        // Description
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(51, 65, 85);
+        doc.text(descLines, margin + 6, yPos + 12, { lineHeightFactor: 1.4 });
+
+        yPos += cardH + 4;
+      });
+      yPos += 3;
+    }
+
+    // --- 7. FOKUS PENDAMPINGAN UTAMA ---
+    if (parsedData.mainPriorities.length > 0) {
+      checkPageBreak(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(7, 94, 99);
+      doc.text("4. FOKUS PENDAMPINGAN UTAMA", margin, yPos);
+      yPos += 2;
+      doc.setDrawColor(11, 122, 117);
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      const priorityCardH = 10 + parsedData.mainPriorities.length * 6;
+      doc.setFillColor(232, 245, 243); // #E8F5F3
+      doc.setDrawColor(11, 122, 117);
+      doc.roundedRect(margin, yPos, contentWidth, priorityCardH, 2, 2, "FD");
+
+      let prioY = yPos + 6;
+      parsedData.mainPriorities.forEach((prio, i) => {
+        const cleanPrio = sanitizeTextForPdf(prio);
+        doc.setFillColor(7, 94, 99);
+        doc.roundedRect(margin + 5, prioY - 3, 5, 4, 1, 1, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text(String(i + 1), margin + 7.5, prioY - 0.2, { align: "center" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(17, 52, 58);
+        doc.text(cleanPrio, margin + 12, prioY);
+        prioY += 6;
+      });
+
+      yPos += priorityCardH + 5;
+    }
+
+    // --- 8. FOOTER & PAGE NUMBERS ON ALL PAGES ---
+    const totalPages = doc.getNumberOfPages();
+    for (let pageIndex = 1; pageIndex <= totalPages; pageIndex++) {
+      doc.setPage(pageIndex);
+
+      // Top running header for page > 1
+      if (pageIndex > 1) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`SEKOLAH ALAM AL-KARIM — EDUKONSUL | Laporan Evaluasi Ananda ${sanitizeTextForPdf(childDisplayName)}`, margin, 10);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.2);
+        doc.line(margin, 12, pageWidth - margin, 12);
       }
 
-      doc.text(lines, margin, yPos, { lineHeightFactor: 1.4 });
-      yPos += lines.length * 5.2 + 4;
+      // Bottom footer line
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(margin, 283, pageWidth - margin, 283);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Dokumen Laporan Resmi EduKonsul — Sekolah Alam Al-Karim | Ref: #${refIdShort} | ${dateStr}`, margin, 288);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(7, 94, 99);
+      doc.text(`${String(pageIndex).padStart(2, "0")} / ${String(totalPages).padStart(2, "0")}`, pageWidth - margin, 288, { align: "right" });
     }
 
-    // 5. Footer Signature Block
-    if (yPos + 35 > pageHeight - 15) {
-      doc.addPage();
-      yPos = 20;
-    } else {
-      yPos += 8;
-    }
-
-    doc.setDrawColor(226, 232, 240);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 7;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text("Dokumen Laporan Resmi EduKonsul — Sekolah Alam Al-Karim", margin, yPos + 4);
-    doc.text(`Diterbitkan pada: ${dateStr}`, margin, yPos + 9);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(4, 120, 87);
-    doc.text("Tim Konsultan Pendidikan", pageWidth - margin - 45, yPos + 4);
-
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(15, 23, 42);
-    doc.text("Sekolah Alam Al-Karim", pageWidth - margin - 45, yPos + 22);
-    doc.line(pageWidth - margin - 45, yPos + 23, pageWidth - margin, yPos + 23);
-
-    // Save File
-    const fileName = `Laporan_Konsultasi_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`;
+    const fileName = `Laporan_EduKonsul_${(item.parent_name || "OrangTua").replace(/\s+/g, "_")}.pdf`;
     doc.save(fileName);
-    toast.success("Dokumen PDF berhasil diunduh!");
+    toast.success("Dokumen PDF laporan resmi berhasil diunduh!");
 
   } catch (err: any) {
     console.error("Native jsPDF error:", err);
-    toast.error("Gagal membuat PDF. Silakan coba lagi.");
+    toast.error("Gagal membuat PDF: " + (err.message || "Error PDF Generator"));
   } finally {
     if (onFinish) onFinish();
   }
