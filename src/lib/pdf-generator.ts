@@ -822,33 +822,33 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     if (!potentialsList.some(x => x.title === p.title)) potentialsList.push(p);
   }
 
-  // Generate minimum 5 recommendations linked to findings
+  // Generate recommendations linked directly to findings
   const rawRecs: string[] = [];
-  concernsList.slice(0, 5).forEach((c) => {
+  concernsList.forEach((c) => {
     const t = c.title;
     if (t.includes("Jurusan") || t.includes("Karier") || t.includes("Cita-Cita")) {
       rawRecs.push(
-        `### 🎯 Diskusi Matriks Minat & Eksplorasi Pilihan Jurusan\nAjak ${nameDisplay} berdiskusi santai untuk mengidentifikasi 3 bidang favorit, membandingkan mata kuliahnya, serta mencocokkan dengan potensi utamanya.`
+        `Diskusi Matriks Minat & Eksplorasi Pilihan Jurusan\nAjak ${nameDisplay} berdiskusi santai untuk mengidentifikasi 3 bidang favorit, membandingkan mata kuliahnya, serta mencocokkan dengan potensi utamanya.`
       );
     } else if (t.includes("Portofolio") || t.includes("Proyek") || t.includes("Karya")) {
       rawRecs.push(
-        `### 🎯 Buat Papan Dokumentasi Karya & Portofolio Digital\nDampingi ${nameDisplay} mengumpulkan sertifikat, hasil tulisan, foto kegiatan, atau proyek sekolah ke dalam satu folder portofolio yang rapi.`
+        `Buat Papan Dokumentasi Karya & Portofolio Digital\nDampingi ${nameDisplay} mengumpulkan sertifikat, hasil tulisan, foto kegiatan, atau proyek sekolah ke dalam satu folder portofolio yang rapi.`
       );
     } else if (t.includes("Screen Time") || t.includes("Gawai") || t.includes("Gadget")) {
       rawRecs.push(
-        `### 🎯 Sepakati Batas Durasi Layar & Rutinitas Tanpa Gawai\nDiskusikan aturan waktu pemakaian gadget bersama ${nameDisplay} dan ciptakan area bebas layar saat jam belajar dan jam makan keluarga.`
+        `Sepakati Batas Durasi Layar & Rutinitas Tanpa Gawai\nDiskusikan aturan waktu pemakaian gadget bersama ${nameDisplay} dan ciptakan area bebas layar saat jam belajar dan jam makan keluarga.`
       );
     } else if (t.includes("Bahasa Inggris") || t.includes("Public Speaking") || t.includes("Komunikasi")) {
       rawRecs.push(
-        `### 🎯 Fasilitasi Latihan Berbicara & Media Bahasa Inggris Harian\nAjak ${nameDisplay} membaca buku ber-bahasa Inggris atau menceritakan kembali berita/video singkat yang diminatinya dalam Bahasa Inggris.`
+        `Fasilitasi Latihan Berbicara & Media Bahasa Inggris Harian\nAjak ${nameDisplay} membaca buku ber-bahasa Inggris atau menceritakan kembali berita/video singkat yang diminatinya dalam Bahasa Inggris.`
       );
     } else if (t.includes("Kemandirian") || t.includes("Emosi") || t.includes("Tugas")) {
       rawRecs.push(
-        `### 🎯 Terapkan Rutinitas Mandiri Bergradasi & Validasi Emosi\nBerikan kepercayaan tanggung jawab harian pada ${nameDisplay} disertai pujian spesifik saat berhasil menyelesaikannya secara mandiri.`
+        `Terapkan Rutinitas Mandiri Bergradasi & Validasi Emosi\nBerikan kepercayaan tanggung jawab harian pada ${nameDisplay} disertai pujian spesifik saat berhasil menyelesaikannya secara mandiri.`
       );
     } else {
       rawRecs.push(
-        `### 🎯 Lakukan Sesi Refleksi Mingguan Bersama Anak\nSediakan waktu 15 menit setiap pekan untuk mendengarkan cerita ${nameDisplay} tentang hambatan yang dihadapi dan merayakan pencapaian kecilnya.`
+        `Lakukan Sesi Refleksi Mingguan Bersama Anak\nSediakan waktu 15 menit setiap pekan untuk mendengarkan cerita ${nameDisplay} tentang hambatan yang dihadapi dan merayakan pencapaian kecilnya.`
       );
     }
   });
@@ -884,8 +884,14 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
     .map((r) => `🎯 ${r}`)
     .join("\n\n");
 
-  const summary = `Berdasarkan jawaban kuesioner yang disampaikan ${parentDisplay} mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran khusus mengenai karakteristik belajar dan interaksi harian anak.\n\nPola jawaban orang tua menunjukkan bahwa ${childPhrase} memiliki potensi positif yang baik pada ${potentialsList[0]?.title || "eksplorasi minat"}, namun pada saat yang sama memerlukan pendampingan terarah terutama pada ${concernsList[0]?.title || "aspek harian"}.\n\nLaporan ini merangkum ${concernsList.length} area perhatian spesifik dan ${potentialsList.length} potensi utama dari jawaban orang tua sebagai panduan pendampingan hangat di rumah.`;
+  // Summary format MUST be bullet points
+  const summaryPoints = [
+    `• Berdasarkan jawaban kuesioner ${parentDisplay}, ${childPhrase} memperlihatkan karakteristik belajar unik pada jenjang ${jenjangLabel}.`,
+    potentialsList[0]?.title ? `• Potensi utama yang menonjol: ${potentialsList[0].title}.` : `• ${childPhrase} menunjukkan antusiasme positif saat didampingi secara produktif.`,
+    concernsList[0]?.title ? `• Fokus pendampingan utama di rumah: ${concernsList[0].title}.` : `• Membutuhkan arahan terstruktur untuk mengoptimalkan kebiasaan harian.`
+  ];
 
+  const summary = summaryPoints.join("\n");
   const fullNarrative = `RINGKASAN AWAL\n\n${summary}\n\nAREA YANG PERLU DIPERHATIKAN\n\n${formattedConcerns}\n\nMINAT & POTENSI\n\n${formattedPotentials}\n\nREKOMENDASI PENDAMPINGAN RUMAH\n\n${formattedRecommendations}`;
 
   return {

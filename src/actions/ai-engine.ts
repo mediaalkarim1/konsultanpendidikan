@@ -199,15 +199,34 @@ Nomor WhatsApp: ${whatsappNumber}
 ${formattedAnswers}
 
 === PETUNJUK FORMAT OUTPUT ===
-Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
+Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
 {
-  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak yang benar-benar berasal dari jawaban orang tua. Dilarang kalimat pembuka generik.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (MINIMAL 5 POIN jika didukung jawaban, setiap area diawali ### ❗ [Nama Temuan Spesifik Dari Jawaban]), lalu ## 3. 🌟 MINAT & POTENSI (MINIMAL 3 POIN, setiap potensi diawali ### 🌟 [Nama Potensi Spesifik]), lalu ## 4. 🎯 REKOMENDASI PENDAMPINGAN RUMAH (MINIMAL 5 POIN, setiap poin diawali ### 🎯 [Judul Rekomendasi Spesifik Rumah]). Dilarang template generik.",
-  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja (Minimal 3 poin) — setiap potensi menggunakan ### 🌟 [Nama Potensi Spesifik] diikuti penjelasan singkat berdasarkan bukti jawaban orang tua.",
-  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Temuan Spesifik Dari Jawaban] diikuti penjelasan 1-3 kalimat.",
-  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI (Minimal 3 poin).",
-  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
-  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI PENDAMPINGAN RUMAH saja (Minimal 5 poin) — berupa rekomendasi konkret untuk pendampingan rumah. Dilarang rekomendasi sekolah."
+  "summary_points": [
+    "Poin ringkasan fakta 1 berbasis jawaban orang tua...",
+    "Poin ringkasan fakta 2 berbasis jawaban orang tua...",
+    "Poin ringkasan fakta 3 berbasis jawaban orang tua..."
+  ],
+  "attention_areas": [
+    {
+      "title": "Judul Temuan Spesifik Dari Jawaban (Bukan kata generik seperti 'Manajemen Waktu')",
+      "description": "Penjelasan kondisi konkret 1-2 kalimat berbasis bukti jawaban orang tua.",
+      "evidence": "Kutipan / ringkasan bukti jawaban orang tua"
+    }
+  ],
+  "potentials": [
+    {
+      "title": "Judul Potensi / Karakter Positif Spesifik",
+      "description": "Penjelasan potensi positif 1-2 kalimat berbasis bukti jawaban orang tua.",
+      "evidence": "Kutipan / ringkasan bukti jawaban orang tua"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Judul Action Plan Pendampingan Rumah",
+      "description": "Langkah praktis pendampingan rumah yang terhubung dengan temuan.",
+      "based_on": "Berhubungan dengan temuan area perhatian / potensi"
+    }
+  ]
 }
 `;
 
@@ -345,7 +364,7 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
     }
 
     // Parse JSON
-    const parsed = parseAiJsonResponse(rawResponseText);
+    const parsed = parseAiJsonResponse(rawResponseText, formattedAnswers);
     return {
       success: true,
       providerName: provider.provider_name,
@@ -367,7 +386,7 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
 
 import { sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
 
-function parseAiJsonResponse(text: string): AiAnalysisResult {
+function parseAiJsonResponse(text: string, formattedAnswers?: string): AiAnalysisResult {
   try {
     // Clean codeblock formatting if present
     const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
@@ -375,28 +394,92 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
-    const rawSummary = obj.summary || "Analisis telah selesai disusun.";
-    const rawAnalysis = obj.analysis || [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation].filter((v: any) => typeof v === "string" && v.trim()).join("\n\n") || text;
-    const rawStrengths = obj.strengths || obj.potential || "-";
-    const rawWeaknesses = obj.weaknesses || "-";
-    const rawPotential = obj.potential || "-";
-    const rawRisk = obj.risk || obj.weaknesses || "-";
-    const rawRec = typeof obj.education_recommendation === "string"
-      ? obj.education_recommendation 
-      : JSON.stringify(obj.education_recommendation, null, 2) || "-";
+    let summaryStr = "";
+    if (Array.isArray(obj.summary_points) && obj.summary_points.length > 0) {
+      summaryStr = obj.summary_points.map((p: string) => `• ${sanitizeAnalysisMarkdown(p)}`).join("\n");
+    } else if (typeof obj.summary === "string") {
+      summaryStr = sanitizeAnalysisMarkdown(obj.summary);
+    } else {
+      summaryStr = "• Ringkasan disusun berdasarkan fakta jawaban kuesioner.";
+    }
+
+    let concernsStr = "";
+    if (Array.isArray(obj.attention_areas) && obj.attention_areas.length > 0) {
+      concernsStr = obj.attention_areas
+        .map((item: any) => {
+          const title = sanitizeAnalysisMarkdown(item.title || item.name || "");
+          const desc = sanitizeAnalysisMarkdown(item.description || item.desc || "");
+          return `❗ ${title}\n${desc}`;
+        })
+        .join("\n\n");
+    } else if (typeof obj.weaknesses === "string") {
+      concernsStr = sanitizeAnalysisMarkdown(obj.weaknesses);
+    } else {
+      concernsStr = "-";
+    }
+
+    let potentialsStr = "";
+    if (Array.isArray(obj.potentials) && obj.potentials.length > 0) {
+      potentialsStr = obj.potentials
+        .map((item: any) => {
+          const title = sanitizeAnalysisMarkdown(item.title || item.name || "");
+          const desc = sanitizeAnalysisMarkdown(item.description || item.desc || "");
+          return `🌟 ${title}\n${desc}`;
+        })
+        .join("\n\n");
+    } else if (typeof obj.strengths === "string") {
+      potentialsStr = sanitizeAnalysisMarkdown(obj.strengths);
+    } else {
+      potentialsStr = "-";
+    }
+
+    let recsStr = "";
+    if (Array.isArray(obj.recommendations) && obj.recommendations.length > 0) {
+      recsStr = obj.recommendations
+        .map((item: any) => {
+          const title = sanitizeAnalysisMarkdown(item.title || item.name || "");
+          const desc = sanitizeAnalysisMarkdown(item.description || item.desc || "");
+          return `🎯 ${title}\n${desc}`;
+        })
+        .join("\n\n");
+    } else if (typeof obj.education_recommendation === "string") {
+      recsStr = sanitizeAnalysisMarkdown(obj.education_recommendation);
+    } else {
+      recsStr = "-";
+    }
+
+    // Negative Constraint Filter: Remove contradictory findings if formattedAnswers states positive condition
+    if (formattedAnswers) {
+      const lowerAnswers = formattedAnswers.toLowerCase();
+      
+      // If parent states child already decided major/knows major
+      if (lowerAnswers.includes("sudah tahu jurusan") || lowerAnswers.includes("jurusan kuliah yang sudah dipilih") || lowerAnswers.includes("sudah mantap")) {
+        concernsStr = concernsStr.split("\n\n").filter(block => !/bingung|belum (tahu|memiliki|paham)|arah jurusan/i.test(block)).join("\n\n");
+      }
+      // If parent states child is active in projects/orgs
+      if (lowerAnswers.includes("aktif berorganisasi") || lowerAnswers.includes("sudah ada proyek") || lowerAnswers.includes("banyak karya")) {
+        concernsStr = concernsStr.split("\n\n").filter(block => !/kurang (pengalaman|organisasi)|belum (ada|memiliki) (portofolio|karya)/i.test(block)).join("\n\n");
+      }
+      // If parent states child manages time well
+      if (lowerAnswers.includes("mampu mengelola waktu") || lowerAnswers.includes("disiplin waktu")) {
+        concernsStr = concernsStr.split("\n\n").filter(block => !/manajemen waktu|prokrastinasi|menunda/i.test(block)).join("\n\n");
+      }
+    }
+
+    const fullNarrative = `RINGKASAN AWAL\n\n${summaryStr}\n\nAREA YANG PERLU DIPERHATIKAN\n\n${concernsStr}\n\nMINAT & POTENSI\n\n${potentialsStr}\n\nREKOMENDASI PENDAMPINGAN RUMAH\n\n${recsStr}`;
 
     return {
-      summary: sanitizeAnalysisMarkdown(rawSummary),
-      analysis: sanitizeAnalysisMarkdown(rawAnalysis),
-      strengths: sanitizeAnalysisMarkdown(rawStrengths),
-      weaknesses: sanitizeAnalysisMarkdown(rawWeaknesses),
-      potential: sanitizeAnalysisMarkdown(rawPotential),
-      risk: sanitizeAnalysisMarkdown(rawRisk),
-      education_recommendation: sanitizeAnalysisMarkdown(rawRec)
+      summary: summaryStr,
+      analysis: fullNarrative,
+      strengths: potentialsStr,
+      weaknesses: concernsStr,
+      potential: potentialsStr,
+      risk: concernsStr,
+      education_recommendation: recsStr
     };
   } catch (e) {
     return {
-      summary: "Hasil analisis telah digenerate.",
+      summary: "• Hasil analisis telah digenerate berbasis poin-poin kuesioner.",
       analysis: sanitizeAnalysisMarkdown(text),
       strengths: "Dapat diamati dari laporan analisis.",
       weaknesses: "Dapat diamati dari laporan analisis.",
