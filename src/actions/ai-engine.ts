@@ -322,8 +322,21 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
       throw new Error(`Tanggapan dari ${provider.provider_name} kosong.`);
     }
 
+    // [TAHAP 8 AUDIT LOG: AI RAW RESPONSE]
+    console.log("==================================================");
+    console.log("[AI RAW RESPONSE]");
+    console.log(rawResponseText);
+    console.log("==================================================");
+
     // Parse JSON
     const parsed = parseAiJsonResponse(rawResponseText, formattedAnswers);
+
+    // [TAHAP 8 AUDIT LOG: AI PARSED RESULT]
+    console.log("==================================================");
+    console.log("[AI PARSED RESULT]");
+    console.log(JSON.stringify(parsed, null, 2));
+    console.log("==================================================");
+
     return {
       success: true,
       providerName: provider.provider_name,
@@ -331,14 +344,10 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
     };
 
   } catch (err: any) {
-    console.warn(`[AI Engine Notice] (${provider?.provider_name} API unavailable, using smart analysis engine):`, err?.message || err);
-    
-    // Smart Fallback Engine: Return high-quality interpreted analysis result
-    const fallbackResult = generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
+    console.error(`[AI Engine Error] (${provider?.provider_name} API call failed):`, err?.message || err);
     return {
-      success: true,
-      providerName: `${provider?.provider_name || "AI Engine"} (Smart Engine)`,
-      data: fallbackResult
+      success: false,
+      error: "Analisis gagal dibuat. Silakan coba kembali."
     };
   }
 }
@@ -619,10 +628,13 @@ export function generateInterpretedAnalysis(parentName: string, childName: strin
 
     // Clean up raw answer into natural sentence for description
     const rawA = item.a.trim();
-    let naturalSentence = rawA.charAt(0).toLowerCase() + rawA.slice(1);
+    let naturalSentence = rawA;
     if (!naturalSentence.endsWith(".")) naturalSentence += ".";
 
-    const desc = `${nameDisplay} ${naturalSentence}`;
+    const startsWithName = new RegExp(`^(${nameDisplay}|ananda|anak)\\s+`, "i").test(naturalSentence);
+    let desc = startsWithName
+      ? naturalSentence.charAt(0).toUpperCase() + naturalSentence.slice(1)
+      : `${nameDisplay} ${naturalSentence.charAt(0).toLowerCase() + naturalSentence.slice(1)}`;
 
     if (interpreted.category === "concern") {
       concernsList.push({ title: interpreted.title, desc });
@@ -631,7 +643,7 @@ export function generateInterpretedAnalysis(parentName: string, childName: strin
     } else {
       potentialsList.push({ title: interpreted.title, desc });
       recommendationsList.push({ title: interpreted.recTitle, desc: interpreted.recDesc(nameDisplay) });
-      summaryPoints.push(`• ${nameDisplay} ${naturalSentence}`);
+      summaryPoints.push(`• ${desc}`);
     }
   }
 

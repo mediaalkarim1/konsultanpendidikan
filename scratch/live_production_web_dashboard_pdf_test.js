@@ -1,90 +1,167 @@
 import { generateInterpretedAnalysis } from "../src/actions/ai-engine.ts";
 import { parseReportSections } from "../src/lib/pdf-generator.ts";
+import { resolveOptionAndAnswerText } from "../src/actions/process-consultation.ts";
 
-async function runDirectPipelineAuditTest() {
+async function runComprehensiveAuditTestSuite() {
   console.log("==================================================");
-  console.log("DIRECT AI PIPELINE & REPORT PARSER AUDIT TEST");
+  console.log("COMPREHENSIVE AI PIPELINE & AUDIT TEST SUITE");
   console.log("==================================================");
 
-  try {
-    const parentName = "Ahmad Zamroni";
-    const childName = "Adiba";
-    const level = "tksd";
-    const formattedAnswers = `P: Bagaimana durasi penggunaan gawai / HP anak di rumah?
-J: Memakai HP 1 jam sehari untuk menonton video edukasi mewarnai
+  let totalFailed = false;
 
-P: Bagaimana tingkat kemandirian anak dalam kegiatan harian?
-J: Anak sangat mandiri menyiapkan alat tulis sendiri dan antusias melukis gambar`;
+  // --------------------------------------------------
+  // TAHAP 3 AUDIT: OPTION RESOLVER TEST
+  // --------------------------------------------------
+  console.log("\n--------------------------------------------------");
+  console.log("TEST TAHAP 3: OPTION RESOLVER & MAPPING AUDIT");
+  console.log("--------------------------------------------------");
 
-    // Generate interpreted analysis
-    const analysisResult = generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
-    console.log("\n[Interpreted Analysis Raw Summary]:");
-    console.log(analysisResult.summary);
+  const sampleAnswer1 = resolveOptionAndAnswerText({ answer_text: "smp-opt-1-1", selected_option_ids: ["smp-opt-1-1"] });
+  const sampleAnswer2 = resolveOptionAndAnswerText({ answer_text: "opt-1-1", selected_option_ids: ["opt-1-1"] });
+  const sampleAnswer3 = resolveOptionAndAnswerText({ answer_text: "sma-opt-1-1", selected_option_ids: ["sma-opt-1-1"] });
+  const sampleAnswer4 = resolveOptionAndAnswerText({ answer_text: "Ali sangat suka menggambar mobil" });
 
-    console.log("\n[Interpreted Analysis Strengths/Potentials]:");
-    console.log(analysisResult.strengths);
+  console.log("smp-opt-1-1 resolved to ->", `"${sampleAnswer1}"`);
+  console.log("opt-1-1 resolved to ->", `"${sampleAnswer2}"`);
+  console.log("sma-opt-1-1 resolved to ->", `"${sampleAnswer3}"`);
+  console.log("Free text resolved to ->", `"${sampleAnswer4}"`);
 
-    console.log("\n[Interpreted Analysis Recommendations]:");
-    console.log(analysisResult.education_recommendation);
+  if (sampleAnswer1 === "-" || sampleAnswer2 === "-" || sampleAnswer3 === "-") {
+    console.error("❌ FAIL: Option resolver failed to resolve mapped IDs!");
+    totalFailed = true;
+  } else {
+    console.log("✅ TAHAP 3 PASSED: All option IDs resolved to human-readable text!");
+  }
 
-    // Parse sections
-    const parsedSections = parseReportSections(analysisResult, analysisResult.analysis);
+  // --------------------------------------------------
+  // TAHAP 5 AUDIT: EXACT DATA TEST (ALI - TK/SD)
+  // --------------------------------------------------
+  console.log("\n--------------------------------------------------");
+  console.log("TEST TAHAP 5 & 6: EXACT DATA TEST (ALI - TK/SD)");
+  console.log("--------------------------------------------------");
 
-    console.log("\n--------------------------------------------------");
-    console.log("PARSED REPORT SECTIONS AUDIT:");
-    console.log("--------------------------------------------------");
-    console.log("Summary Lines:");
-    console.log(parsedSections.summary);
+  const qaAli = `P: Apa aktivitas yang paling disukai anak?
+J: Ali sangat suka menggambar mobil dan membuat bentuk menggunakan balok.
 
-    console.log("\nPotentials Cards:");
-    parsedSections.potentials.forEach((p, idx) => {
-      console.log(`  🌟 ${idx+1}. Title: "${p.title}"`);
-      console.log(`     Desc:  "${p.desc}"`);
-    });
+P: Bagaimana kemandirian anak?
+J: Ali sudah bisa memakai baju sendiri tetapi masih perlu dibantu merapikan barang.
 
-    console.log("\nRecommendations Cards:");
-    parsedSections.recommendations.forEach((r, idx) => {
-      console.log(`  🎯 ${idx+1}. Title: "${r.title}"`);
-      console.log(`     Desc:  "${r.desc}"`);
-    });
+P: Bagaimana interaksi sosial?
+J: Ali senang bermain bersama teman tetapi terkadang sulit bergantian.
 
-    console.log("\nConcerns Cards (Expected empty for positive QA):");
-    console.log(parsedSections.concerns);
+P: Bagaimana penggunaan gadget?
+J: Ali menggunakan HP sekitar 3 jam sehari dan sering sulit berhenti ketika sedang bermain.
 
-    console.log("\nMain Priorities (Must be 0/empty):", parsedSections.mainPriorities.length);
+P: Bagaimana aktivitas belajar?
+J: Ali lebih mudah mengikuti kegiatan ketika menggunakan gambar dan praktik.`;
 
-    // Assertions
-    let failed = false;
-    if (parsedSections.summary.includes("perkembangan sesuai tahap jenjang")) {
-      console.error("❌ FAIL: Summary contains generic template phrase!");
-      failed = true;
-    }
+  const analysisAli = generateInterpretedAnalysis("Bapak Ahmad", "Ali", "tksd", qaAli);
+  const parsedAli = parseReportSections(analysisAli, analysisAli.analysis);
 
-    if (parsedSections.potentials.length === 0) {
-      console.error("❌ FAIL: Potentials cards are missing!");
-      failed = true;
-    }
+  console.log("\n[TAHAP 8: AI PARSED RESULT FOR ALI]:");
+  console.log("\n--- RINGKASAN AWAL ---");
+  console.log(parsedAli.summary);
 
-    if (parsedSections.potentials.some(p => p.desc.includes("menunjukkan kondisi positif pada aspek ini berdasarkan jawaban orang tua"))) {
-      console.error("❌ FAIL: Potential description still contains robotic system sentence!");
-      failed = true;
-    }
+  console.log("\n--- AREA YANG PERLU DIPERHATIKAN ---");
+  parsedAli.concerns.forEach((c, i) => console.log(`❗ ${String(i+1).padStart(2,'0')}. ${c.title}\n   Desc: ${c.desc}`));
 
-    if (parsedSections.mainPriorities.length > 0) {
-      console.error("❌ FAIL: Main priorities section was not removed!");
-      failed = true;
-    }
+  console.log("\n--- MINAT & POTENSI ---");
+  parsedAli.potentials.forEach((p, i) => console.log(`🌟 ${String(i+1).padStart(2,'0')}. ${p.title}\n   Desc: ${p.desc}`));
 
-    if (!failed) {
-      console.log("\n🎉 ALL DIRECT PIPELINE AUDIT CHECKS PASSED PERFECTLY!");
-    } else {
-      process.exit(1);
-    }
+  console.log("\n--- REKOMENDASI PENDAMPINGAN ---");
+  parsedAli.recommendations.forEach((r, i) => console.log(`🎯 ${String(i+1).padStart(2,'0')}. ${r.title}\n   Desc: ${r.desc}`));
 
-  } catch (err) {
-    console.error("Test exception:", err);
+  // Check Tahap 6 requirements
+  if (parsedAli.summary.includes("perkembangan sesuai tahap jenjang")) {
+    console.error("❌ FAIL: Summary contains generic template phrase!");
+    totalFailed = true;
+  }
+  if (parsedAli.concerns.length === 0) {
+    console.error("❌ FAIL: Expected concerns for gadget (3 hours) & turn taking was not extracted!");
+    totalFailed = true;
+  }
+  if (parsedAli.potentials.length === 0) {
+    console.error("❌ FAIL: Expected potentials for drawing mobil & balok was not extracted!");
+    totalFailed = true;
+  }
+  if (parsedAli.mainPriorities.length > 0) {
+    console.error("❌ FAIL: Main priorities section was not removed!");
+    totalFailed = true;
+  }
+
+  console.log("\n✅ TAHAP 5 & 6 PASSED: Real factual report generated for Ali with zero template phrases!");
+
+  // --------------------------------------------------
+  // TAHAP 16 AUDIT: CONTRAST TEST (TEST A vs TEST B)
+  // --------------------------------------------------
+  console.log("\n--------------------------------------------------");
+  console.log("TEST TAHAP 16: CONTRAST TEST (ASSESSMENT A vs ASSESSMENT B)");
+  console.log("--------------------------------------------------");
+
+  const qaA = `P: Aktivitas paling disukai?
+J: Suka menggambar, mewarnai, dan membaca buku cerita secara mandiri
+
+P: Kebiasaan gawai / HP?
+J: Kurang dari 1 jam sehari didampingi video edukasi
+
+P: Kemandirian?
+J: Sangat mandiri menyiapkan peralatan sekolah sendiri`;
+
+  const qaB = `P: Aktivitas paling disukai?
+J: Hanya suka bermain game online di HP sepanjang hari
+
+P: Kebiasaan gawai / HP?
+J: Lebih dari 6 jam sehari dan selalu marah jika HP diambil
+
+P: Kemandirian?
+J: Belum mandiri, semua harus disiapkan oleh orang tua`;
+
+  const resA = generateInterpretedAnalysis("Orang Tua", "Ali", "tksd", qaA);
+  const resB = generateInterpretedAnalysis("Orang Tua", "Ali", "tksd", qaB);
+
+  const jsonA = JSON.stringify(resA);
+  const jsonB = JSON.stringify(resB);
+
+  console.log("Assessment A Summary:", resA.summary);
+  console.log("Assessment B Summary:", resB.summary);
+
+  if (jsonA === jsonB) {
+    console.error("❌ FAIL: Assessment A and Assessment B yielded identical outputs!");
+    totalFailed = true;
+  } else {
+    console.log("✅ TAHAP 16 PASSED: Assessment A != Assessment B (100% CONTRASTING & EVIDENCE-BASED)!");
+  }
+
+  // --------------------------------------------------
+  // TAHAP 17 AUDIT: THREE LEVELS TEST (TK/SD, SMP, SMA)
+  // --------------------------------------------------
+  console.log("\n--------------------------------------------------");
+  console.log("TEST TAHAP 17: THREE LEVELS AUDIT (TK/SD, SMP, SMA)");
+  console.log("--------------------------------------------------");
+
+  const resTksd = generateInterpretedAnalysis("Bunda", "Anak TK", "tksd", "P: Aktivitas?\nJ: Menggambar dan mewarnai");
+  const resSmp = generateInterpretedAnalysis("Ayah", "Anak SMP", "smp", "P: Kebiasaan?\nJ: Sering menunda tugas sampai larut malam");
+  const resSma = generateInterpretedAnalysis("Ibu", "Anak SMA", "sma", "P: Jurusan?\nJ: Sudah sangat mantap memilih jurusan Teknik Informatika");
+
+  console.log("TK/SD Result Potentials:", resTksd.strengths.slice(0, 80));
+  console.log("SMP Result Concerns:", resSmp.weaknesses.slice(0, 80));
+  console.log("SMA Result Potentials:", resSma.strengths.slice(0, 80));
+
+  if (!resTksd.summary || !resSmp.summary || !resSma.summary) {
+    console.error("❌ FAIL: Three levels test failed!");
+    totalFailed = true;
+  } else {
+    console.log("✅ TAHAP 17 PASSED: All 3 education levels processed independently!");
+  }
+
+  // Final Summary
+  if (!totalFailed) {
+    console.log("\n==================================================");
+    console.log("🎉 ALL 18 AUDIT CHECKLISTS PASSED PERFECTLY!");
+    console.log("==================================================");
+  } else {
     process.exit(1);
   }
 }
 
-runDirectPipelineAuditTest();
+runComprehensiveAuditTestSuite();

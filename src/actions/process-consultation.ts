@@ -18,6 +18,45 @@ ALL_DEFAULT_QUESTIONS.forEach(q => {
   });
 });
 
+export function resolveOptionAndAnswerText(
+  a: { answer_text?: string | null; answer?: string | null; selected_option_ids?: string[] | null },
+  optionsMapFromDb: Record<string, string> = {}
+): string {
+  const combinedMap = { ...FALLBACK_OPTIONS_MAP, ...optionsMapFromDb };
+  const isTechId = (str: string) => !str || str === "-" || /^[0-9a-f-]{36}$/i.test(str) || /^(opt|smp-opt|sma-opt|tksd-q\d+-o\d+)/i.test(str);
+
+  // 1. Check raw text if it is human-readable text
+  const rawText = (a.answer_text || a.answer || "").trim();
+  if (rawText && !isTechId(rawText)) {
+    return rawText;
+  }
+
+  // 2. Check if raw text is a key in option map
+  if (rawText && combinedMap[rawText]) {
+    return combinedMap[rawText];
+  }
+
+  // 3. Resolve selected_option_ids
+  const optionIds = a.selected_option_ids || [];
+  if (optionIds.length > 0) {
+    const texts: string[] = [];
+    for (const oid of optionIds) {
+      if (!oid) continue;
+      if (combinedMap[oid]) {
+        texts.push(combinedMap[oid]);
+      } else if (!isTechId(oid)) {
+        texts.push(oid);
+      }
+    }
+    if (texts.length > 0) {
+      return texts.join(", ");
+    }
+  }
+
+  return "-";
+}
+
+
 
 export type ConsultationSubmitPayload = {
   parent_name: string;
@@ -175,44 +214,24 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       const questionsTextMap: Record<string, string> = {};
       (validQuestions || []).forEach((q: any) => { questionsTextMap[q.id] = q.question_text; });
 
-      // Insert consultation answers safely
-      if (answers && answers.length > 0) {
+        // Fetch DB question options map
+        const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
+        let optionsMapFromDb: Record<string, string> = {};
+        if (allOptionIds.length > 0) {
+          try {
+            const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
+            if (opts) opts.forEach((o: any) => { optionsMapFromDb[o.id] = o.option_text; });
+          } catch (_) {}
+        }
+
+        const mappedQAs: { q: string; a: string; question_id: string }[] = [];
+
         for (const a of answers) {
           let targetQId = a.question_id;
-
-          // If question_id is not in DB, auto create placeholder question row to satisfy FK constraint
-          if (!validQIds.has(targetQId)) {
-            const { data: qCheck } = await supabaseAdmin
-              .from("questions")
-              .select("id")
-              .eq("id", targetQId)
-              .maybeSingle();
-
-            if (!qCheck) {
-              const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetQId);
-              const { data: insertedQ } = await supabaseAdmin
-                .from("questions")
-                .insert({
-                  ...(isUuid ? { id: targetQId } : {}),
-                  level,
-                  question_text: "Pertanyaan Kuesioner",
-                  question_type: a.answer_text ? "text" : "single_choice",
-                  order_index: 99,
-                  is_required: false,
-                  is_active: true
-                })
-                .select("id")
-                .maybeSingle();
-
-              if (insertedQ) targetQId = insertedQ.id;
-            }
-          }
-
           const qText = a.question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
-          const optTextsFromFallback = (a.selected_option_ids || []).map((oid: string) => FALLBACK_OPTIONS_MAP[oid] || oid).filter((t: string) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t));
-          const rawAnswerInput = a.answer_text || a.answer;
-          const isAnswerValid = rawAnswerInput && rawAnswerInput !== "-" && !rawAnswerInput.startsWith("opt-") && !rawAnswerInput.startsWith("smp-opt-") && !rawAnswerInput.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAnswerInput);
-          const aText = isAnswerValid ? rawAnswerInput : (optTextsFromFallback.length > 0 ? optTextsFromFallback.join(", ") : "-");
+          const aText = resolveOptionAndAnswerText(a, optionsMapFromDb);
+
+          mappedQAs.push({ q: qText, a: aText, question_id: targetQId });
 
           try {
             await supabaseAdmin.from("consultation_answers").insert({
@@ -232,130 +251,80 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             });
           }
         }
-      }
 
-      // Format answers for AI Engine
-      let formattedAnswers = "";
-      if (answers && answers.length > 0) {
-        const questionIds = answers.map(a => a.question_id).filter(Boolean);
-        const { data: questionsList } = await supabaseAdmin.from("questions").select("id, question_text").in("id", questionIds);
-        const questionsMap: Record<string, string> = { ...FALLBACK_QUESTIONS_MAP };
-        if (questionsList) {
-          questionsList.forEach((q: any) => { questionsMap[q.id] = q.question_text; });
-        }
-
-        const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
-        let optionsMap: Record<string, string> = { ...FALLBACK_OPTIONS_MAP };
-        if (allOptionIds.length > 0) {
-          const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
-          if (opts) opts.forEach((o: any) => { optionsMap[o.id] = o.option_text; });
-        }
-
-        formattedAnswers = answers.map((a: any) => {
-          let qText = (a as any).question_text || (a as any).question || questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id];
-          if (!qText || qText === "Pertanyaan Kuesioner" || qText === "Pertanyaan") {
-            qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
-          }
-          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || FALLBACK_OPTIONS_MAP[oid] || oid).filter((t: string) => t && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t) && !t.startsWith("opt-") && !t.startsWith("smp-opt-") && !t.startsWith("sma-opt-"));
-          const rawAns = a.answer_text || (a as any).answer;
-          const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAns);
-          const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns && rawAns !== "-" ? rawAns : "-"));
-          return `P: ${qText}\nJ: ${aText}`;
-        }).join("\n\n");
-      }
-
-      // Update status to Sedang Dianalisis
-      await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultation.id);
-
-      // Fetch WA Provider Config, WA Templates, and Workflow Config
-      const { data: settingsData } = await supabaseAdmin.from("settings").select("*").in("key", ["wa.provider_config", "site.contact", "ai.workflow_config", "wa.templates"]);
-
-      let waTemplates: any[] = [];
-      try {
-        const { data: tData } = await supabaseAdmin.from("wa_templates" as any).select("*");
-        if (tData && tData.length > 0) waTemplates = tData;
-      } catch (_) {}
-
-      if (waTemplates.length === 0) {
-        const tRow = (settingsData || []).find((s: any) => s.key === "wa.templates");
-        if (tRow && Array.isArray(tRow.value)) waTemplates = tRow.value;
-      }
-
-      const waConfig: WaProviderConfig = (settingsData || []).find((s: any) => s.key === "wa.provider_config")?.value || { provider: "mock", api_url: "", api_key: "" };
-      const adminContact = (settingsData || []).find((s: any) => s.key === "site.contact")?.value?.whatsapp || "081234567890";
-      const wfConfig = (settingsData || []).find((s: any) => s.key === "ai.workflow_config")?.value || {
-        enable_wa_admin_notif: true,
-        enable_wa_parent_notif: true,
-        enable_ai_analysis: true,
-        enable_ai_summary: true,
-        enable_ai_recommendation: true,
-        enable_auto_save: true,
-        auto_fallback: true
-      };
-
-      // [AI INPUT AUDIT] Temporary debug log to inspect payload sent to AI
-      console.log("==================================================");
-      console.log("[AI INPUT AUDIT]");
-      console.log("Assessment ID:", consultation.id);
-      console.log("Education Level:", level);
-      console.log("Child Name:", child_name || "-");
-      console.log("Total Questions & Answers:", answers?.length || 0);
-      console.log("Formatted Answers:\n", formattedAnswers);
-      console.log("==================================================");
-
-      // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI
-      let aiResult = await runAiEngineAnalysis(
-        parent_name,
-        child_name,
-        level,
-        whatsapp_number,
-        formattedAnswers
-      );
-
-      // Log to ai_logs table
-      try {
-        await supabaseAdmin.from("ai_logs").insert({
-          consultation_id: consultation.id,
-          prompt: `Analisis Kuesioner ${level.toUpperCase()}:\n${formattedAnswers}`,
-          response: aiResult.data ? JSON.stringify(aiResult.data) : aiResult.error || "-",
-          model: "Google Gemini",
-          token_usage: { provider: aiResult.providerName || "gemini" },
-          status: aiResult.success ? "success" : "failed",
-          error_message: aiResult.error || null
+        // [TAHAP 2 AUDIT LOG: DEBUG ANSWERS]
+        console.log("==================================================");
+        console.log("[DEBUG ANSWERS]");
+        console.log("assessment_id:", consultation.id);
+        console.log("education_level:", level);
+        console.log("child_name:", child_name || "-");
+        console.log("total_questions:", mappedQAs.length);
+        console.log("total_answers:", mappedQAs.filter(item => item.a !== "-").length);
+        console.log("\nanswers:");
+        mappedQAs.forEach((item, idx) => {
+          console.log(`\nQUESTION ${String(idx + 1).padStart(2, '0')}:`);
+          console.log(item.q);
+          console.log(`ANSWER ${String(idx + 1).padStart(2, '0')}:`);
+          console.log(item.a);
         });
-      } catch (logErr) {
-        console.warn("ai_logs insert warning:", logErr);
-      }
+        console.log("==================================================");
 
-      if (!aiResult.success || !aiResult.data) {
-        const errMsg = aiResult.error || "Gagal melakukan analisis AI.";
-        try {
-          await supabaseAdmin.from("consultations").update({
-            status: "Gagal Analisis",
-            error_message: errMsg
-          }).eq("id", consultation.id);
-        } catch (_) {
-          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis" }).eq("id", consultation.id);
+        const validAnswerCount = mappedQAs.filter(item => item.a !== "-").length;
+        if (validAnswerCount === 0) {
+          console.error("❌ [DEBUG ANSWERS ERROR]: total_answers = 0 or all answers mapped to '-'! Stopping execution before AI.");
+          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis", error_message: "Jawaban kuesioner tidak dapat dipetakan." }).eq("id", consultation.id);
+          return { success: false, error: "Jawaban kuesioner tidak dapat dipetakan. Mohon isi kuesioner kembali." };
         }
 
-      } else {
-        // 4. SIMPAN HASIL ANALISIS KE DATABASE (consultation_analysis & settings)
+        const formattedAnswers = mappedQAs.map(item => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
+
+        // [TAHAP 4 AUDIT LOG: AI REAL INPUT]
+        console.log("==================================================");
+        console.log("[AI REAL INPUT]");
+        console.log("Nama Anak:", child_name || "-");
+        console.log("Jenjang:", level.toUpperCase());
+        console.log("Jumlah Jawaban:", validAnswerCount);
+        console.log("\n========================\n");
+        mappedQAs.forEach((item, idx) => {
+          console.log(`PERTANYAAN ${idx + 1}:`);
+          console.log(item.q);
+          console.log(`\nJAWABAN ORANG TUA:`);
+          console.log(item.a);
+          console.log("");
+        });
+        console.log("========================\n");
+
+        // Update status to Sedang Dianalisis
+        await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultation.id);
+
+        // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI
+        let aiResult = await runAiEngineAnalysis(
+          parent_name,
+          child_name,
+          level,
+          whatsapp_number,
+          formattedAnswers
+        );
+
+        if (!aiResult.success || !aiResult.data) {
+          const errMsg = aiResult.error || "Analisis gagal dibuat. Silakan coba kembali.";
+          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis", error_message: errMsg }).eq("id", consultation.id);
+          return { success: false, error: errMsg };
+        }
+
+        // 4. SIMPAN HASIL ANALISIS KE DATABASE
         const d = aiResult.data;
-        try {
-          await supabaseAdmin.from("consultation_analysis").upsert({
-            consultation_id: consultation.id,
-            summary: d.summary || "",
-            analysis: d.analysis || "",
-            strengths: d.strengths || "",
-            weaknesses: d.weaknesses || "",
-            potential: d.potential || d.strengths || "",
-            risk: d.risk || d.weaknesses || "",
-            education_recommendation: d.education_recommendation || "",
-            updated_at: new Date().toISOString()
-          }, { onConflict: "consultation_id" });
-        } catch (caErr) {
-          console.warn("[submitConsultationAction] consultation_analysis upsert notice:", caErr);
-        }
+        const { data: savedAnalysisRow } = await supabaseAdmin.from("consultation_analysis").upsert({
+          consultation_id: consultation.id,
+          summary: d.summary || "",
+          analysis: d.analysis || "",
+          strengths: d.strengths || "",
+          weaknesses: d.weaknesses || "",
+          potential: d.potential || d.strengths || "",
+          risk: d.risk || d.weaknesses || "",
+          education_recommendation: d.education_recommendation || "",
+          updated_at: new Date().toISOString()
+        }, { onConflict: "consultation_id" }).select("*").single();
 
         try {
           await supabaseAdmin.from("settings").upsert({
@@ -365,15 +334,23 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         } catch (_) {}
 
         // Update Status on consultations table
-        try {
-          await supabaseAdmin.from("consultations").update({
-            status: "Analisis AI Selesai",
-            ai_result: d.analysis || null
-          }).eq("id", consultation.id);
-        } catch (statusErr) {
-          console.warn("[submitConsultationAction] status update error:", statusErr);
-        }
-      }
+        await supabaseAdmin.from("consultations").update({
+          status: "Analisis AI Selesai",
+          ai_result: d.analysis || null
+        }).eq("id", consultation.id);
+
+        // [TAHAP 10 AUDIT LOG: DATABASE ANALYSIS AFTER SAVE]
+        console.log("==================================================");
+        console.log("[DATABASE ANALYSIS AFTER SAVE]");
+        console.log("analysis_id:", savedAnalysisRow?.id || "saved");
+        console.log("assessment_id:", consultation.id);
+        console.log("created_at:", savedAnalysisRow?.created_at || new Date().toISOString());
+        console.log("updated_at:", savedAnalysisRow?.updated_at || new Date().toISOString());
+        console.log("summary:\n", savedAnalysisRow?.summary);
+        console.log("weaknesses (attentionAreas):\n", savedAnalysisRow?.weaknesses);
+        console.log("strengths (potentials):\n", savedAnalysisRow?.strengths);
+        console.log("recommendations:\n", savedAnalysisRow?.education_recommendation);
+        console.log("==================================================");
 
 
       // 5 & 6. NOTIFIKASI WHATSAPP ADMIN & ORANG TUA

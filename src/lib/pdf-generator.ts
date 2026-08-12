@@ -225,34 +225,30 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
 
   if (!consult) throw new Error("Data konsultasi tidak ditemukan.");
 
-  // 2. Fetch Q&A answers and map option_text cleanly (no empty "-")
+  // 2. Fetch Q&A answers using resolveOptionAndAnswerText helper
   const { data: answers } = await supabase
     .from("consultation_answers")
     .select("*, questions(question_text)")
     .eq("consultation_id", consultationId);
 
   const allOptionIds = answers?.flatMap((a) => a.selected_option_ids || []) || [];
-  let optionsMap: Record<string, string> = {};
+  let optionsMapFromDb: Record<string, string> = {};
   if (allOptionIds.length > 0) {
     const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
-    if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
+    if (opts) optionsMapFromDb = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
   }
+
+  const { resolveOptionAndAnswerText } = require("../actions/process-consultation");
 
   const mappedAnswers = (answers || []).map((a) => {
     const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
-    const optTexts = (a.selected_option_ids || [])
-      .map((oid: string) => optionsMap[oid] || oid)
-      .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t) && !t.startsWith("opt-") && !t.startsWith("smp-opt-") && !t.startsWith("sma-opt-"));
-
-    const rawAns = a.answer_text || a.answer;
-    const isValidAns = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
-    const aText = isValidAns ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns && rawAns !== "-" ? rawAns : "-"));
+    const aText = resolveOptionAndAnswerText(a, optionsMapFromDb);
     return { q: qText, a: aText };
   });
 
   const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
 
-  // 3. Fetch latest analysis row ORDER BY updated_at DESC, created_at DESC
+  // 3. Fetch latest analysis row ORDER BY updated_at DESC
   const { data: analysisRows } = await (supabase as any)
     .from("consultation_analysis")
     .select("*")
@@ -275,40 +271,27 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
   const analysisContentStr = JSON.stringify(latestAnalysisRow || {});
   const isLegacy = legacyKeywords.some(kw => analysisContentStr.includes(kw));
 
-  // Generate dynamic evidence analysis from formattedAnswers
-  const dynamicEvidenceAnalysis = generateFallbackAnalysisResult(
-    consult.parent_name,
-    consult.child_name || "-",
-    consult.level,
-    answersFormatted
-  );
-
   let effectiveAnalysis = latestAnalysisRow;
 
-  if (!effectiveAnalysis || isLegacy) {
-    effectiveAnalysis = {
-      summary: dynamicEvidenceAnalysis.summary,
-      analysis: consult.ai_result || dynamicEvidenceAnalysis.analysis,
-      strengths: dynamicEvidenceAnalysis.strengths,
-      weaknesses: dynamicEvidenceAnalysis.weaknesses,
-      potential: dynamicEvidenceAnalysis.potential,
-      risk: dynamicEvidenceAnalysis.risk,
-      education_recommendation: dynamicEvidenceAnalysis.education_recommendation
-    };
+  if (isLegacy) {
+    effectiveAnalysis = null;
+  }
+
+  if (!effectiveAnalysis) {
+    throw new Error("Analisis belum tersedia.");
   }
 
   // Debug source logging
   console.log("==================================================");
   console.log("PDF/WEB ANALYSIS SOURCE DEBUG LOG:");
   console.log("- Consultation ID:", consultationId);
-  console.log("- Analysis ID:", latestAnalysisRow?.id || "DYNAMIC_EVIDENCE");
-  console.log("- Created At:", latestAnalysisRow?.created_at || "FRESH_GENERATED");
-  console.log("- Updated At:", latestAnalysisRow?.updated_at || "FRESH_GENERATED");
-  console.log("- Is Legacy Overridden?:", isLegacy);
+  console.log("- Analysis ID:", latestAnalysisRow?.id || "DB_ROW");
+  console.log("- Created At:", latestAnalysisRow?.created_at);
+  console.log("- Updated At:", latestAnalysisRow?.updated_at);
   console.log("- Summary Snippet:", effectiveAnalysis.summary?.slice(0, 100));
   console.log("==================================================");
 
-  const parsedSections = parseReportSections(effectiveAnalysis, consult.ai_result || dynamicEvidenceAnalysis.analysis);
+  const parsedSections = parseReportSections(effectiveAnalysis, consult.ai_result || "");
 
   return {
     consult,
