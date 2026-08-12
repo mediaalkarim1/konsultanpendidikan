@@ -20,6 +20,11 @@ const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma:
 export function sanitizeTextForPdf(str: string): string {
   if (!str) return "";
   return str
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/\u2022/g, "-")
     .replace(/❗/g, "")
     .replace(/🌟/g, "")
     .replace(/🎯/g, "")
@@ -31,8 +36,8 @@ export function sanitizeTextForPdf(str: string): string {
     .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
     .replace(/[\u{2600}-\u{26FF}]/gu, "")
     .replace(/[\u{2700}-\u{27BF}]/gu, "")
-    .replace(/[\u{200B}-\u{200D}\u{FEFF}]/g, "")
-    .replace(/[^\x00-\x7F\xA0-\xFF]/g, " ")
+    .replace(/\u200B|\u200C|\u200D|\uFEFF/g, "")
+    .replace(/[^\x00-\x7F]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -849,45 +854,48 @@ export function generateFallbackAnalysisResult(parentName: string, childName: st
   });
 
   const poolRecs = [
-    `### 🎯 Diskusi Matriks Minat & Eksplorasi Pilihan Jurusan\nAjak ${nameDisplay} berdiskusi santai untuk mengidentifikasi 3 bidang favorit, membandingkan mata kuliahnya, serta mencocokkan dengan potensi utamanya.`,
-    `### 🎯 Buat Papan Dokumentasi Karya & Portofolio Digital\nDampingi ${nameDisplay} mengumpulkan sertifikat, hasil tulisan, foto kegiatan, atau proyek sekolah ke dalam satu folder portofolio yang rapi.`,
-    `### 🎯 Sepakati Batas Durasi Layar & Rutinitas Tanpa Gawai\nDiskusikan aturan waktu pemakaian gadget bersama ${nameDisplay} dan ciptakan area bebas layar saat jam belajar dan jam makan keluarga.`,
-    `### 🎯 Fasilitasi Latihan Berbicara & Media Bahasa Inggris Harian\nAjak ${nameDisplay} membaca buku ber-bahasa Inggris atau menceritakan kembali berita/video singkat yang diminatinya dalam Bahasa Inggris.`,
-    `### 🎯 Terapkan Rutinitas Mandiri Bergradasi & Validasi Emosi\nBerikan kepercayaan tanggung jawab harian pada ${nameDisplay} disertai pujian spesifik saat berhasil menyelesaikannya secara mandiri.`,
-    `### 🎯 Lakukan Sesi Refleksi Mingguan Bersama Anak\nSediakan waktu 15 menit setiap pekan untuk mendengarkan cerita ${nameDisplay} tentang hambatan yang dihadapi dan merayakan pencapaian kecilnya.`,
-    `### 🎯 Ciptakan Suasana Belajar yang Kondusif & Suportif di Rumah\nPastikan pendampingan dilakukan dengan komunikasi dua arah agar ${nameDisplay} merasa aman dan nyaman saat belajar.`
+    `Diskusi Matriks Minat & Eksplorasi Pilihan Jurusan\nAjak ${nameDisplay} berdiskusi santai untuk mengidentifikasi 3 bidang favorit, membandingkan mata kuliahnya, serta mencocokkan dengan potensi utamanya.`,
+    `Buat Papan Dokumentasi Karya & Portofolio Digital\nDampingi ${nameDisplay} mengumpulkan sertifikat, hasil tulisan, foto kegiatan, atau proyek sekolah ke dalam satu folder portofolio yang rapi.`,
+    `Sepakati Batas Durasi Layar & Rutinitas Tanpa Gawai\nDiskusikan aturan waktu pemakaian gadget bersama ${nameDisplay} dan ciptakan area bebas layar saat jam belajar dan jam makan keluarga.`,
+    `Fasilitasi Latihan Berbicara & Media Bahasa Inggris Harian\nAjak ${nameDisplay} membaca buku ber-bahasa Inggris atau menceritakan kembali berita/video singkat yang diminatinya dalam Bahasa Inggris.`,
+    `Terapkan Rutinitas Mandiri Bergradasi & Validasi Emosi\nBerikan kepercayaan tanggung jawab harian pada ${nameDisplay} disertai pujian spesifik saat berhasil menyelesaikannya secara mandiri.`,
+    `Lakukan Sesi Refleksi Mingguan Bersama Anak\nSediakan waktu 15 menit setiap pekan untuk mendengarkan cerita ${nameDisplay} tentang hambatan yang dihadapi dan merayakan pencapaian kecilnya.`,
+    `Ciptakan Suasana Belajar yang Kondusif & Suportif di Rumah\nPastikan pendampingan dilakukan dengan komunikasi dua arah agar ${nameDisplay} merasa aman dan nyaman saat belajar.`
   ];
 
   const recommendationsList: string[] = [];
   [...rawRecs, ...poolRecs].forEach(r => {
-    if (recommendationsList.length < 5 && !recommendationsList.includes(r)) {
-      recommendationsList.push(r);
+    const cleanR = sanitizeAnalysisMarkdown(r);
+    if (recommendationsList.length < 5 && !recommendationsList.includes(cleanR)) {
+      recommendationsList.push(cleanR);
     }
   });
 
-  // Format markdown output strings
+  // Format clean output strings
   const formattedConcerns = concernsList
-    .map((c) => `### ❗ ${c.title}\n${c.desc}`)
+    .map((c) => `❗ ${c.title}\n${c.desc}`)
     .join("\n\n");
 
   const formattedPotentials = potentialsList
-    .map((p) => `### 🌟 ${p.title}\n${p.desc}`)
+    .map((p) => `🌟 ${p.title}\n${p.desc}`)
     .join("\n\n");
 
-  const formattedRecommendations = recommendationsList.join("\n\n");
+  const formattedRecommendations = recommendationsList
+    .map((r) => `🎯 ${r}`)
+    .join("\n\n");
 
   const summary = `Berdasarkan jawaban kuesioner yang disampaikan ${parentDisplay} mengenai ${childPhrase} pada jenjang ${jenjangLabel}, terlihat gambaran khusus mengenai karakteristik belajar dan interaksi harian anak.\n\nPola jawaban orang tua menunjukkan bahwa ${childPhrase} memiliki potensi positif yang baik pada ${potentialsList[0]?.title || "eksplorasi minat"}, namun pada saat yang sama memerlukan pendampingan terarah terutama pada ${concernsList[0]?.title || "aspek harian"}.\n\nLaporan ini merangkum ${concernsList.length} area perhatian spesifik dan ${potentialsList.length} potensi utama dari jawaban orang tua sebagai panduan pendampingan hangat di rumah.`;
 
-  const fullNarrative = `## 1. RINGKASAN AWAL\n\n${summary}\n\n## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${formattedConcerns}\n\n## 3. 🌟 MINAT & POTENSI\n\n${formattedPotentials}\n\n## 4. 🎯 REKOMENDASI PENDAMPINGAN RUMAH\n\n${formattedRecommendations}`;
+  const fullNarrative = `RINGKASAN AWAL\n\n${summary}\n\nAREA YANG PERLU DIPERHATIKAN\n\n${formattedConcerns}\n\nMINAT & POTENSI\n\n${formattedPotentials}\n\nREKOMENDASI PENDAMPINGAN RUMAH\n\n${formattedRecommendations}`;
 
   return {
-    summary,
-    analysis: fullNarrative,
-    strengths: formattedPotentials,
-    weaknesses: formattedConcerns,
-    potential: formattedPotentials,
-    risk: formattedConcerns,
-    education_recommendation: formattedRecommendations
+    summary: sanitizeAnalysisMarkdown(summary),
+    analysis: sanitizeAnalysisMarkdown(fullNarrative),
+    strengths: sanitizeAnalysisMarkdown(formattedPotentials),
+    weaknesses: sanitizeAnalysisMarkdown(formattedConcerns),
+    potential: sanitizeAnalysisMarkdown(formattedPotentials),
+    risk: sanitizeAnalysisMarkdown(formattedConcerns),
+    education_recommendation: sanitizeAnalysisMarkdown(formattedRecommendations)
   };
 }
 
