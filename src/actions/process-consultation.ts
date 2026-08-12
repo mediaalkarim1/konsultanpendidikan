@@ -233,22 +233,21 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
 
           mappedQAs.push({ q: qText, a: aText, question_id: targetQId });
 
+          // Filter selected_option_ids to only valid UUIDs to prevent Postgres uuid syntax errors
+          const validUuidOptionIds = (a.selected_option_ids || []).filter((oid: string) => /^[0-9a-f-]{36}$/i.test(oid));
+
           try {
-            await supabaseAdmin.from("consultation_answers").insert({
-              consultation_id: consultation.id,
-              question_id: targetQId,
-              question: qText,
-              answer: aText,
-              answer_text: aText,
-              selected_option_ids: a.selected_option_ids || []
-            });
-          } catch (_) {
-            await supabaseAdmin.from("consultation_answers").insert({
+            const { error: insErr } = await (supabaseAdmin as any).from("consultation_answers").insert({
               consultation_id: consultation.id,
               question_id: targetQId,
               answer_text: aText,
-              selected_option_ids: a.selected_option_ids || []
+              selected_option_ids: validUuidOptionIds
             });
+            if (insErr) {
+              console.error("[consultation_answers insert error]:", insErr);
+            }
+          } catch (insertErr) {
+            console.error("[consultation_answers insert exception]:", insertErr);
           }
         }
 
