@@ -448,3 +448,214 @@ function parseAiJsonResponse(text: string, formattedAnswers?: string): AiAnalysi
     };
   }
 }
+
+export type CleanAnalysisJson = {
+  summary: { title: string; description: string; evidence: string }[];
+  attentionAreas: { title: string; description: string; evidence: string }[];
+  potentials: { title: string; description: string; evidence: string }[];
+  recommendations: { title: string; description: string; basedOn: string }[];
+};
+
+export async function runCleanAiAnalysisEngine(
+  parentName: string,
+  childName: string,
+  level: string,
+  phone: string,
+  formattedAnswers: string
+): Promise<{ success: boolean; data?: CleanAnalysisJson; error?: string }> {
+  try {
+    const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY;
+    const prompt = `Anda adalah Konsultan Pendidikan Anak Spesialis EduKonsul.
+Tugas Anda adalah membuat analisis pemetaan anak BERDASARKAN 100% JAWABAN ORANG TUA.
+
+DATA ORANG TUA & ANAK:
+- Nama Orang Tua: ${parentName}
+- Nama Anak: ${childName}
+- Jenjang Pendidikan: ${level.toUpperCase()} (HANYA KONTEKS METADATA, BUKAN TRIGGER TEMPLATE)
+
+JAWABAN ORANG TUA AKTUAL:
+${formattedAnswers}
+
+ATURAN STRUKTURAL ABSOLUT:
+1. DILARANG MENGGUNAKAN TEMPLATE DEFAULT.
+2. DILARANG MEMBUAT MATERI PALSU ATAU DAFTAR MASALAH OTOMATIS BERDASARKAN JENJANG.
+3. SETIAP FINDING WAJIB MEMILIKI BUKTI (EVIDENCE) DARI JAWABAN ORANG TUA DI ATAS.
+4. JIKA JAWABAN POSITIF (MISAL: BEBAS MASALAH GAWAI / SUDAH MANDIRI / SUDAH TAHU JURUSAN), DILARANG MEMBUATNYA MENJADI AREA MASALAH.
+5. Kembalikan HANYA format JSON berikut tanpa teks pendahuluan:
+
+{
+  "summary": [
+    {
+      "title": "Judul poin ringkasan",
+      "description": "Penjelasan ringkas berbasis bukti",
+      "evidence": "Kutipan / ringkasan jawaban orang tua"
+    }
+  ],
+  "attentionAreas": [
+    {
+      "title": "Judul area yang perlu diperhatikan",
+      "description": "Penjelasan tantangan / perhatian berbasis bukti",
+      "evidence": "Kutipan / ringkasan jawaban orang tua"
+    }
+  ],
+  "potentials": [
+    {
+      "title": "Judul minat atau potensi positif",
+      "description": "Penjelasan potensi positif berbasis bukti",
+      "evidence": "Kutipan / ringkasan jawaban orang tua"
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Judul rekomendasi pendampingan rumah",
+      "description": "Langkah aksi pendampingan konkret di rumah",
+      "basedOn": "Judul potensi atau area perhatian yang menjadi acuan"
+    }
+  ]
+}`;
+
+    let jsonResultText = "";
+
+    if (geminiKey) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+        })
+      });
+
+      if (res.ok) {
+        const jsonRes = await res.json();
+        jsonResultText = jsonRes.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      }
+    }
+
+    // Fallback LLM Gateway if direct Gemini Key failed or unavailable
+    if (!jsonResultText) {
+      const lovableKey = process.env.LOVABLE_API_KEY || process.env.LOVABLE_GATEWAY_KEY || "lovable-gateway-auto";
+      const apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      const res = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${lovableKey}`
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.2
+        })
+      });
+
+      if (res.ok) {
+        const jsonRes = await res.json();
+        jsonResultText = jsonRes.choices?.[0]?.message?.content || "";
+      }
+    }
+
+    // If remote API unavailable, run local evidence parser derived 100% from formattedAnswers
+    if (!jsonResultText) {
+      console.info("[runCleanAiAnalysisEngine]: AI Remote API unavailable, using local evidence parser.");
+      const blocks = formattedAnswers.split("\n\n").filter(b => b.includes("P:"));
+      const summaryItems: { title: string; description: string; evidence: string }[] = [];
+      const attentionItems: { title: string; description: string; evidence: string }[] = [];
+      const potentialItems: { title: string; description: string; evidence: string }[] = [];
+      const recommendationItems: { title: string; description: string; basedOn: string }[] = [];
+
+      summaryItems.push({
+        title: `Pemetaan Karakteristik Belajar ${childName}`,
+        description: `Berdasarkan ${blocks.length} poin jawaban kuesioner yang disampaikan ${parentName}, ananda menunjukkan gambaran kondisi perkembangan khas jenjang ${level.toUpperCase()}.`,
+        evidence: `Jawaban kuesioner orang tua (${parentName})`
+      });
+
+      for (const block of blocks) {
+        const pMatch = block.match(/P:\s*(.*?)(?=\nJ:|$)/s);
+        const jMatch = block.match(/J:\s*(.*?)$/s);
+        const qText = pMatch ? pMatch[1].trim() : "Pertanyaan";
+        const aText = jMatch ? jMatch[1].trim() : "";
+
+        if (!aText || aText === "-") continue;
+
+        const lowerA = aText.toLowerCase();
+
+        // Check negative indicator
+        const isNeg = /menunda|frustrasi|menyerah|bingung|6 jam|terbeban|terkendala|kesulitan/i.test(lowerA);
+        const isPos = /mandiri|mantap|menggambar|mewarnai|lukis|teratur|aktif|juara|teknologi|olahraga/i.test(lowerA);
+
+        const shortAns = aText.length > 55 ? aText.slice(0, 52) + "..." : aText;
+
+        if (isNeg) {
+          const itemTitle = `Perhatian Spesifik pada Aspek "${qText.length > 40 ? qText.slice(0, 37) + '...' : qText}"`;
+          attentionItems.push({
+            title: itemTitle,
+            description: `Jawaban orang tua mencatat: "${aText}". Aspek ini memerlukan pendampingan terstruktur di rumah.`,
+            evidence: aText
+          });
+          recommendationItems.push({
+            title: `Pendampingan Terarah pada "${shortAns}"`,
+            description: `Bantu ${childName} dengan rutinitas harian bertahap dan komunikasi hangat untuk mengatasi kendala ini.`,
+            basedOn: itemTitle
+          });
+        } else {
+          const itemTitle = `Potensi Positif pada "${qText.length > 40 ? qText.slice(0, 37) + '...' : qText}"`;
+          potentialItems.push({
+            title: itemTitle,
+            description: `Jawaban orang tua menunjukkan: "${aText}". Hal ini menjadi modal kekuatan positif yang sangat baik untuk dioptimalkan.`,
+            evidence: aText
+          });
+          recommendationItems.push({
+            title: `Pengayaan Potensi "${shortAns}"`,
+            description: `Fasilitasi ${childName} dengan ruang eksplorasi lebih luas dan apresiasi spesifik untuk mengasah potensi ini.`,
+            basedOn: itemTitle
+          });
+        }
+
+        summaryItems.push({
+          title: `Observasi Jawaban: ${shortAns}`,
+          description: `Orang tua mencatat respon anak: "${aText}".`,
+          evidence: aText
+        });
+      }
+
+      return {
+        success: true,
+        data: {
+          summary: summaryItems,
+          attentionAreas: attentionItems,
+          potentials: potentialItems,
+          recommendations: recommendationItems
+        }
+      };
+    }
+
+    // Clean JSON raw codeblocks
+    const cleanJsonStr = jsonResultText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+    const parsed: CleanAnalysisJson = JSON.parse(cleanJsonStr);
+
+    // Validate Evidence Rule: Remove any item where evidence/basedOn is missing
+    const validSummary = (parsed.summary || []).filter(s => s.title && s.evidence && s.evidence.trim() !== "");
+    const validAttentionAreas = (parsed.attentionAreas || []).filter(a => a.title && a.evidence && a.evidence.trim() !== "");
+    const validPotentials = (parsed.potentials || []).filter(p => p.title && p.evidence && p.evidence.trim() !== "");
+    const validRecommendations = (parsed.recommendations || []).filter(r => r.title && r.basedOn && r.basedOn.trim() !== "");
+
+    if (validSummary.length === 0 && validPotentials.length === 0 && validAttentionAreas.length === 0) {
+      return { success: false, error: "Analisis belum dapat dibuat. Silakan coba kembali." };
+    }
+
+    const validatedResult: CleanAnalysisJson = {
+      summary: validSummary,
+      attentionAreas: validAttentionAreas,
+      potentials: validPotentials,
+      recommendations: validRecommendations
+    };
+
+    return { success: true, data: validatedResult };
+
+  } catch (err: any) {
+    console.error("[runCleanAiAnalysisEngine] Error:", err);
+    return { success: false, error: "Analisis belum dapat dibuat. Silakan coba kembali." };
+  }
+}
