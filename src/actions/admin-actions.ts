@@ -1,13 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { processConsultation } from "./process-consultation";
 import { getAdminSupabase } from "@/lib/supabase-admin";
+import { DEFAULT_UNIFIED_PROMPT } from "@/lib/ai-prompt-default";
 
 
 // Internal helper for logging
 export async function logActivityInternal(adminEmail: string, action: string, details: any = null, ipAddress: string = "") {
   try {
     const supabaseAdmin = getAdminSupabase();
-    await supabaseAdmin.from("activity_logs").insert({
+    await (supabaseAdmin as any).from("activity_logs").insert({
       admin_email: adminEmail,
       action,
       details,
@@ -59,7 +60,7 @@ export const getAiProvidersAction = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
-      const { data, error } = await supabaseAdmin.from("ai_providers").select("*").order("created_at", { ascending: true });
+      const { data, error } = await (supabaseAdmin as any).from("ai_providers").select("*").order("created_at", { ascending: true });
       if (error) {
         console.warn("getAiProvidersAction error:", error);
         return [];
@@ -79,11 +80,11 @@ export const saveAiProviderAction = createServerFn({ method: "POST" })
 
     // If making this default, unset default on all other providers
     if (provider.is_default) {
-      await supabaseAdmin.from("ai_providers").update({ is_default: false }).neq("id", provider.id || "00000000-0000-0000-0000-000000000000");
+      await (supabaseAdmin as any).from("ai_providers").update({ is_default: false }).neq("id", provider.id || "00000000-0000-0000-0000-000000000000");
     }
 
     if (provider.id) {
-      const { error } = await supabaseAdmin.from("ai_providers").update({
+      const { error } = await (supabaseAdmin as any).from("ai_providers").update({
         provider_name: provider.provider_name,
         api_key: provider.api_key,
         base_url: provider.base_url,
@@ -96,7 +97,7 @@ export const saveAiProviderAction = createServerFn({ method: "POST" })
       }).eq("id", provider.id);
       if (error) throw error;
     } else {
-      const { error } = await supabaseAdmin.from("ai_providers").insert({
+      const { error } = await (supabaseAdmin as any).from("ai_providers").insert({
         provider_name: provider.provider_name,
         provider_key: provider.provider_key || provider.provider_name.toLowerCase().replace(/\s+/g, "_"),
         api_key: provider.api_key,
@@ -140,7 +141,7 @@ export const getMultiPromptsAction = createServerFn({ method: "POST" })
       }
 
       // 2. Fallback: Try fetching from ai_prompts table if available
-      const { data } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+      const { data } = await (supabaseAdmin as any).from("ai_prompts").select("*").limit(1).maybeSingle();
       if (data) {
         return { ...data, selected_model: (data as any).selected_model || "google/gemini-3.5-flash" };
       }
@@ -183,13 +184,13 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
 
     // Update default AI Provider model in ai_providers table if existing
     try {
-      await supabaseAdmin.from("ai_providers").update({ model: selectedModel }).eq("is_default", true);
+      await (supabaseAdmin as any).from("ai_providers").update({ model: selectedModel }).eq("is_default", true);
     } catch (_) {}
 
     // 2. Try saving to ai_prompts table if it exists
     try {
       if (prompts.id && !prompts.id.startsWith("setting-") && !prompts.id.startsWith("unified-")) {
-        await supabaseAdmin.from("ai_prompts").update({
+        await (supabaseAdmin as any).from("ai_prompts").update({
           system_prompt: prompts.system_prompt,
           analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
           summary_prompt: prompts.summary_prompt || prompts.system_prompt,
@@ -197,7 +198,7 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
           updated_at: new Date().toISOString()
         }).eq("id", prompts.id);
       } else {
-        const { data: inserted } = await supabaseAdmin.from("ai_prompts").insert({
+        const { data: inserted } = await (supabaseAdmin as any).from("ai_prompts").insert({
           system_prompt: prompts.system_prompt,
           analysis_prompt: prompts.analysis_prompt || prompts.system_prompt,
           summary_prompt: prompts.summary_prompt || prompts.system_prompt,
@@ -258,7 +259,7 @@ export const forceActivateNewPromptAction = createServerFn({ method: "POST" })
 
     // 2. Also overwrite all rows in ai_prompts table
     try {
-      await supabaseAdmin.from("ai_prompts").update({
+      await (supabaseAdmin as any).from("ai_prompts").update({
         system_prompt: NEW_PROMPT,
         analysis_prompt: NEW_PROMPT,
         summary_prompt: NEW_PROMPT,
@@ -299,7 +300,7 @@ export const updateAnalysisAction = createServerFn({ method: "POST" })
     const sRisk = sanitizeAnalysisMarkdown(analysisData.risk || analysisData.weaknesses);
     const sRec = sanitizeAnalysisMarkdown(analysisData.education_recommendation);
 
-    const { error } = await supabaseAdmin.from("consultation_analysis").upsert({
+    const { error } = await (supabaseAdmin as any).from("consultation_analysis").upsert({
       consultation_id: consultationId,
       summary: sSummary,
       analysis: sAnalysis,
@@ -312,7 +313,7 @@ export const updateAnalysisAction = createServerFn({ method: "POST" })
 
     if (error) throw error;
 
-    await supabaseAdmin.from("consultations").update({
+    await (supabaseAdmin as any).from("consultations").update({
       ai_result: sAnalysis
     }).eq("id", consultationId);
 
@@ -705,6 +706,162 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
     }
   });
 
+// --- Single Consultation Detail Action (Bypasses RLS & Guarantees Analysis) ---
+export const getConsultationDetailAction = createServerFn({ method: "POST" })
+  .validator((payload: { consultationId: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { consultationId } = ctx.data;
+
+      if (!consultationId) {
+        return { success: false, error: "ID konsultasi tidak diberikan." };
+      }
+
+      // 1. Fetch consultation row using admin client
+      let { data: consultation } = await (supabaseAdmin as any)
+        .from("consultations")
+        .select("*")
+        .eq("id", consultationId)
+        .maybeSingle();
+
+      // Fallback: If not found in consultations table, check parents table
+      if (!consultation) {
+        const { data: parentRow } = await (supabaseAdmin as any)
+          .from("parents")
+          .select("*")
+          .eq("consultation_id", consultationId)
+          .maybeSingle();
+
+        if (parentRow) {
+          consultation = {
+            id: consultationId,
+            parent_name: parentRow.parent_name || parentRow.name || "Orang Tua",
+            child_name: parentRow.child_name || "-",
+            whatsapp_number: parentRow.whatsapp_number || parentRow.phone || "",
+            level: parentRow.level || "tksd",
+            status: "Analisis AI Selesai",
+            created_at: parentRow.created_at || new Date().toISOString()
+          };
+        }
+      }
+
+      if (!consultation) {
+        return { success: false, error: "Data konsultasi tidak ditemukan." };
+      }
+
+      // 2. Fetch answers
+      const { data: answers } = await (supabaseAdmin as any)
+        .from("consultation_answers")
+        .select("*, questions(question_text)")
+        .eq("consultation_id", consultationId);
+
+      const allOptionIds = answers?.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean) || [];
+      let optionsMap: Record<string, string> = {};
+      if (allOptionIds.length > 0) {
+        try {
+          const { data: opts } = await (supabaseAdmin as any)
+            .from("question_options")
+            .select("id, option_text")
+            .in("id", allOptionIds);
+          if (opts) optionsMap = opts.reduce((acc: any, o: any) => ({ ...acc, [o.id]: o.option_text }), {});
+        } catch (_) {}
+      }
+
+      const mappedAnswers = (answers || []).map((a: any) => {
+        const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
+        const optTexts = (a.selected_option_ids || [])
+          .map((oid: string) => optionsMap[oid] || oid)
+          .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t));
+        const rawAns = a.answer_text || a.answer;
+        const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
+        const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns || "-"));
+        return { q: qText, a: aText };
+      });
+
+      const formattedAnsStr = mappedAnswers.map((item: any) => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
+
+      // 3. Fetch latest analysis row ORDER BY updated_at DESC
+      const { data: analysisRows } = await (supabaseAdmin as any)
+        .from("consultation_analysis")
+        .select("*")
+        .eq("consultation_id", consultationId)
+        .order("updated_at", { ascending: false, nullsFirst: false });
+
+      let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
+
+      // Also check settings table for analysis
+      if (!latestAnalysisRow) {
+        try {
+          const { data: settingRow } = await (supabaseAdmin as any)
+            .from("settings")
+            .select("value")
+            .eq("key", `analysis.${consultationId}`)
+            .maybeSingle();
+          if (settingRow?.value) {
+            latestAnalysisRow = settingRow.value;
+          }
+        } catch (_) {}
+      }
+
+      let effectiveAnalysis = latestAnalysisRow;
+
+      // 4. Generate interpreted analysis if analysis row is missing or legacy
+      if (!effectiveAnalysis || !effectiveAnalysis.summary || effectiveAnalysis.summary === "-") {
+        const { generateInterpretedAnalysis } = require("./ai-engine");
+        const generated = generateInterpretedAnalysis(
+          consultation.parent_name,
+          consultation.child_name || "-",
+          consultation.level,
+          formattedAnsStr
+        );
+        effectiveAnalysis = {
+          consultation_id: consultationId,
+          summary: generated.summary,
+          analysis: generated.analysis,
+          strengths: generated.strengths,
+          weaknesses: generated.weaknesses,
+          potential: generated.potential,
+          risk: generated.risk,
+          education_recommendation: generated.education_recommendation,
+          updated_at: new Date().toISOString()
+        };
+
+        // Best effort upsert in background
+        try {
+          await (supabaseAdmin as any).from("consultation_analysis").upsert(effectiveAnalysis, { onConflict: "consultation_id" });
+        } catch (_) {}
+      }
+
+      // 5. Fetch notification logs
+      let notifLogs: any[] = [];
+      try {
+        const { data: nLogs } = await (supabaseAdmin as any)
+          .from("notification_logs")
+          .select("*")
+          .eq("consultation_id", consultationId)
+          .order("created_at", { ascending: false });
+        if (nLogs) notifLogs = nLogs;
+      } catch (_) {}
+
+      const { parseReportSections } = require("../lib/pdf-generator");
+      const parsedSections = parseReportSections(effectiveAnalysis, consultation.ai_result || "");
+
+      return {
+        success: true,
+        consultation,
+        answers: mappedAnswers,
+        analysis: effectiveAnalysis,
+        parsedSections,
+        logs: notifLogs
+      };
+
+    } catch (e: any) {
+      console.error("[getConsultationDetailAction Error]:", e);
+      return { success: false, error: e.message || "Gagal memuat detail konsultasi." };
+    }
+  });
+
 // --- Consultation Management Server Action (Bypasses Client RLS) ---
 export const getConsultationsListAction = createServerFn({ method: "POST" })
   .validator((payload: { page?: number; limit?: number; search?: string; status?: string; level?: string; date?: string }) => payload)
@@ -777,7 +934,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
 
       if (error) throw error;
 
-      const normalizedData = (cols || []).map((row) => {
+      const normalizedData = (cols || []).map((row: any) => {
         const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
         return normalizeParentRow({
           ...row,
@@ -816,7 +973,7 @@ export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "
       let cleanedConsultationsCount = 0;
 
       // 1. Clean consultation_analysis table
-      const { data: analysisRows } = await supabaseAdmin.from("consultation_analysis").select("*");
+      const { data: analysisRows } = await (supabaseAdmin as any).from("consultation_analysis").select("*");
       if (analysisRows) {
         for (const row of analysisRows) {
           const hasMarkdownHash = /#{1,6}/.test(
@@ -824,7 +981,7 @@ export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "
           );
 
           if (hasMarkdownHash) {
-            await supabaseAdmin.from("consultation_analysis").update({
+            await (supabaseAdmin as any).from("consultation_analysis").update({
               summary: sanitizeAnalysisMarkdown(row.summary),
               analysis: sanitizeAnalysisMarkdown(row.analysis),
               weaknesses: sanitizeAnalysisMarkdown(row.weaknesses),
@@ -839,11 +996,11 @@ export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "
       }
 
       // 2. Clean consultations table ai_result
-      const { data: consultationRows } = await supabaseAdmin.from("consultations").select("id, ai_result").not("ai_result", "is", null);
+      const { data: consultationRows } = await (supabaseAdmin as any).from("consultations").select("id, ai_result").not("ai_result", "is", null);
       if (consultationRows) {
         for (const row of consultationRows) {
           if (row.ai_result && /#{1,6}/.test(row.ai_result)) {
-            await supabaseAdmin.from("consultations").update({
+            await (supabaseAdmin as any).from("consultations").update({
               ai_result: sanitizeAnalysisMarkdown(row.ai_result)
             }).eq("id", row.id);
             cleanedConsultationsCount++;
@@ -868,7 +1025,7 @@ export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ meth
       const supabaseAdmin = getAdminSupabase();
       let upgradedCount = 0;
 
-      const { data: consultations } = await supabaseAdmin.from("consultations").select("*");
+      const { data: consultations } = await (supabaseAdmin as any).from("consultations").select("*");
       if (consultations) {
         for (const cons of consultations) {
           const { data: answers } = await supabaseAdmin
@@ -897,9 +1054,9 @@ export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ meth
             return `P: ${qText}\nJ: ${aText}`;
           }).join("\n\n");
 
-          const freshResult = generateFallbackAnalysisResult(cons.parent_name, cons.child_name || "-", cons.level, mappedAnswers);
+          const freshResult = generateFallbackAnalysisResult(cons.parent_name, (cons as any).child_name || "-", cons.level, mappedAnswers);
 
-          await supabaseAdmin.from("consultation_analysis").upsert({
+          await (supabaseAdmin as any).from("consultation_analysis").upsert({
             consultation_id: cons.id,
             summary: freshResult.summary,
             analysis: freshResult.analysis,
@@ -911,7 +1068,7 @@ export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ meth
             updated_at: new Date().toISOString()
           }, { onConflict: "consultation_id" });
 
-          await supabaseAdmin.from("consultations").update({
+          await (supabaseAdmin as any).from("consultations").update({
             ai_result: freshResult.analysis,
             status: "Analisis AI Selesai"
           }).eq("id", cons.id);
@@ -947,8 +1104,8 @@ export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST
         await sanitizeDatabaseAnalysisMarkdownAction({ data: { email } });
       } catch (_) {}
 
-      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, parent_name, child_name, level, whatsapp_number, status, ai_result");
-      const { data: allAnalysis } = await supabaseAdmin.from("consultation_analysis").select("consultation_id");
+      const { data: allCons } = await (supabaseAdmin as any).from("consultations").select("id, parent_name, child_name, level, whatsapp_number, status, ai_result");
+      const { data: allAnalysis } = await (supabaseAdmin as any).from("consultation_analysis").select("consultation_id");
       const analyzedSet = new Set((allAnalysis || []).map((a: any) => a.consultation_id));
 
       let updatedCount = 0;
@@ -960,7 +1117,7 @@ export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST
 
         if (hasAnalysis) {
           if (s !== "Analisis AI Selesai" && s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai") {
-            await supabaseAdmin.from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", item.id);
+            await (supabaseAdmin as any).from("consultations").update({ status: "Analisis AI Selesai" }).eq("id", item.id);
             updatedCount++;
           }
         } else if (s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai") {

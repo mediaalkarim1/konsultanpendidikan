@@ -228,7 +228,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
 
         for (const a of answers) {
           let targetQId = a.question_id;
-          const qText = a.question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+          const qText = (a as any).question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
           const aText = resolveOptionAndAnswerText(a, optionsMapFromDb);
 
           mappedQAs.push({ q: qText, a: aText, question_id: targetQId });
@@ -352,8 +352,29 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         console.log("recommendations:\n", savedAnalysisRow?.education_recommendation);
         console.log("==================================================");
 
-
       // 5 & 6. NOTIFIKASI WHATSAPP ADMIN & ORANG TUA
+      let waTemplates: any[] = [];
+      let wfConfig: any = {};
+      let waConfig: any = {};
+      let adminContact = "";
+
+      try {
+        const { data: settingsRows } = await supabaseAdmin.from("settings").select("*");
+        if (settingsRows) {
+          const tRow = settingsRows.find((s: any) => s.key === "wa.templates");
+          if (tRow?.value) waTemplates = Array.isArray(tRow.value) ? tRow.value : [];
+
+          const wfRow = settingsRows.find((s: any) => s.key === "wa.workflow_config");
+          if (wfRow?.value) wfConfig = wfRow.value;
+
+          const cRow = settingsRows.find((s: any) => s.key === "wa.provider_config");
+          if (cRow?.value) waConfig = cRow.value;
+
+          const aRow = settingsRows.find((s: any) => s.key === "wa.admin_contact");
+          if (aRow?.value) adminContact = typeof aRow.value === "string" ? aRow.value : (aRow.value?.phone || aRow.value?.number || "");
+        }
+      } catch (_) {}
+
       const dateStr = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
       
       const templateData: WaTemplateData = {

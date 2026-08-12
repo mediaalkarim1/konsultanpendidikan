@@ -255,7 +255,7 @@ function FormulirPage() {
       setSubmitStatusText("Selesai");
 
       toast.success("Konsultasi berhasil dikirim!");
-      navigate({ to: "/sukses" });
+      navigate({ to: "/sukses", search: { id: res.consultationId } });
     } catch (err: any) {
       console.error("Submit consultation error:", err);
       toast.error(err.message || "Gagal mengirim data konsultasi. Silakan coba lagi.");

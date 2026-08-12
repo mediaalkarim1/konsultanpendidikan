@@ -114,15 +114,15 @@ export function AlurSistemPage() {
 
       // Load WA Gateway Provider Config
       const waProv = await getWaProviderConfigAction();
-      if (waProv) setWaGateway((prev) => ({ ...prev, ...waProv }));
+      if (waProv && typeof waProv === "object") setWaGateway((prev) => ({ ...prev, ...(waProv as any) }));
 
       // Load WA Templates
       const templates = await getWaTemplatesAction();
-      if (templates) {
+      if (templates && Array.isArray(templates)) {
         const adminT = templates.find((t: any) => t.template_key === "admin_notification");
         const partT = templates.find((t: any) => t.template_key === "participant_notification");
-        if (adminT) setWaAdminTemplate(adminT.content);
-        if (partT) setWaParticipantTemplate(partT.content);
+        if (adminT && (adminT as any).content) setWaAdminTemplate((adminT as any).content);
+        if (partT && (partT as any).content) setWaParticipantTemplate((partT as any).content);
       }
     } catch (e) {
       console.error(e);

@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/start";
+import { createServerFn } from "@tanstack/react-start";
 import { getAdminSupabase } from "@/lib/supabase-admin";
 import { runCleanAiAnalysisEngine } from "./ai-engine";
 
@@ -16,7 +16,7 @@ export type AssessmentSubmitPayload = {
 
 export const submitAssessmentCleanAction = createServerFn({ method: "POST" })
   .validator((payload: AssessmentSubmitPayload) => payload)
-  .handler(async (ctx) => {
+  .handler(async (ctx: any) => {
     const { parent_name, parent_phone, child_name, education_level, answers } = ctx.data;
 
     if (!parent_name || !parent_name.trim()) throw new Error("Nama Orang Tua wajib diisi.");
@@ -48,7 +48,7 @@ export const submitAssessmentCleanAction = createServerFn({ method: "POST" })
     const assessmentId = consultation.id;
 
     // 2. Save Answers to DB ensuring text answer is saved (not raw UUID or "-")
-    const answerRows = answers.map(a => {
+    const answerRows = answers.map((a: any) => {
       const cleanText = (a.answer_text || "").trim();
       if (!cleanText || cleanText === "-" || /^opt-[a-z0-9-]+$/i.test(cleanText) || /^[0-9a-f-]{36}$/i.test(cleanText)) {
         throw new Error(`Jawaban untuk pertanyaan "${a.question_text || a.question_id}" belum valid.`);
@@ -76,7 +76,7 @@ export const submitAssessmentCleanAction = createServerFn({ method: "POST" })
       throw new Error("Penyimpanan jawaban gagal terverifikasi di database.");
     }
 
-    const formattedAnswersList = savedAnswers.map((sa, idx) => {
+    const formattedAnswersList = savedAnswers.map((sa: any, idx: number) => {
       const qText = sa.questions?.question_text || answers[idx]?.question_text || `Pertanyaan ${idx + 1}`;
       return `P: ${qText}\nJ: ${sa.answer_text}`;
     }).join("\n\n");
@@ -97,7 +97,7 @@ export const submitAssessmentCleanAction = createServerFn({ method: "POST" })
     const analysisJson = aiResponse.data;
 
     // 5. Save Analysis JSON to consultation_analysis
-    const { error: caErr } = await supabaseAdmin
+    const { error: caErr } = await (supabaseAdmin as any)
       .from("consultation_analysis")
       .upsert({
         consultation_id: assessmentId,
@@ -114,7 +114,7 @@ export const submitAssessmentCleanAction = createServerFn({ method: "POST" })
       console.error("[submitAssessmentCleanAction] Analysis Save Error:", caErr);
     }
 
-    await supabaseAdmin.from("consultations").update({
+    await (supabaseAdmin as any).from("consultations").update({
       status: "Analisis AI Selesai",
       ai_result: JSON.stringify(analysisJson)
     }).eq("id", assessmentId);

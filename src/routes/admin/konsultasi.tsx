@@ -28,11 +28,9 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
-import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction, bulkSyncConsultationStatusesAction } from "@/actions/admin-actions";
-import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult, parseReportSections } from "@/lib/pdf-generator";
+import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction, bulkSyncConsultationStatusesAction, getConsultationDetailAction } from "@/actions/admin-actions";
+import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult, parseReportSections, sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
 import { Lightbulb, Target, ShieldCheck, Compass } from "lucide-react";
-
-
 
 export const Route = createFileRoute("/admin/konsultasi")({
   component: KonsultasiPage,
@@ -696,53 +694,30 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
   async function loadDetail() {
     setLoading(true);
     try {
-      const { data: consultation } = await supabase.from("consultations").select("*").eq("id", consultId).single();
-      const { data: answers } = await supabase
-        .from("consultation_answers")
-        .select("*, questions(question_text)")
-        .eq("consultation_id", consultId);
-      
-      const allOptionIds = answers?.flatMap(a => a.selected_option_ids || []) || [];
-      let optionsMap: Record<string, string> = {};
-      if (allOptionIds.length > 0) {
-        const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
-        if (opts) {
-          optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
-        }
-      }
-
-      // Use centralized helper to guarantee 100% data sync with PDF generator
-      const { getLatestConsultationAnalysisHelper } = await import("@/lib/pdf-generator");
-      const { effectiveAnalysis } = await getLatestConsultationAnalysisHelper(consultId);
-
-      // Fetch notification logs
-      const { data: notifLogs } = await supabase.from("notification_logs" as any).select("*").eq("consultation_id", consultId).order("created_at", { ascending: false });
-
-      if (consultation) {
-        const mappedAnswers = (answers || []).map(a => ({
-          q: a.questions?.question_text || "Pertanyaan",
-          a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
-        }));
-
+      const res = await getConsultationDetailAction({ data: { consultationId: consultId } });
+      if (res.success && res.consultation) {
         setData({
-          ...consultation,
-          answers: mappedAnswers,
-          logs: notifLogs || []
+          ...res.consultation,
+          answers: res.answers || [],
+          logs: res.logs || []
         });
-
-        setAnalysis(effectiveAnalysis);
+        const eff = res.analysis;
+        setAnalysis(eff);
         setEditForm({
-          summary: sanitizeAnalysisMarkdown(effectiveAnalysis?.summary || ""),
-          analysis: sanitizeAnalysisMarkdown(effectiveAnalysis?.analysis || ""),
-          strengths: sanitizeAnalysisMarkdown(effectiveAnalysis?.strengths || ""),
-          weaknesses: sanitizeAnalysisMarkdown(effectiveAnalysis?.weaknesses || ""),
-          potential: sanitizeAnalysisMarkdown(effectiveAnalysis?.potential || ""),
-          risk: sanitizeAnalysisMarkdown(effectiveAnalysis?.risk || ""),
-          education_recommendation: sanitizeAnalysisMarkdown(effectiveAnalysis?.education_recommendation || "")
+          summary: sanitizeAnalysisMarkdown(eff?.summary || ""),
+          analysis: sanitizeAnalysisMarkdown(eff?.analysis || ""),
+          strengths: sanitizeAnalysisMarkdown(eff?.strengths || ""),
+          weaknesses: sanitizeAnalysisMarkdown(eff?.weaknesses || ""),
+          potential: sanitizeAnalysisMarkdown(eff?.potential || eff?.strengths || ""),
+          risk: sanitizeAnalysisMarkdown(eff?.risk || eff?.weaknesses || ""),
+          education_recommendation: sanitizeAnalysisMarkdown(eff?.education_recommendation || "")
         });
+      } else {
+        toast.error("Gagal memuat detail konsultasi: " + (res.error || "Data tidak ditemukan."));
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("loadDetail error:", e);
+      toast.error("Gagal memuat detail konsultasi: " + (e.message || "Error server"));
     } finally {
       setLoading(false);
     }

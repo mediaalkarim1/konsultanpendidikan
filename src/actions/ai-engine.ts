@@ -28,7 +28,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
 
   if (!provider) {
     try {
-      const { data: defaultProv } = await supabaseAdmin
+      const { data: defaultProv } = await (supabaseAdmin as any)
         .from("ai_providers")
         .select("*")
         .eq("is_default", true)
@@ -38,7 +38,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
       provider = defaultProv;
 
       if (!provider) {
-        const { data: firstActive } = await supabaseAdmin
+        const { data: firstActive } = await (supabaseAdmin as any)
           .from("ai_providers")
           .select("*")
           .eq("is_active", true)
@@ -118,7 +118,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   // Fallback: check ai_prompts table only if settings had nothing usable
   if (!systemPromptFromDb) {
     try {
-      const { data: prompt } = await supabaseAdmin.from("ai_prompts").select("*").limit(1).maybeSingle();
+      const { data: prompt } = await (supabaseAdmin as any).from("ai_prompts").select("*").limit(1).maybeSingle();
       if (prompt?.system_prompt && isNewFormatPrompt(prompt.system_prompt)) {
         systemPromptFromDb = prompt.system_prompt;
         console.info("[AI Engine] Using prompt from ai_prompts table (new format).");
@@ -345,10 +345,21 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
 
   } catch (err: any) {
     console.error(`[AI Engine Error] (${provider?.provider_name} API call failed):`, err?.message || err);
-    return {
-      success: false,
-      error: "Analisis gagal dibuat. Silakan coba kembali."
-    };
+    console.info("[AI Engine] Using local semantic interpreter fallback (generateInterpretedAnalysis)...");
+    try {
+      const fallbackParsed = generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
+      return {
+        success: true,
+        providerName: `${provider?.provider_name || "AI Engine"} (Interpreted Fallback)`,
+        data: fallbackParsed
+      };
+    } catch (fallbackErr: any) {
+      console.error("[AI Engine] Local fallback error:", fallbackErr);
+      return {
+        success: false,
+        error: "Analisis gagal dibuat. Silakan coba kembali."
+      };
+    }
   }
 }
 
