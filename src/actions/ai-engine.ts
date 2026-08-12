@@ -138,45 +138,6 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
 
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
 
-  let jenjangGuidance = "";
-  const normalizedLevel = (level || "").toLowerCase().trim();
-  if (normalizedLevel === "sma") {
-    jenjangGuidance = `
-=== GUIDELINES SPESIFIK ANALISIS JENJANG SMA ===
-- Subjek adalah siswa SMA (persiapan perguruan tinggi & karier masa depan).
-- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
-  * Kebingungan menentukan jurusan kuliah / belum memiliki tujuan hidup yang jelas
-  * Keterbatasan portofolio karya, pengalaman proyek nyata, atau aktivitas organisasi
-  * Manajemen waktu mandiri, kedisiplinan belajar, dan literasi keuangan
-  * Kebutuhan penguasaan Bahasa Inggris aktif & digital skill masa depan
-  * Keterlibatan dalam karya / kewirausahaan
-  * Tekanan persiapan kelulusan dan seleksi masuk kampus
-- DILARANG MEMAKSAKAN temuan generik seperti "❗ Rutinitas & Konsistensi Belajar" KECUALI jika jawaban orang tua memang eksplisit menunjukkan kendala tersebut.
-`;
-  } else if (normalizedLevel === "smp") {
-    jenjangGuidance = `
-=== GUIDELINES SPESIFIK ANALISIS JENJANG SMP ===
-- Subjek adalah remaja jenjang SMP (fase eksplorasi bakat & identitas remaja).
-- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
-  * Durasi gawai / game online / media sosial & dampaknya pada fokus belajar
-  * Kebiasaan menunda pekerjaan (prokrastinasi) & disiplin belajar mandiri
-  * Kepercayaan diri menyampaikan pendapat & pola komunikasi keluarga
-  * Daya tahan problem solving saat menghadapi tugas atau tantangan sulit
-  * Pengaruh lingkungan sebaya & kejelasan gambaran minat cita-cita awal
-`;
-  } else if (normalizedLevel === "tksd") {
-    jenjangGuidance = `
-=== GUIDELINES SPESIFIK ANALISIS JENJANG TK & SD ===
-- Subjek adalah anak usia dini / sekolah dasar (fase pembentukan karakter & tumbuh kembang).
-- Perhatikan dan angkat topik-topik berikut HANYA JIKA DIDUKUNG OLEH JAWABAN ORANG TUA:
-  * Durasi screen time gawai & reaksi emosional saat gawai disudahi (menangis/marah/rewel)
-  * Kemandirian harian (apakah terbiasa sendiri atau masih dibantu orang tua)
-  * Respon saat hadapi kesulitan (mencoba sendiri vs mudah menyerah/menangis)
-  * Adaptasi sosial dan kemampuan berteman dengan anak lain
-  * Karakter utama (akhlak, adab, mandiri, percaya diri) & stimulasi visual/bermain
-`;
-  }
-
   const processedPrompt = mainPromptTemplate
     .replace(/{{nama_orang_tua}}/g, parentName)
     .replace(/{{nama_anak}}/g, childName || "-")
@@ -186,8 +147,6 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   const fullUserPrompt = `
 === INSTRUKSI PROMPT UTAMA ===
 ${processedPrompt}
-
-${jenjangGuidance}
 
 === DATA KONSULTASI KLIEN ===
 Nama Orang Tua: ${parentName}
