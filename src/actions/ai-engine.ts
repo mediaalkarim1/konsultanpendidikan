@@ -1,5 +1,5 @@
 import { generateFallbackAnalysisResult, type AiAnalysisResult } from "../lib/pdf-generator";
-import { DEFAULT_UNIFIED_PROMPT } from "../lib/ai-prompt-default";
+import { DEFAULT_UNIFIED_PROMPT, PROMPT_VERSION_MARKER } from "../lib/ai-prompt-default";
 import { getAdminSupabase } from "../lib/supabase-admin";
 
 
@@ -86,16 +86,16 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   // 2. Fetch active prompts from DB
   let systemPromptFromDb = "";
 
-  // Helper: validate if a prompt from DB strictly matches the NEW 4-section format
+  // Helper: validate if a prompt from DB matches the CURRENT (v3-spesifik) format.
+  // Older prompts (narrative or generic 4-section) are ignored so the new logic always wins.
   const isNewFormatPrompt = (p: string): boolean => {
     if (!p) return false;
-    const hasRingkasan = p.includes("RINGKASAN") || p.includes("Ringkasan");
-    const hasPerhatian = p.includes("PERLU DIPERHATIKAN") || p.includes("Perlu Diperhatikan") || p.includes("❗");
-    const hasPotensi = p.includes("POTENSI") || p.includes("Potensi") || p.includes("🌟");
-    const hasRekomendasi = p.includes("REKOMENDASI") || p.includes("Rekomendasi") || p.includes("🎯");
+    if (p.includes(PROMPT_VERSION_MARKER)) return true;
+    const hasSpecificityRules = /MINIMAL 5/i.test(p) && /PRINSIP ANALISIS/i.test(p);
     const isOldNarrative = p.includes("500 kata") || p.includes("900 kata") || p.includes("narasi yang mengalir") || p.includes("narasi konsultasi");
-    return hasRingkasan && hasPerhatian && hasPotensi && hasRekomendasi && !isOldNarrative;
+    return hasSpecificityRules && !isOldNarrative;
   };
+
 
   try {
     const { data: promptSetting } = await supabaseAdmin
@@ -175,18 +175,29 @@ Nomor WhatsApp: ${whatsappNumber}
 === JAWABAN KUESIONER ===
 ${formattedAnswers}
 
-=== PETUNJUK OUTPUT ===
+=== PETUNJUK OUTPUT (WAJIB DIPATUHI) ===
+Sebelum menulis, baca ulang SETIAP pasangan pertanyaan-jawaban di atas dan catat pola nyatanya.
+Aturan wajib:
+- "weaknesses" berisi MINIMAL 5 poin ❗ (lebih banyak bila temuan memang lebih banyak), masing-masing spesifik dan bersumber dari jawaban.
+- "potential" berisi MINIMAL 3 poin 🌟 yang spesifik.
+- "education_recommendation" berisi MINIMAL 5 poin 🎯 yang terhubung langsung dengan poin ❗/🌟 di atas.
+- Judul poin harus mendeskripsikan kondisi (mis. "❗ Fokus mudah menurun saat aktivitas terasa monoton"), BUKAN nama kategori (mis. "❗ Konsentrasi").
+- Setiap penjelasan wajib merujuk isi jawaban orang tua (parafrase konkret), bukan kalimat umum.
+- DILARANG kalimat seperti "memiliki potensi berkembang yang positif", "membutuhkan pendampingan yang konsisten", "berikan motivasi kepada anak", "bangun rutinitas yang konsisten" tanpa penjelasan spesifik dari jawaban.
+- DILARANG menyimpulkan berdasarkan jenjang. DILARANG merekomendasikan sekolah/lembaga. DILARANG diagnosis.
+
 Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), semua nilai berupa string:
 {
-  "summary": "1-2 paragraf pendek: Ringkasan awal berisi gambaran umum anak, kecenderungan yang terlihat, kekuatan menonjol, dan hal utama yang perlu diperhatikan. Tulis berdasarkan jawaban aktual, bukan template.",
-  "analysis": "Gabungan seluruh 4 bagian analisis dalam format markdown terstruktur berurutan: ## 1. RINGKASAN AWAL, lalu ## 2. ❗ AREA YANG PERLU DIPERHATIKAN (setiap area diawali ### ❗ [Nama Area] dari jawaban), lalu ## 3. 🌟 MINAT & POTENSI (setiap potensi diawali ### 🌟 [Nama Potensi]), lalu ## 4. 🎯 REKOMENDASI (diawali ### 🎯 Rekomendasi Pendampingan berupa bullet point untuk orang tua di rumah). Jangan pakai kategori tetap. Setiap anak harus berbeda sesuai jawabannya.",
-  "strengths": "Format markdown: Bagian 🌟 MINAT & POTENSI saja — setiap potensi menggunakan ### 🌟 [Nama Potensi] diikuti penjelasan singkat berdasarkan jawaban. Hanya potensi yang benar-benar muncul dari jawaban.",
-  "weaknesses": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN saja — setiap area menggunakan ### ❗ [Nama Area] diikuti penjelasan singkat. Jumlah mengikuti temuan dari jawaban, bukan template tetap. Jangan label negatif.",
-  "potential": "Format markdown: Bagian 🌟 MINAT & POTENSI.",
-  "risk": "Format markdown: Bagian ❗ AREA YANG PERLU DIPERHATIKAN.",
-  "education_recommendation": "Format markdown: Bagian 🎯 REKOMENDASI saja — berupa bullet point rekomendasi konkret untuk orang tua di rumah. Jangan rekomendasikan sekolah tertentu. Jumlah rekomendasi mengikuti kebutuhan anak."
+  "summary": "RINGKASAN AWAL maksimal 2 paragraf: pola utama yang terlihat, kekuatan yang muncul, dan kondisi yang perlu diperhatikan — semuanya berdasarkan jawaban aktual anak ini.",
+  "weaknesses": "MINIMAL 5 blok. Setiap blok: baris '❗ [temuan spesifik]' lalu baris penjelasan 1-3 kalimat berbasis jawaban. Pisahkan antar blok dengan baris kosong.",
+  "potential": "MINIMAL 3 blok. Setiap blok: baris '🌟 [minat/kemampuan/karakter spesifik]' lalu baris penjelasan berbasis jawaban. Pisahkan dengan baris kosong.",
+  "education_recommendation": "MINIMAL 5 blok. Setiap blok: baris '🎯 [rekomendasi spesifik]' lalu baris penjelasan cara orang tua melakukannya di rumah, terkait langsung dengan poin ❗/🌟 di atas.",
+  "strengths": "Sama persis dengan isi potential.",
+  "risk": "Sama persis dengan isi weaknesses.",
+  "analysis": "Gabungan berurutan: '## 1. RINGKASAN AWAL' + summary, '## 2. ❗ AREA YANG PERLU DIPERHATIKAN' + weaknesses, '## 3. 🌟 MINAT & POTENSI' + potential, '## 4. 🎯 REKOMENDASI' + education_recommendation. Tanpa narasi tambahan."
 }
 `;
+
 
 
   try {
@@ -195,7 +206,8 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock), sem
     const model = provider.model?.trim() || "gpt-4o-mini";
     const baseUrl = (provider.base_url?.trim() || "").replace(/\/+$/, "");
     const temp = Number(provider.temperature) || 0.7;
-    const maxTokens = Number(provider.max_tokens) || 2048;
+    // Analisis butuh minimal 5 area + 3 potensi + 5 rekomendasi → butuh ruang token lebih besar
+    const maxTokens = Math.max(Number(provider.max_tokens) || 0, 4096);
 
     if (provider.provider_key === "gemini") {
       // Google Gemini API
@@ -321,21 +333,66 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
-    const composed = [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation]
-      .filter((v: any) => typeof v === "string" && v.trim())
-      .join("\n\n");
+    // Model kadang mengembalikan array objek {title, description} — normalisasi ke blok teks beremoji
+    const normalize = (v: any, emoji: string): string => {
+      const ensure = (line: string) => {
+        const t = line.replace(/^[#*\-\s]+/, "").trim();
+        if (!t) return "";
+        return /^(❗|🌟|🎯)/.test(t) ? t.replace(/^(❗|🌟|🎯)\s*/, `${emoji} `) : `${emoji} ${t}`;
+      };
+      if (!v) return "";
+      if (Array.isArray(v)) {
+        return v
+          .map((it: any) => {
+            if (typeof it === "string") return ensure(it);
+            const title = it?.title || it?.area || it?.name || it?.judul || it?.rekomendasi || "";
+            const desc = it?.description || it?.penjelasan || it?.detail || it?.deskripsi || "";
+            return [ensure(String(title)), String(desc).trim()].filter(Boolean).join("\n");
+          })
+          .filter(Boolean)
+          .join("\n\n");
+      }
+      if (typeof v === "object") {
+        return Object.values(v).map((x: any) => normalize(x, emoji)).filter(Boolean).join("\n\n");
+      }
+      const s = String(v).trim();
+      if (!s) return "";
+      if (s.includes(emoji)) return s;
+      // Teks polos multi-baris tanpa emoji → beri emoji pada tiap baris judul
+      return s
+        .split(/\n{2,}/)
+        .map((block) => {
+          const [first, ...rest] = block.split("\n");
+          return [ensure(first), ...rest.map((r) => r.trim())].filter(Boolean).join("\n");
+        })
+        .join("\n\n");
+    };
+
+    const asText = (v: any) => (typeof v === "string" ? v.trim() : Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("\n\n") : v ? String(v) : "");
+
+    const summary = asText(obj.summary);
+    const weaknesses = normalize(obj.weaknesses ?? obj.risk, "❗");
+    const potential = normalize(obj.potential ?? obj.strengths, "🌟");
+    const recommendation = normalize(obj.education_recommendation ?? obj.recommendations, "🎯");
+
+
+    const composed = [
+      summary ? `## 1. RINGKASAN AWAL\n\n${summary}` : "",
+      weaknesses ? `## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${weaknesses}` : "",
+      potential ? `## 3. 🌟 MINAT & POTENSI\n\n${potential}` : "",
+      recommendation ? `## 4. 🎯 REKOMENDASI\n\n${recommendation}` : ""
+    ].filter(Boolean).join("\n\n");
 
     return {
-      summary: obj.summary || "Analisis telah selesai disusun.",
-      analysis: obj.analysis || composed || text,
-      strengths: obj.strengths || obj.potential || "-",
-      weaknesses: obj.weaknesses || "-",
-      potential: obj.potential || "-",
-      risk: obj.risk || obj.weaknesses || "-",
-      education_recommendation: typeof obj.education_recommendation === "string" 
-        ? obj.education_recommendation 
-        : JSON.stringify(obj.education_recommendation, null, 2) || "-"
+      summary: summary || "Analisis telah selesai disusun.",
+      analysis: composed || asText(obj.analysis) || text,
+      strengths: potential || "-",
+      weaknesses: weaknesses || "-",
+      potential: potential || "-",
+      risk: weaknesses || "-",
+      education_recommendation: recommendation || "-"
     };
+
   } catch (e) {
     return {
       summary: "Hasil analisis telah digenerate.",

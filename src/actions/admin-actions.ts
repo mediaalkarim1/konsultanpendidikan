@@ -796,7 +796,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
 
       const unSyncedAnalyzedIds: string[] = [];
 
-      (allCons || []).forEach((item) => {
+      (allCons || []).forEach((item: any) => {
         const itemDate = new Date(item.created_at).toISOString().split("T")[0];
         if (itemDate === todayStr) todayCount++;
 
@@ -833,7 +833,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       }
 
       // 2. Auto-analyze any pending consultations that have no analysis record yet
-      const pendingUnAnalyzed = (allCons || []).filter((item) => {
+      const pendingUnAnalyzed = (allCons || []).filter((item: any) => {
         const isAnalyzed = analyzedSet.has(item.id) || Boolean(item.ai_result);
         const s = (item.status || "").trim();
         return !isAnalyzed && s !== "Sudah Dihubungi" && s !== "Selesai" && s !== "Closed" && s !== "Konsultasi Selesai";
@@ -874,7 +874,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
 
       if (error) throw error;
 
-      const normalizedData = (cols || []).map((row) => {
+      const normalizedData = (cols || []).map((row: any) => {
         const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
         return normalizeParentRow({
           ...row,
