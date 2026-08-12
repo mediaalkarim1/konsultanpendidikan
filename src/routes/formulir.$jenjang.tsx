@@ -210,6 +210,7 @@ function FormulirPage() {
 
         return {
           question_id: q.id,
+          question_text: q.question_text,
           answer_text: isChoice ? (choiceTextStr || null) : (((v as string) ?? "").trim() || null),
           selected_option_ids: isChoice
             ? Array.isArray(v)

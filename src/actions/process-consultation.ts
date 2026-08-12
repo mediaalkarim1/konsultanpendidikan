@@ -208,9 +208,11 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             }
           }
 
-          const qText = questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
-          const optTextsFromFallback = (a.selected_option_ids || []).map((oid: string) => FALLBACK_OPTIONS_MAP[oid] || oid).filter(Boolean);
-          const aText = a.answer_text || (optTextsFromFallback.length > 0 ? optTextsFromFallback.join(", ") : "-");
+          const qText = a.question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+          const optTextsFromFallback = (a.selected_option_ids || []).map((oid: string) => FALLBACK_OPTIONS_MAP[oid] || oid).filter((t: string) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t));
+          const rawAnswerInput = a.answer_text || a.answer;
+          const isAnswerValid = rawAnswerInput && rawAnswerInput !== "-" && !rawAnswerInput.startsWith("opt-") && !rawAnswerInput.startsWith("smp-opt-") && !rawAnswerInput.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAnswerInput);
+          const aText = isAnswerValid ? rawAnswerInput : (optTextsFromFallback.length > 0 ? optTextsFromFallback.join(", ") : "-");
 
           try {
             await supabaseAdmin.from("consultation_answers").insert({
@@ -250,9 +252,14 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         }
 
         formattedAnswers = answers.map(a => {
-          const qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan";
-          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).filter(Boolean);
-          const aText = a.answer_text || (optTexts.length > 0 ? optTexts.join(", ") : "-");
+          let qText = a.question_text || questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id];
+          if (!qText || qText === "Pertanyaan Kuesioner" || qText === "Pertanyaan") {
+            qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+          }
+          const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || FALLBACK_OPTIONS_MAP[oid] || oid).filter((t: string) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t));
+          const rawAns = a.answer_text || a.answer;
+          const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAns);
+          const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : "-");
           return `P: ${qText}\nJ: ${aText}`;
         }).join("\n\n");
       }
@@ -455,10 +462,13 @@ export const processConsultation = createServerFn({ method: "POST" })
     }
 
     const formattedAnswersList = answers ? answers.map((a: any) => {
-      const qText = questionsMap[a.question_id] || a.question || a.question_text || "Pertanyaan Kuesioner";
-      const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).filter(Boolean);
+      let qText = a.question_text || a.question || questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id];
+      if (!qText || qText === "Pertanyaan Kuesioner" || qText === "Pertanyaan") {
+        qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+      }
+      const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || FALLBACK_OPTIONS_MAP[oid] || oid).filter((t: string) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t));
       const rawAns = a.answer_text || a.answer;
-      const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-");
+      const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-") && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAns);
       const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : "-");
       return `P: ${qText}\nJ: ${aText}`;
     }).join("\n\n") : "";
