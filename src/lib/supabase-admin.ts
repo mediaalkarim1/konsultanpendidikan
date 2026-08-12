@@ -5,7 +5,7 @@ function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
 }
 
-export function getAdminSupabase() {
+export function getAdminSupabase(): any {
   const DEFAULT_URL = "https://muyugntbzspnincoaekj.supabase.co";
   const DEFAULT_KEY = "sb_publishable_KHzSJnooFPXSFmwcL8yvpg_pHLzwSBK";
 
