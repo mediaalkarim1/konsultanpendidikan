@@ -483,6 +483,26 @@ export const processConsultation = createServerFn({ method: "POST" })
     );
 
     if (aiResult.success && aiResult.data) {
+      const d = aiResult.data;
+
+      // 1. Upsert into consultation_analysis table
+      try {
+        await supabaseAdmin.from("consultation_analysis").upsert({
+          consultation_id: consultationId,
+          summary: d.summary || "",
+          analysis: d.analysis || "",
+          strengths: d.strengths || "",
+          weaknesses: d.weaknesses || "",
+          potential: d.potential || d.strengths || "",
+          risk: d.risk || d.weaknesses || "",
+          education_recommendation: d.education_recommendation || "",
+          updated_at: new Date().toISOString()
+        }, { onConflict: "consultation_id" });
+      } catch (caErr) {
+        console.warn("[processConsultation] consultation_analysis upsert notice:", caErr);
+      }
+
+      // 2. Save in settings table
       try {
         await supabaseAdmin.from("settings").upsert({
           key: `analysis.${consultationId}`,
@@ -490,11 +510,13 @@ export const processConsultation = createServerFn({ method: "POST" })
         }, { onConflict: "key" });
       } catch (_) {}
 
+      // 3. Update consultations table status & ai_result
       await supabaseAdmin.from("consultations").update({
-        status: "Analisis AI Selesai"
+        status: "Analisis AI Selesai",
+        ai_result: d.analysis || null
       }).eq("id", consultationId);
 
-      return { success: true, provider: aiResult.providerName };
+      return { success: true, provider: aiResult.providerName, data: d };
 
     }
 

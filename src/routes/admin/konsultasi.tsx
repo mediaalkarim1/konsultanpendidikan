@@ -739,8 +739,20 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
 
         let effectiveAnalysis = analysisData;
 
-        // If analysisData is missing or contains old static dummy text, replace with dynamic narrative
-        if (!effectiveAnalysis || (effectiveAnalysis.summary && effectiveAnalysis.summary.includes("Resume Konsultasi untuk Anak (Jenjang SMP):"))) {
+        const legacyKeywords = [
+          "Pengaturan Screen Time & Pendampingan Aktivitas Digital",
+          "Kemandirian Harian & Pembiasaan Tanggung Jawab Rutin",
+          "Regulasi Emosi & Ketahanan Menghadapi Kesulitan",
+          "Kemampuan Adaptasi Bersosialisasi",
+          "Stimulasi Karakter & Kegemaran Membaca",
+          "Eksplorasi Pilihan Jurusan",
+          "Portofolio Digital"
+        ];
+        const analysisContentStr = JSON.stringify(effectiveAnalysis || {});
+        const isLegacy = legacyKeywords.some(kw => analysisContentStr.includes(kw));
+
+        // If analysisData is missing or contains old legacy template text, replace with dynamic narrative
+        if (!effectiveAnalysis || isLegacy || (effectiveAnalysis.summary && effectiveAnalysis.summary.includes("Resume Konsultasi untuk Anak (Jenjang SMP):"))) {
           effectiveAnalysis = {
             summary: dynamicNarrative.summary,
             analysis: (consultation as any).ai_result || dynamicNarrative.analysis,

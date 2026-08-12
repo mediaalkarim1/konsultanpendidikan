@@ -224,6 +224,109 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
   };
 }
 
+export async function getLatestConsultationAnalysisHelper(consultationId: string) {
+  // 1. Fetch consultation row
+  const { data: consult } = await supabase
+    .from("consultations")
+    .select("*")
+    .eq("id", consultationId)
+    .maybeSingle();
+
+  if (!consult) throw new Error("Data konsultasi tidak ditemukan.");
+
+  // 2. Fetch Q&A answers and map option_text cleanly (no empty "-")
+  const { data: answers } = await supabase
+    .from("consultation_answers")
+    .select("*, questions(question_text)")
+    .eq("consultation_id", consultationId);
+
+  const allOptionIds = answers?.flatMap((a) => a.selected_option_ids || []) || [];
+  let optionsMap: Record<string, string> = {};
+  if (allOptionIds.length > 0) {
+    const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
+    if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
+  }
+
+  const mappedAnswers = (answers || []).map((a) => {
+    const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
+    const optTexts = (a.selected_option_ids || [])
+      .map((oid: string) => optionsMap[oid] || oid)
+      .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t) && !t.startsWith("opt-") && !t.startsWith("smp-opt-") && !t.startsWith("sma-opt-"));
+
+    const rawAns = a.answer_text || a.answer;
+    const isValidAns = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
+    const aText = isValidAns ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns && rawAns !== "-" ? rawAns : "-"));
+    return { q: qText, a: aText };
+  });
+
+  const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
+
+  // 3. Fetch latest analysis row ORDER BY updated_at DESC, created_at DESC
+  const { data: analysisRows } = await (supabase as any)
+    .from("consultation_analysis")
+    .select("*")
+    .eq("consultation_id", consultationId)
+    .order("updated_at", { ascending: false, nullsFirst: false });
+
+  let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
+
+  // 4. Legacy Template Detector
+  const legacyKeywords = [
+    "Pengaturan Screen Time & Pendampingan Aktivitas Digital",
+    "Kemandirian Harian & Pembiasaan Tanggung Jawab Rutin",
+    "Regulasi Emosi & Ketahanan Menghadapi Kesulitan",
+    "Kemampuan Adaptasi Bersosialisasi",
+    "Stimulasi Karakter & Kegemaran Membaca",
+    "Eksplorasi Pilihan Jurusan",
+    "Portofolio Digital"
+  ];
+
+  const analysisContentStr = JSON.stringify(latestAnalysisRow || {});
+  const isLegacy = legacyKeywords.some(kw => analysisContentStr.includes(kw));
+
+  // Generate dynamic evidence analysis from formattedAnswers
+  const dynamicEvidenceAnalysis = generateFallbackAnalysisResult(
+    consult.parent_name,
+    consult.child_name || "-",
+    consult.level,
+    answersFormatted
+  );
+
+  let effectiveAnalysis = latestAnalysisRow;
+
+  if (!effectiveAnalysis || isLegacy) {
+    effectiveAnalysis = {
+      summary: dynamicEvidenceAnalysis.summary,
+      analysis: consult.ai_result || dynamicEvidenceAnalysis.analysis,
+      strengths: dynamicEvidenceAnalysis.strengths,
+      weaknesses: dynamicEvidenceAnalysis.weaknesses,
+      potential: dynamicEvidenceAnalysis.potential,
+      risk: dynamicEvidenceAnalysis.risk,
+      education_recommendation: dynamicEvidenceAnalysis.education_recommendation
+    };
+  }
+
+  // Debug source logging
+  console.log("==================================================");
+  console.log("PDF/WEB ANALYSIS SOURCE DEBUG LOG:");
+  console.log("- Consultation ID:", consultationId);
+  console.log("- Analysis ID:", latestAnalysisRow?.id || "DYNAMIC_EVIDENCE");
+  console.log("- Created At:", latestAnalysisRow?.created_at || "FRESH_GENERATED");
+  console.log("- Updated At:", latestAnalysisRow?.updated_at || "FRESH_GENERATED");
+  console.log("- Is Legacy Overridden?:", isLegacy);
+  console.log("- Summary Snippet:", effectiveAnalysis.summary?.slice(0, 100));
+  console.log("==================================================");
+
+  const parsedSections = parseReportSections(effectiveAnalysis, consult.ai_result || dynamicEvidenceAnalysis.analysis);
+
+  return {
+    consult,
+    effectiveAnalysis,
+    parsedSections,
+    answersFormatted
+  };
+}
+
 export async function handleDownloadPdfForConsultation(
   item: Consultation,
   onStart?: () => void,
@@ -236,39 +339,14 @@ export async function handleDownloadPdfForConsultation(
     const { jsPDF } = await import("jspdf");
     await new Promise((r) => setTimeout(r, 60));
 
-    // Fetch consultation answers & options
-    const { data: answers } = await supabase
-      .from("consultation_answers")
-      .select("*, questions(question_text)")
-      .eq("consultation_id", item.id);
+    // Use centralized helper to ensure 100% identical data with Web UI
+    const { consult, parsedSections } = await getLatestConsultationAnalysisHelper(item.id);
+    const parsedData = parsedSections;
 
-    const allOptionIds = answers?.flatMap((a) => a.selected_option_ids || []) || [];
-    let optionsMap: Record<string, string> = {};
-    if (allOptionIds.length > 0) {
-      const { data: opts } = await supabase.from("question_options").select("id, option_text").in("id", allOptionIds);
-      if (opts) optionsMap = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
-    }
-
-    const { data: analysisData } = await (supabase as any)
-      .from("consultation_analysis")
-      .select("*")
-      .eq("consultation_id", item.id)
-      .maybeSingle();
-
-    const mappedAnswers = (answers || []).map((a) => ({
-      q: a.questions?.question_text || "Pertanyaan",
-      a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
-    }));
-
-    const answersFormatted = mappedAnswers.map((ans) => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
-    const dynamicNarrative = generateFallbackAnalysisResult(item.parent_name, item.child_name || "-", item.level, answersFormatted);
-
-    const parsedData = parseReportSections(analysisData || { summary: dynamicNarrative.summary, analysis: (item as any).ai_result || dynamicNarrative.analysis, weaknesses: dynamicNarrative.weaknesses, strengths: dynamicNarrative.strengths, education_recommendation: dynamicNarrative.education_recommendation }, (item as any).ai_result || dynamicNarrative.analysis);
-
-    const dateStr = format(new Date(item.created_at), "dd MMMM yyyy", { locale: id });
-    const levelLabel = (LEVEL_LABELS[item.level] || item.level).toUpperCase();
-    const refIdShort = item.id.substring(0, 8).toUpperCase();
-    const childDisplayName = item.child_name && item.child_name !== "-" ? item.child_name : "Ananda";
+    const dateStr = format(new Date(consult.created_at || item.created_at), "dd MMMM yyyy", { locale: id });
+    const levelLabel = (LEVEL_LABELS[consult.level] || consult.level).toUpperCase();
+    const refIdShort = consult.id.substring(0, 8).toUpperCase();
+    const childDisplayName = consult.child_name && consult.child_name !== "-" ? consult.child_name : "Ananda";
 
     const doc = new jsPDF({
       orientation: "portrait",

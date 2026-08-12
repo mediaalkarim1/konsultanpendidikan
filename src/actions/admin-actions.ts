@@ -859,6 +859,82 @@ export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "
     }
   });
 
+import { generateFallbackAnalysisResult } from "@/lib/pdf-generator";
+
+export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ method: "POST" })
+  .validator((payload: { email: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      let upgradedCount = 0;
+
+      const { data: consultations } = await supabaseAdmin.from("consultations").select("*");
+      if (consultations) {
+        for (const cons of consultations) {
+          const { data: answers } = await supabaseAdmin
+            .from("consultation_answers")
+            .select("*, questions(question_text)")
+            .eq("consultation_id", cons.id);
+
+          if (!answers || answers.length === 0) continue;
+
+          const allOptionIds = answers.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean);
+          let optionsMap: Record<string, string> = {};
+          if (allOptionIds.length > 0) {
+            const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
+            if (opts) optionsMap = (opts || []).reduce((acc: any, o: any) => ({ ...acc, [o.id]: o.option_text }), {});
+          }
+
+          const mappedAnswers = answers.map((a: any) => {
+            const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
+            const optTexts = (a.selected_option_ids || [])
+              .map((oid: string) => optionsMap[oid] || oid)
+              .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t) && !t.startsWith("opt-") && !t.startsWith("smp-opt-") && !t.startsWith("sma-opt-"));
+
+            const rawAns = a.answer_text || a.answer;
+            const isValidAns = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
+            const aText = isValidAns ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns && rawAns !== "-" ? rawAns : "-"));
+            return `P: ${qText}\nJ: ${aText}`;
+          }).join("\n\n");
+
+          const freshResult = generateFallbackAnalysisResult(cons.parent_name, cons.child_name || "-", cons.level, mappedAnswers);
+
+          await supabaseAdmin.from("consultation_analysis").upsert({
+            consultation_id: cons.id,
+            summary: freshResult.summary,
+            analysis: freshResult.analysis,
+            strengths: freshResult.strengths,
+            weaknesses: freshResult.weaknesses,
+            potential: freshResult.potential,
+            risk: freshResult.risk,
+            education_recommendation: freshResult.education_recommendation,
+            updated_at: new Date().toISOString()
+          }, { onConflict: "consultation_id" });
+
+          await supabaseAdmin.from("consultations").update({
+            ai_result: freshResult.analysis,
+            status: "Analisis AI Selesai"
+          }).eq("id", cons.id);
+
+          try {
+            await supabaseAdmin.from("settings").upsert({
+              key: `analysis.${cons.id}`,
+              value: freshResult
+            }, { onConflict: "key" });
+          } catch (_) {}
+
+          upgradedCount++;
+        }
+      }
+
+      await logActivityInternal(ctx.data.email || "admin", "UPGRADE_ALL_DATABASE_ANALYSIS", { upgradedCount });
+      return { success: true, upgradedCount };
+    } catch (e: any) {
+      console.error("sanitizeAndUpgradeAllDatabaseAnalysisAction error:", e);
+      return { success: false, error: e.message };
+    }
+  });
+
 export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST" })
   .validator((payload: { email: string }) => payload)
   .handler(async (ctx) => {
