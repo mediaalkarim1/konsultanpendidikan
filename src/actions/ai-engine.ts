@@ -333,21 +333,30 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
-    const composed = [obj.summary, obj.weaknesses, obj.potential, obj.education_recommendation]
-      .filter((v: any) => typeof v === "string" && v.trim())
-      .join("\n\n");
+    const asText = (v: any) => (typeof v === "string" ? v.trim() : Array.isArray(v) ? v.join("\n\n") : v ? String(v) : "");
+
+    const summary = asText(obj.summary);
+    const weaknesses = asText(obj.weaknesses) || asText(obj.risk);
+    const potential = asText(obj.potential) || asText(obj.strengths);
+    const recommendation = asText(obj.education_recommendation);
+
+    const composed = [
+      summary ? `## 1. RINGKASAN AWAL\n\n${summary}` : "",
+      weaknesses ? `## 2. ❗ AREA YANG PERLU DIPERHATIKAN\n\n${weaknesses}` : "",
+      potential ? `## 3. 🌟 MINAT & POTENSI\n\n${potential}` : "",
+      recommendation ? `## 4. 🎯 REKOMENDASI\n\n${recommendation}` : ""
+    ].filter(Boolean).join("\n\n");
 
     return {
-      summary: obj.summary || "Analisis telah selesai disusun.",
-      analysis: obj.analysis || composed || text,
-      strengths: obj.strengths || obj.potential || "-",
-      weaknesses: obj.weaknesses || "-",
-      potential: obj.potential || "-",
-      risk: obj.risk || obj.weaknesses || "-",
-      education_recommendation: typeof obj.education_recommendation === "string" 
-        ? obj.education_recommendation 
-        : JSON.stringify(obj.education_recommendation, null, 2) || "-"
+      summary: summary || "Analisis telah selesai disusun.",
+      analysis: composed || asText(obj.analysis) || text,
+      strengths: potential || "-",
+      weaknesses: weaknesses || "-",
+      potential: potential || "-",
+      risk: weaknesses || "-",
+      education_recommendation: recommendation || "-"
     };
+
   } catch (e) {
     return {
       summary: "Hasil analisis telah digenerate.",
