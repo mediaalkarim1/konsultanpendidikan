@@ -333,12 +333,48 @@ function parseAiJsonResponse(text: string): AiAnalysisResult {
     const jsonStr = jsonMatch ? jsonMatch[0] : cleaned;
     const obj = JSON.parse(jsonStr);
 
-    const asText = (v: any) => (typeof v === "string" ? v.trim() : Array.isArray(v) ? v.join("\n\n") : v ? String(v) : "");
+    // Model kadang mengembalikan array objek {title, description} — normalisasi ke blok teks beremoji
+    const normalize = (v: any, emoji: string): string => {
+      const ensure = (line: string) => {
+        const t = line.replace(/^[#*\-\s]+/, "").trim();
+        if (!t) return "";
+        return /^(❗|🌟|🎯)/.test(t) ? t.replace(/^(❗|🌟|🎯)\s*/, `${emoji} `) : `${emoji} ${t}`;
+      };
+      if (!v) return "";
+      if (Array.isArray(v)) {
+        return v
+          .map((it: any) => {
+            if (typeof it === "string") return ensure(it);
+            const title = it?.title || it?.area || it?.name || it?.judul || it?.rekomendasi || "";
+            const desc = it?.description || it?.penjelasan || it?.detail || it?.deskripsi || "";
+            return [ensure(String(title)), String(desc).trim()].filter(Boolean).join("\n");
+          })
+          .filter(Boolean)
+          .join("\n\n");
+      }
+      if (typeof v === "object") {
+        return Object.values(v).map((x: any) => normalize(x, emoji)).filter(Boolean).join("\n\n");
+      }
+      const s = String(v).trim();
+      if (!s) return "";
+      if (s.includes(emoji)) return s;
+      // Teks polos multi-baris tanpa emoji → beri emoji pada tiap baris judul
+      return s
+        .split(/\n{2,}/)
+        .map((block) => {
+          const [first, ...rest] = block.split("\n");
+          return [ensure(first), ...rest.map((r) => r.trim())].filter(Boolean).join("\n");
+        })
+        .join("\n\n");
+    };
+
+    const asText = (v: any) => (typeof v === "string" ? v.trim() : Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : JSON.stringify(x))).join("\n\n") : v ? String(v) : "");
 
     const summary = asText(obj.summary);
-    const weaknesses = asText(obj.weaknesses) || asText(obj.risk);
-    const potential = asText(obj.potential) || asText(obj.strengths);
-    const recommendation = asText(obj.education_recommendation);
+    const weaknesses = normalize(obj.weaknesses ?? obj.risk, "❗");
+    const potential = normalize(obj.potential ?? obj.strengths, "🌟");
+    const recommendation = normalize(obj.education_recommendation ?? obj.recommendations, "🎯");
+
 
     const composed = [
       summary ? `## 1. RINGKASAN AWAL\n\n${summary}` : "",
