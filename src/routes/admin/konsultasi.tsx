@@ -711,18 +711,15 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
         }
       }
 
-      // Fetch consultation_analysis
-      const { data: analysisData } = await (supabase as any)
-        .from("consultation_analysis")
-        .select("*")
-        .eq("consultation_id", consultId)
-        .maybeSingle();
+      // Use centralized helper to guarantee 100% data sync with PDF generator
+      const { getLatestConsultationAnalysisHelper } = await import("@/lib/pdf-generator");
+      const { effectiveAnalysis } = await getLatestConsultationAnalysisHelper(consultId);
 
       // Fetch notification logs
       const { data: notifLogs } = await supabase.from("notification_logs" as any).select("*").eq("consultation_id", consultId).order("created_at", { ascending: false });
 
-      if (consultation && answers) {
-        const mappedAnswers = answers.map(a => ({
+      if (consultation) {
+        const mappedAnswers = (answers || []).map(a => ({
           q: a.questions?.question_text || "Pertanyaan",
           a: a.answer_text || (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).join(", ")
         }));
@@ -733,46 +730,15 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
           logs: notifLogs || []
         });
 
-        // Formatted answers text for narrative generator
-        const answersFormatted = mappedAnswers.map(ans => `P: ${ans.q}\nJ: ${ans.a}`).join("\n\n");
-        const dynamicNarrative = generateFallbackAnalysisResult(consultation.parent_name, (consultation as any).child_name || "-", consultation.level, answersFormatted);
-
-        let effectiveAnalysis = analysisData;
-
-        const legacyKeywords = [
-          "Pengaturan Screen Time & Pendampingan Aktivitas Digital",
-          "Kemandirian Harian & Pembiasaan Tanggung Jawab Rutin",
-          "Regulasi Emosi & Ketahanan Menghadapi Kesulitan",
-          "Kemampuan Adaptasi Bersosialisasi",
-          "Stimulasi Karakter & Kegemaran Membaca",
-          "Eksplorasi Pilihan Jurusan",
-          "Portofolio Digital"
-        ];
-        const analysisContentStr = JSON.stringify(effectiveAnalysis || {});
-        const isLegacy = legacyKeywords.some(kw => analysisContentStr.includes(kw));
-
-        // If analysisData is missing or contains old legacy template text, replace with dynamic narrative
-        if (!effectiveAnalysis || isLegacy || (effectiveAnalysis.summary && effectiveAnalysis.summary.includes("Resume Konsultasi untuk Anak (Jenjang SMP):"))) {
-          effectiveAnalysis = {
-            summary: dynamicNarrative.summary,
-            analysis: (consultation as any).ai_result || dynamicNarrative.analysis,
-            strengths: dynamicNarrative.strengths,
-            weaknesses: dynamicNarrative.weaknesses,
-            potential: dynamicNarrative.potential,
-            risk: dynamicNarrative.risk,
-            education_recommendation: dynamicNarrative.education_recommendation
-          };
-        }
-
         setAnalysis(effectiveAnalysis);
         setEditForm({
-          summary: sanitizeAnalysisMarkdown(effectiveAnalysis.summary || ""),
-          analysis: sanitizeAnalysisMarkdown(effectiveAnalysis.analysis || ""),
-          strengths: sanitizeAnalysisMarkdown(effectiveAnalysis.strengths || ""),
-          weaknesses: sanitizeAnalysisMarkdown(effectiveAnalysis.weaknesses || ""),
-          potential: sanitizeAnalysisMarkdown(effectiveAnalysis.potential || ""),
-          risk: sanitizeAnalysisMarkdown(effectiveAnalysis.risk || ""),
-          education_recommendation: sanitizeAnalysisMarkdown(effectiveAnalysis.education_recommendation || "")
+          summary: sanitizeAnalysisMarkdown(effectiveAnalysis?.summary || ""),
+          analysis: sanitizeAnalysisMarkdown(effectiveAnalysis?.analysis || ""),
+          strengths: sanitizeAnalysisMarkdown(effectiveAnalysis?.strengths || ""),
+          weaknesses: sanitizeAnalysisMarkdown(effectiveAnalysis?.weaknesses || ""),
+          potential: sanitizeAnalysisMarkdown(effectiveAnalysis?.potential || ""),
+          risk: sanitizeAnalysisMarkdown(effectiveAnalysis?.risk || ""),
+          education_recommendation: sanitizeAnalysisMarkdown(effectiveAnalysis?.education_recommendation || "")
         });
       }
     } catch (e) {
@@ -1167,24 +1133,7 @@ ${parsed.recommendations.map(r => `• ${r.title}${r.desc ? `: ${r.desc}` : ""}`
                         </div>
                       )}
 
-                      {/* 5. FOKUS PENDAMPINGAN UTAMA */}
-                      {parsed.mainPriorities.length > 0 && (
-                        <div className="rounded-xl border border-teal-200 bg-[#E8F5F3]/80 dark:bg-teal-950/30 p-4 space-y-2 shadow-sm">
-                          <h4 className="font-extrabold text-xs uppercase tracking-wider text-[#075E63] dark:text-teal-300 flex items-center gap-1.5">
-                            <Target className="h-4 w-4 text-[#0B7A75]" /> Fokus Pendampingan Utama
-                          </h4>
-                          <div className="grid gap-2 sm:grid-cols-3 pt-1">
-                            {parsed.mainPriorities.map((prio, i) => (
-                              <div key={i} className="flex items-center gap-2 rounded-lg bg-white/80 dark:bg-slate-900/60 p-2.5 border border-teal-200/60 text-xs font-bold text-slate-800 dark:text-slate-200">
-                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#075E63] text-white text-[10px]">
-                                  {i + 1}
-                                </span>
-                                <span className="line-clamp-2">{prio}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+
 
                       {/* OFFICIAL FOOTER */}
                       <div className="pt-4 border-t border-border flex flex-wrap items-center justify-between text-[11px] text-muted-foreground">

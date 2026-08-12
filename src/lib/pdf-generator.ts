@@ -123,12 +123,12 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
     if (!text || text === "-") return [];
     const items: ParsedReportSectionItem[] = [];
 
-    // Split text into blocks by heading boundaries or newlines
-    const rawBlocks = text.split(/(?=(?:^[ \t]*#{1,6}\s+|^\s*###?\s*))/gm);
+    // Split text into distinct item blocks by emojis (❗, 🌟, 🎯), numbers (01., 1.), headings (#), or double newlines
+    const rawBlocks = text.split(/(?=(?:^[ \t]*[❗🌟🎯]\s*\d*[\.\)]?|^\s*\d+[\.\)]\s*|^\s*#{1,6}\s+))/gm);
 
     for (const block of rawBlocks) {
       const trimmed = block.trim();
-      if (!trimmed) continue;
+      if (!trimmed || trimmed === "-") continue;
 
       const firstLineEnd = trimmed.indexOf("\n");
       let headingLine = "";
@@ -141,7 +141,7 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
         headingLine = trimmed;
       }
 
-      // Clean heading title while PRESERVING emojis and title content (e.g. "❗ Pemetaan Pilihan Jurusan")
+      // Clean heading title
       const title = cleanHeadingTitle(headingLine);
       const desc = sanitizeAnalysisMarkdown(descBody);
 
@@ -155,14 +155,20 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
       }
     }
 
-    // Secondary fallback split if items array is empty but text has paragraphs
+    // Secondary fallback split by double newlines if items array is empty
     if (items.length === 0 && text) {
       const cleanText = sanitizeAnalysisMarkdown(text);
-      const lines = cleanText.split("\n").filter((l) => l.trim().length > 0);
-      for (const line of lines) {
-        const cleaned = cleanHeadingTitle(line);
-        if (cleaned && !isMainSectionHeader(cleaned) && cleaned.length > 3) {
-          items.push({ title: cleaned, desc: "" });
+      const lines = cleanText.split("\n\n").filter((l) => l.trim().length > 0);
+      for (const paragraph of lines) {
+        const pTrimmed = paragraph.trim();
+        const firstLineEnd = pTrimmed.indexOf("\n");
+        if (firstLineEnd !== -1) {
+          const h = cleanHeadingTitle(pTrimmed.substring(0, firstLineEnd));
+          const d = sanitizeAnalysisMarkdown(pTrimmed.substring(firstLineEnd + 1));
+          if (h && !isMainSectionHeader(h)) items.push({ title: h, desc: d });
+        } else {
+          const h = cleanHeadingTitle(pTrimmed);
+          if (h && !isMainSectionHeader(h) && h.length > 3) items.push({ title: h, desc: "" });
         }
       }
     }
@@ -173,7 +179,6 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
   // Clean summary text
   let rawSummary = (analysis?.summary || "").trim();
   rawSummary = sanitizeAnalysisMarkdown(rawSummary);
-  // Remove duplicate section title like "1. RINGKASAN AWAL:" from start of summary
   rawSummary = rawSummary.replace(/^(?:1\.\s*)?RINGKASAN AWAL:?\s*/i, "").trim();
 
   let weaknessesText = (analysis?.weaknesses && analysis.weaknesses !== "-") ? analysis.weaknesses : "";
@@ -183,12 +188,12 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
   const fullText = analysis?.analysis || fallbackMarkdownText || "";
 
   if (!weaknessesText && fullText) {
-    const match = fullText.match(/(?:##?\s*(?:2\.\s*)?AREA YANG PERLU DIPERHATIKAN|##?\s*❗[\s\S]*?Area yang Perlu Diperhatikan)([\s\S]*?)(?=## 3|## 4|\n# |$)/i);
+    const match = fullText.match(/(?:##?\s*(?:2\.\s*)?AREA YANG PERLU DIPERHATIKAN|##?\s*❗[\s\S]*?Area yang Perlu Diperhatikan)([\s\S]*?)(?=## 3|## 4|\n# |🌟|🎯|$)/i);
     if (match) weaknessesText = match[1].trim();
   }
 
   if (!strengthsText && fullText) {
-    const match = fullText.match(/(?:##?\s*(?:3\.\s*)?MINAT & POTENSI|##?\s*🌟[\s\S]*?Minat & Potensi)([\s\S]*?)(?=## 4|\n# |$)/i);
+    const match = fullText.match(/(?:##?\s*(?:3\.\s*)?MINAT & POTENSI|##?\s*🌟[\s\S]*?Minat & Potensi)([\s\S]*?)(?=## 4|\n# |🎯|$)/i);
     if (match) strengthsText = match[1].trim();
   }
 
@@ -201,26 +206,12 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
   const potentials = parseBlocks(strengthsText);
   const recommendations = parseBlocks(recText);
 
-  const mainPriorities: string[] = [];
-  concerns.slice(0, 3).forEach((c) => {
-    const cleanTitle = cleanHeadingTitle(c.title).replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
-    if (cleanTitle && !mainPriorities.includes(cleanTitle)) mainPriorities.push(cleanTitle);
-  });
-  if (mainPriorities.length < 3) {
-    recommendations.slice(0, 3).forEach((r) => {
-      const cleanTitle = cleanHeadingTitle(r.title).replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
-      if (cleanTitle && !mainPriorities.includes(cleanTitle) && mainPriorities.length < 3) {
-        mainPriorities.push(cleanTitle);
-      }
-    });
-  }
-
   return {
-    summary: rawSummary || "Ringkasan evaluasi hasil assessment konsultan pendidikan anak.",
+    summary: rawSummary || "• Berdasarkan jawaban kuesioner, hasil analisis sedang diproses.",
     concerns,
     potentials,
     recommendations,
-    mainPriorities
+    mainPriorities: []
   };
 }
 
@@ -648,43 +639,7 @@ export async function handleDownloadPdfForConsultation(
       yPos += 3;
     }
 
-    // --- 7. FOKUS PENDAMPINGAN UTAMA ---
-    if (parsedData.mainPriorities.length > 0) {
-      checkPageBreak(24);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(7, 94, 99);
-      doc.text("4. FOKUS PENDAMPINGAN UTAMA", margin, yPos);
-      yPos += 2;
-      doc.setDrawColor(11, 122, 117);
-      doc.setLineWidth(0.3);
-      doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 5;
 
-      const priorityCardH = 10 + parsedData.mainPriorities.length * 6;
-      doc.setFillColor(232, 245, 243); // #E8F5F3
-      doc.setDrawColor(11, 122, 117);
-      doc.roundedRect(margin, yPos, contentWidth, priorityCardH, 2, 2, "FD");
-
-      let prioY = yPos + 6;
-      parsedData.mainPriorities.forEach((prio, i) => {
-        const cleanPrio = sanitizeTextForPdf(prio);
-        doc.setFillColor(7, 94, 99);
-        doc.roundedRect(margin + 5, prioY - 3, 5, 4, 1, 1, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6.5);
-        doc.setTextColor(255, 255, 255);
-        doc.text(String(i + 1), margin + 7.5, prioY - 0.2, { align: "center" });
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8.5);
-        doc.setTextColor(17, 52, 58);
-        doc.text(cleanPrio, margin + 12, prioY);
-        prioY += 6;
-      });
-
-      yPos += priorityCardH + 5;
-    }
 
     // --- 8. FOOTER & PAGE NUMBERS ON ALL PAGES ---
     const totalPages = doc.getNumberOfPages();

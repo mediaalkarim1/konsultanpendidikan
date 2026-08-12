@@ -293,6 +293,16 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         auto_fallback: true
       };
 
+      // [AI INPUT AUDIT] Temporary debug log to inspect payload sent to AI
+      console.log("==================================================");
+      console.log("[AI INPUT AUDIT]");
+      console.log("Assessment ID:", consultation.id);
+      console.log("Education Level:", level);
+      console.log("Child Name:", child_name || "-");
+      console.log("Total Questions & Answers:", answers?.length || 0);
+      console.log("Formatted Answers:\n", formattedAnswers);
+      console.log("==================================================");
+
       // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI
       let aiResult = await runAiEngineAnalysis(
         parent_name,
@@ -329,8 +339,24 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         }
 
       } else {
-        // 4. SIMPAN HASIL ANALISIS KE DATABASE
-        // Save analysis data safely in settings table
+        // 4. SIMPAN HASIL ANALISIS KE DATABASE (consultation_analysis & settings)
+        const d = aiResult.data;
+        try {
+          await supabaseAdmin.from("consultation_analysis").upsert({
+            consultation_id: consultation.id,
+            summary: d.summary || "",
+            analysis: d.analysis || "",
+            strengths: d.strengths || "",
+            weaknesses: d.weaknesses || "",
+            potential: d.potential || d.strengths || "",
+            risk: d.risk || d.weaknesses || "",
+            education_recommendation: d.education_recommendation || "",
+            updated_at: new Date().toISOString()
+          }, { onConflict: "consultation_id" });
+        } catch (caErr) {
+          console.warn("[submitConsultationAction] consultation_analysis upsert notice:", caErr);
+        }
+
         try {
           await supabaseAdmin.from("settings").upsert({
             key: `analysis.${consultation.id}`,
@@ -341,7 +367,8 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         // Update Status on consultations table
         try {
           await supabaseAdmin.from("consultations").update({
-            status: "Analisis AI Selesai"
+            status: "Analisis AI Selesai",
+            ai_result: d.analysis || null
           }).eq("id", consultation.id);
         } catch (statusErr) {
           console.warn("[submitConsultationAction] status update error:", statusErr);
