@@ -3,9 +3,20 @@ import { getAdminSupabase } from "@/lib/supabase-admin";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
 import { runAiEngineAnalysis } from "./ai-engine";
 import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
-import { seedTKSDQuestionsDirect } from "./seed-tksd";
-import { seedSMPQuestionsDirect } from "./seed-smp";
-import { seedSMAQuestionsDirect } from "./seed-sma";
+import { seedTKSDQuestionsDirect, DEFAULT_TKSD_QUESTIONS } from "./seed-tksd";
+import { seedSMPQuestionsDirect, DEFAULT_SMP_QUESTIONS } from "./seed-smp";
+import { seedSMAQuestionsDirect, DEFAULT_SMA_QUESTIONS } from "./seed-sma";
+
+const ALL_DEFAULT_QUESTIONS = [...DEFAULT_TKSD_QUESTIONS, ...DEFAULT_SMP_QUESTIONS, ...DEFAULT_SMA_QUESTIONS];
+const FALLBACK_QUESTIONS_MAP: Record<string, string> = {};
+const FALLBACK_OPTIONS_MAP: Record<string, string> = {};
+
+ALL_DEFAULT_QUESTIONS.forEach(q => {
+  if (q.id && q.question_text) FALLBACK_QUESTIONS_MAP[q.id] = q.question_text;
+  (q.options || []).forEach(o => {
+    if (o.id && o.option_text) FALLBACK_OPTIONS_MAP[o.id] = o.option_text;
+  });
+});
 
 
 export type ConsultationSubmitPayload = {
@@ -197,8 +208,9 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
             }
           }
 
-          const qText = questionsTextMap[a.question_id] || "Pertanyaan Kuesioner";
-          const aText = a.answer_text || (a.selected_option_ids || []).join(", ");
+          const qText = questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+          const optTextsFromFallback = (a.selected_option_ids || []).map((oid: string) => FALLBACK_OPTIONS_MAP[oid] || oid).filter(Boolean);
+          const aText = a.answer_text || (optTextsFromFallback.length > 0 ? optTextsFromFallback.join(", ") : "-");
 
           try {
             await supabaseAdmin.from("consultation_answers").insert({
@@ -206,14 +218,14 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
               question_id: targetQId,
               question: qText,
               answer: aText,
-              answer_text: a.answer_text || null,
+              answer_text: aText,
               selected_option_ids: a.selected_option_ids || []
             });
           } catch (_) {
             await supabaseAdmin.from("consultation_answers").insert({
               consultation_id: consultation.id,
               question_id: targetQId,
-              answer_text: a.answer_text || null,
+              answer_text: aText,
               selected_option_ids: a.selected_option_ids || []
             });
           }
@@ -225,20 +237,20 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       if (answers && answers.length > 0) {
         const questionIds = answers.map(a => a.question_id).filter(Boolean);
         const { data: questionsList } = await supabaseAdmin.from("questions").select("id, question_text").in("id", questionIds);
-        const questionsMap: Record<string, string> = {};
+        const questionsMap: Record<string, string> = { ...FALLBACK_QUESTIONS_MAP };
         if (questionsList) {
           questionsList.forEach((q: any) => { questionsMap[q.id] = q.question_text; });
         }
 
         const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
-        let optionsMap: Record<string, string> = {};
+        let optionsMap: Record<string, string> = { ...FALLBACK_OPTIONS_MAP };
         if (allOptionIds.length > 0) {
           const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
           if (opts) opts.forEach((o: any) => { optionsMap[o.id] = o.option_text; });
         }
 
         formattedAnswers = answers.map(a => {
-          const qText = questionsMap[a.question_id] || "Pertanyaan";
+          const qText = questionsMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan";
           const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).filter(Boolean);
           const aText = a.answer_text || (optTexts.length > 0 ? optTexts.join(", ") : "-");
           return `P: ${qText}\nJ: ${aText}`;
@@ -315,7 +327,7 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         try {
           await supabaseAdmin.from("settings").upsert({
             key: `analysis.${consultation.id}`,
-            value: analysisData
+            value: aiResult.data
           }, { onConflict: "key" });
         } catch (_) {}
 
@@ -421,9 +433,33 @@ export const processConsultation = createServerFn({ method: "POST" })
 
     const { data: answers } = await supabaseAdmin.from("consultation_answers").select("*").eq("consultation_id", consultationId);
 
+    let questionsMap: Record<string, string> = { ...FALLBACK_QUESTIONS_MAP };
+    let optionsMap: Record<string, string> = { ...FALLBACK_OPTIONS_MAP };
+
+    if (answers && answers.length > 0) {
+      const qIds = answers.map((a: any) => a.question_id).filter(Boolean);
+      const optIds = answers.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean);
+
+      if (qIds.length > 0) {
+        try {
+          const { data: qRows } = await supabaseAdmin.from("questions").select("id, question_text").in("id", qIds);
+          (qRows || []).forEach((q: any) => { questionsMap[q.id] = q.question_text; });
+        } catch (_) {}
+      }
+      if (optIds.length > 0) {
+        try {
+          const { data: optRows } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", optIds);
+          (optRows || []).forEach((o: any) => { optionsMap[o.id] = o.option_text; });
+        } catch (_) {}
+      }
+    }
+
     const formattedAnswersList = answers ? answers.map((a: any) => {
-      const qText = a.question || a.question_text || a.question_id || "Pertanyaan";
-      const aText = a.answer || a.answer_text || (a.selected_option_ids || []).join(", ") || "-";
+      const qText = questionsMap[a.question_id] || a.question || a.question_text || "Pertanyaan Kuesioner";
+      const optTexts = (a.selected_option_ids || []).map((oid: string) => optionsMap[oid] || oid).filter(Boolean);
+      const rawAns = a.answer_text || a.answer;
+      const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !rawAns.startsWith("smp-opt-") && !rawAns.startsWith("sma-opt-");
+      const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : "-");
       return `P: ${qText}\nJ: ${aText}`;
     }).join("\n\n") : "";
 

@@ -203,9 +203,14 @@ function FormulirPage() {
       const formattedAnswersPayload = questions.map((q) => {
         const v = answers[q.id];
         const isChoice = q.question_type === "single_choice" || q.question_type === "multi_choice";
+        const selectedOptTexts = isChoice && q.options
+          ? q.options.filter((o) => (Array.isArray(v) ? v.includes(o.id) : v === o.id)).map((o) => o.option_text)
+          : [];
+        const choiceTextStr = selectedOptTexts.join(", ");
+
         return {
           question_id: q.id,
-          answer_text: isChoice ? null : ((v as string) ?? "").trim() || null,
+          answer_text: isChoice ? (choiceTextStr || null) : (((v as string) ?? "").trim() || null),
           selected_option_ids: isChoice
             ? Array.isArray(v)
               ? v
