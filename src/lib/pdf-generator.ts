@@ -50,36 +50,121 @@ export type ParsedReportData = {
   mainPriorities: string[];
 };
 
+export function sanitizeAnalysisMarkdown(text: string): string {
+  if (!text) return "";
+  return text
+    // Strip Markdown heading hashes (#, ##, ###, ####, etc.) at the start of any line
+    .replace(/^[ \t]*#{1,6}[ \t]*/gm, "")
+    // Remove bold **text** or __text__ syntax
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .trim();
+}
+
+export function cleanHeadingTitle(title: string): string {
+  if (!title) return "";
+  return title
+    // Strip heading hashes
+    .replace(/^[ \t]*#{1,6}[ \t]*/g, "")
+    // Strip bold stars & underscores
+    .replace(/\*\*/g, "")
+    .replace(/__/g, "")
+    // Remove leading numbering like "1. " or "1) "
+    .replace(/^\d+[\.\)]\s*/, "")
+    // Remove trailing colon
+    .replace(/:$/, "")
+    .trim();
+}
+
+export function isMainSectionHeader(title: string): boolean {
+  if (!title) return false;
+  const t = title.toUpperCase().replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
+  return (
+    t.includes("RINGKASAN AWAL") ||
+    t.includes("AREA YANG PERLU DIPERHATIKAN") ||
+    t.includes("MINAT & POTENSI") ||
+    t.includes("MINAT DAN POTENSI") ||
+    t.includes("REKOMENDASI PENDAMPINGAN") ||
+    t.includes("REKOMENDASI RUMAH") ||
+    t.includes("FOKUS PENDAMPINGAN") ||
+    t.startsWith("1.") ||
+    t.startsWith("2.") ||
+    t.startsWith("3.") ||
+    t.startsWith("4.")
+  );
+}
+
+export type ParsedReportSectionItem = {
+  title: string;
+  desc: string;
+};
+
+export type ParsedReportData = {
+  summary: string;
+  concerns: ParsedReportSectionItem[];
+  potentials: ParsedReportSectionItem[];
+  recommendations: ParsedReportSectionItem[];
+  mainPriorities: string[];
+};
+
 export function parseReportSections(analysis: any, fallbackMarkdownText?: string): ParsedReportData {
   const parseBlocks = (text: string): ParsedReportSectionItem[] => {
     if (!text || text === "-") return [];
     const items: ParsedReportSectionItem[] = [];
 
-    const rawBlocks = text.split(/(?=###?\s*)/g);
+    // Split text into blocks by heading boundaries or newlines
+    const rawBlocks = text.split(/(?=(?:^[ \t]*#{1,6}\s+|^\s*###?\s*))/gm);
+
     for (const block of rawBlocks) {
       const trimmed = block.trim();
       if (!trimmed) continue;
 
-      const matchHeading = trimmed.match(/^###?\s*(?:[❗🌟🎯✦\*\-\d\.\s]+)?([^\n]+)\n([\s\S]*)$/);
-      if (matchHeading) {
-        let title = matchHeading[1].replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
-        let desc = matchHeading[2].trim();
-        title = title.replace(/\*\*/g, "").replace(/^\[!\]\s*/, "").replace(/^\[\+\]\s*/, "").replace(/^\[\*\]\s*/, "").trim();
-        desc = desc.replace(/\*\*/g, "").trim();
-        if (title) items.push({ title, desc });
+      const firstLineEnd = trimmed.indexOf("\n");
+      let headingLine = "";
+      let descBody = "";
+
+      if (firstLineEnd !== -1) {
+        headingLine = trimmed.substring(0, firstLineEnd).trim();
+        descBody = trimmed.substring(firstLineEnd + 1).trim();
       } else {
-        const lines = trimmed.split("\n");
-        let title = lines[0].replace(/^[#\*❗🌟🎯✦\-\d\.\s]+/, "").trim();
-        const desc = lines.slice(1).join("\n").replace(/\*\*/g, "").trim();
-        if (title && title.length > 3) {
-          items.push({ title, desc });
+        headingLine = trimmed;
+      }
+
+      // Clean heading title while PRESERVING emojis and title content (e.g. "❗ Pemetaan Pilihan Jurusan")
+      const title = cleanHeadingTitle(headingLine);
+      const desc = sanitizeAnalysisMarkdown(descBody);
+
+      // Filter out main section headers to prevent duplicate cards!
+      if (title && !isMainSectionHeader(title)) {
+        items.push({ title, desc });
+      } else if (descBody && isMainSectionHeader(title)) {
+        // Recursive parse if section header block contains nested items
+        const subItems = parseBlocks(descBody);
+        items.push(...subItems);
+      }
+    }
+
+    // Secondary fallback split if items array is empty but text has paragraphs
+    if (items.length === 0 && text) {
+      const cleanText = sanitizeAnalysisMarkdown(text);
+      const lines = cleanText.split("\n").filter((l) => l.trim().length > 0);
+      for (const line of lines) {
+        const cleaned = cleanHeadingTitle(line);
+        if (cleaned && !isMainSectionHeader(cleaned) && cleaned.length > 3) {
+          items.push({ title: cleaned, desc: "" });
         }
       }
     }
+
     return items;
   };
 
-  let summary = (analysis?.summary || "").trim();
+  // Clean summary text
+  let rawSummary = (analysis?.summary || "").trim();
+  rawSummary = sanitizeAnalysisMarkdown(rawSummary);
+  // Remove duplicate section title like "1. RINGKASAN AWAL:" from start of summary
+  rawSummary = rawSummary.replace(/^(?:1\.\s*)?RINGKASAN AWAL:?\s*/i, "").trim();
+
   let weaknessesText = (analysis?.weaknesses && analysis.weaknesses !== "-") ? analysis.weaknesses : "";
   let strengthsText = (analysis?.strengths && analysis.strengths !== "-") ? analysis.strengths : (analysis?.potential || "");
   let recText = (analysis?.education_recommendation && analysis.education_recommendation !== "-") ? analysis.education_recommendation : "";
@@ -106,19 +191,21 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
   const recommendations = parseBlocks(recText);
 
   const mainPriorities: string[] = [];
-  concerns.slice(0, 3).forEach(c => {
-    if (c.title && !mainPriorities.includes(c.title)) mainPriorities.push(c.title);
+  concerns.slice(0, 3).forEach((c) => {
+    const cleanTitle = cleanHeadingTitle(c.title).replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
+    if (cleanTitle && !mainPriorities.includes(cleanTitle)) mainPriorities.push(cleanTitle);
   });
   if (mainPriorities.length < 3) {
-    recommendations.slice(0, 3).forEach(r => {
-      if (r.title && !mainPriorities.includes(r.title) && mainPriorities.length < 3) {
-        mainPriorities.push(r.title);
+    recommendations.slice(0, 3).forEach((r) => {
+      const cleanTitle = cleanHeadingTitle(r.title).replace(/^[❗🌟🎯✦\*\-\d\.\s]+/, "").trim();
+      if (cleanTitle && !mainPriorities.includes(cleanTitle) && mainPriorities.length < 3) {
+        mainPriorities.push(cleanTitle);
       }
     });
   }
 
   return {
-    summary: summary || "Ringkasan evaluasi hasil assessment konsultan pendidikan anak.",
+    summary: rawSummary || "Ringkasan evaluasi hasil assessment konsultan pendidikan anak.",
     concerns,
     potentials,
     recommendations,
