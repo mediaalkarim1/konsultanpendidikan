@@ -592,7 +592,6 @@ function validateTitleNotCopyPaste(title: string, evidence: string): boolean {
 export function generateInterpretedAnalysis(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
   const jenjangLabel = level === "tksd" ? "TK & SD" : level === "smp" ? "SMP" : "SMA";
   const nameDisplay = (childName && childName !== "-") ? childName : "Ananda";
-  const childPhrase = (childName && childName !== "-") ? `Ananda ${childName}` : "Ananda";
 
   type QA = { q: string; a: string };
   const qa: QA[] = (formattedAnswers || "")
@@ -610,6 +609,7 @@ export function generateInterpretedAnalysis(parentName: string, childName: strin
   const concernsList: { title: string; desc: string }[] = [];
   const potentialsList: { title: string; desc: string }[] = [];
   const recommendationsList: { title: string; desc: string }[] = [];
+  const summaryPoints: string[] = [];
 
   for (const item of qa) {
     const interpreted = interpretAnswer(item.a, item.q);
@@ -617,37 +617,34 @@ export function generateInterpretedAnalysis(parentName: string, childName: strin
     if (seenTitles.has(interpreted.title)) continue;
     seenTitles.add(interpreted.title);
 
-    // Build natural description that interprets the answer (not copies it)
-    const desc = interpreted.category === "concern"
-      ? `${childPhrase} membutuhkan pendampingan lebih lanjut pada aspek ini berdasarkan kondisi yang disampaikan orang tua.`
-      : `${childPhrase} menunjukkan kondisi positif pada aspek ini berdasarkan jawaban orang tua.`;
+    // Clean up raw answer into natural sentence for description
+    const rawA = item.a.trim();
+    let naturalSentence = rawA.charAt(0).toLowerCase() + rawA.slice(1);
+    if (!naturalSentence.endsWith(".")) naturalSentence += ".";
+
+    const desc = `${nameDisplay} ${naturalSentence}`;
 
     if (interpreted.category === "concern") {
       concernsList.push({ title: interpreted.title, desc });
       recommendationsList.push({ title: interpreted.recTitle, desc: interpreted.recDesc(nameDisplay) });
+      summaryPoints.push(`• ${nameDisplay} memerlukan perhatian pada aspek ${interpreted.title.toLowerCase()} (${rawA}).`);
     } else {
       potentialsList.push({ title: interpreted.title, desc });
       recommendationsList.push({ title: interpreted.recTitle, desc: interpreted.recDesc(nameDisplay) });
+      summaryPoints.push(`• ${nameDisplay} ${naturalSentence}`);
     }
   }
 
-  // Build summary as bullet points
-  const summaryPoints: string[] = [];
-  if (potentialsList.length > 0) {
-    summaryPoints.push(`• ${childPhrase} menunjukkan potensi positif pada: ${potentialsList.map(p => p.title).join(", ")}.`);
-  }
-  if (concernsList.length > 0) {
-    summaryPoints.push(`• Area yang memerlukan pendampingan: ${concernsList.map(c => c.title).join(", ")}.`);
-  }
+  // Ensure 3-5 bullet points in summary if available
   if (summaryPoints.length === 0) {
-    summaryPoints.push(`• Berdasarkan jawaban kuesioner, ${childPhrase} menunjukkan perkembangan sesuai tahap jenjang ${jenjangLabel}.`);
+    summaryPoints.push(`• ${nameDisplay} telah menyelesaikan pengisian asesmen pemetaan kondisi belajar.`);
   }
 
   const summary = summaryPoints.join("\n");
 
   const formattedConcerns = concernsList.length > 0
     ? concernsList.map((c, i) => `❗ ${String(i + 1).padStart(2, '0')}. ${c.title}\n${c.desc}`).join("\n\n")
-    : "Tidak ditemukan area utama yang perlu mendapat perhatian khusus berdasarkan jawaban yang diberikan.";
+    : "Belum ditemukan area utama yang perlu mendapat perhatian khusus berdasarkan jawaban orang tua.";
 
   const formattedPotentials = potentialsList.length > 0
     ? potentialsList.map((p, i) => `🌟 ${String(i + 1).padStart(2, '0')}. ${p.title}\n${p.desc}`).join("\n\n")

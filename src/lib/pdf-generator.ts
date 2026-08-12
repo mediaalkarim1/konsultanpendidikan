@@ -78,8 +78,8 @@ export function cleanHeadingTitle(title: string): string {
     // Strip bold stars & underscores
     .replace(/\*\*/g, "")
     .replace(/__/g, "")
-    // Remove leading numbering like "1. " or "1) "
-    .replace(/^\d+[\.\)]\s*/, "")
+    // Strip leading emojis and numbers like "🌟 01. ", "❗ 02. ", "🎯 03. ", "1. "
+    .replace(/^[❗🌟🎯✦★\*\-\s\d]+[\.\)]?\s*/g, "")
     // Remove trailing colon
     .replace(/:$/, "")
     // Remove any remaining stray hashes

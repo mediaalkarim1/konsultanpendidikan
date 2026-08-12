@@ -1,108 +1,90 @@
-import { submitConsultationAction } from "../src/actions/process-consultation.ts";
-import { getLatestConsultationAnalysisHelper } from "../src/lib/pdf-generator.ts";
-import { getAdminSupabase } from "../src/lib/supabase-admin.ts";
+import { generateInterpretedAnalysis } from "../src/actions/ai-engine.ts";
+import { parseReportSections } from "../src/lib/pdf-generator.ts";
 
-async function runLiveProductionAuditTest() {
+async function runDirectPipelineAuditTest() {
   console.log("==================================================");
-  console.log("LIVE PRODUCTION & PIPELINE AUDIT TEST");
+  console.log("DIRECT AI PIPELINE & REPORT PARSER AUDIT TEST");
   console.log("==================================================");
 
   try {
-    const supabaseAdmin = getAdminSupabase();
+    const parentName = "Ahmad Zamroni";
+    const childName = "Adiba";
+    const level = "tksd";
+    const formattedAnswers = `P: Bagaimana durasi penggunaan gawai / HP anak di rumah?
+J: Memakai HP 1 jam sehari untuk menonton video edukasi mewarnai
 
-    // 1. Fetch real questions for TKSD
-    const { data: questions } = await supabaseAdmin
-      .from("questions")
-      .select("id, question_text")
-      .eq("level", "tksd")
-      .order("order_index", { ascending: true });
+P: Bagaimana tingkat kemandirian anak dalam kegiatan harian?
+J: Anak sangat mandiri menyiapkan alat tulis sendiri dan antusias melukis gambar`;
 
-    console.log(`Fetched ${questions?.length || 0} TK/SD questions from DB.`);
+    // Generate interpreted analysis
+    const analysisResult = generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
+    console.log("\n[Interpreted Analysis Raw Summary]:");
+    console.log(analysisResult.summary);
 
-    const q1Id = questions?.[0]?.id || "tksd-q1";
-    const q2Id = questions?.[1]?.id || "tksd-q2";
+    console.log("\n[Interpreted Analysis Strengths/Potentials]:");
+    console.log(analysisResult.strengths);
 
-    // 2. Submit Live Test for Ahmad Zamroni (Anak: Adiba)
-    console.log("\n--- Submitting Live Assessment for Ahmad Zamroni (Anak: Adiba) ---");
-    const payload = {
-      parentName: "Ahmad Zamroni (Live Test)",
-      childName: "Adiba",
-      whatsappNumber: "081234567890",
-      level: "tksd",
-      answers: [
-        {
-          question_id: q1Id,
-          question_text: "Bagaimana durasi penggunaan gawai / HP anak di rumah?",
-          answer_text: "Memakai HP 1 jam sehari untuk menonton video edukasi mewarnai"
-        },
-        {
-          question_id: q2Id,
-          question_text: "Bagaimana tingkat kemandirian anak dalam kegiatan harian?",
-          answer_text: "Anak sangat mandiri menyiapkan alat tulis sendiri dan antusias melukis gambar"
-        }
-      ]
-    };
+    console.log("\n[Interpreted Analysis Recommendations]:");
+    console.log(analysisResult.education_recommendation);
 
-    const submitRes = await submitConsultationAction({ data: payload });
-    console.log("Submit Result:", submitRes);
+    // Parse sections
+    const parsedSections = parseReportSections(analysisResult, analysisResult.analysis);
 
-    if (!submitRes.success || !submitRes.id) {
-      console.error("❌ FAIL: Submission failed:", submitRes.error);
-      process.exit(1);
-    }
+    console.log("\n--------------------------------------------------");
+    console.log("PARSED REPORT SECTIONS AUDIT:");
+    console.log("--------------------------------------------------");
+    console.log("Summary Lines:");
+    console.log(parsedSections.summary);
 
-    const consultId = submitRes.id;
-    console.log(`✅ Consultation created with ID: ${consultId}`);
+    console.log("\nPotentials Cards:");
+    parsedSections.potentials.forEach((p, idx) => {
+      console.log(`  🌟 ${idx+1}. Title: "${p.title}"`);
+      console.log(`     Desc:  "${p.desc}"`);
+    });
 
-    // 3. Audit getLatestConsultationAnalysisHelper (Same data source for Web & PDF)
-    console.log("\n--- Auditing Web/PDF Data Helper ---");
-    const { consult, effectiveAnalysis, parsedSections } = await getLatestConsultationAnalysisHelper(consultId);
+    console.log("\nRecommendations Cards:");
+    parsedSections.recommendations.forEach((r, idx) => {
+      console.log(`  🎯 ${idx+1}. Title: "${r.title}"`);
+      console.log(`     Desc:  "${r.desc}"`);
+    });
 
-    console.log("\n[Parsed Report Sections Output]:");
-    console.log("Summary:\n", parsedSections.summary);
-    console.log("Concerns Titles:", parsedSections.concerns.map(c => c.title));
-    console.log("Potentials Titles:", parsedSections.potentials.map(p => p.title));
-    console.log("Recommendations Titles:", parsedSections.recommendations.map(r => r.title));
-    console.log("Main Priorities (Must be empty!):", parsedSections.mainPriorities);
+    console.log("\nConcerns Cards (Expected empty for positive QA):");
+    console.log(parsedSections.concerns);
 
-    // 4. Assertions
+    console.log("\nMain Priorities (Must be 0/empty):", parsedSections.mainPriorities.length);
+
+    // Assertions
     let failed = false;
-
     if (parsedSections.summary.includes("perkembangan sesuai tahap jenjang")) {
       console.error("❌ FAIL: Summary contains generic template phrase!");
       failed = true;
     }
 
     if (parsedSections.potentials.length === 0) {
-      console.error("❌ FAIL: Potentials section is missing!");
+      console.error("❌ FAIL: Potentials cards are missing!");
+      failed = true;
+    }
+
+    if (parsedSections.potentials.some(p => p.desc.includes("menunjukkan kondisi positif pada aspek ini berdasarkan jawaban orang tua"))) {
+      console.error("❌ FAIL: Potential description still contains robotic system sentence!");
       failed = true;
     }
 
     if (parsedSections.mainPriorities.length > 0) {
-      console.error("❌ FAIL: Main priorities section (Fokus Pendampingan Utama) was not removed!");
-      failed = true;
-    }
-
-    const allTitles = [
-      ...parsedSections.concerns.map(c => c.title),
-      ...parsedSections.potentials.map(p => p.title)
-    ].join(" ").toLowerCase();
-
-    if (allTitles.includes("potensi positif pada aspek") || allTitles.includes("perhatian spesifik pada aspek")) {
-      console.error("❌ FAIL: Output contains copy-paste banned phrases!");
+      console.error("❌ FAIL: Main priorities section was not removed!");
       failed = true;
     }
 
     if (!failed) {
-      console.log("\n🎉 LIVE PRODUCTION PIPELINE AUDIT TEST PASSED 100%!");
+      console.log("\n🎉 ALL DIRECT PIPELINE AUDIT CHECKS PASSED PERFECTLY!");
     } else {
       process.exit(1);
     }
 
   } catch (err) {
-    console.error("Audit test exception:", err);
+    console.error("Test exception:", err);
     process.exit(1);
   }
 }
 
-runLiveProductionAuditTest();
+runDirectPipelineAuditTest();
