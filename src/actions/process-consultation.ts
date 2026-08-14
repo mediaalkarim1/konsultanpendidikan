@@ -546,3 +546,45 @@ export const processConsultation = createServerFn({ method: "POST" })
 
     return { success: false, error: aiResult.error };
   });
+
+export const getPublicConsultationStatusAction = createServerFn({ method: "POST" })
+  .validator((payload: { consultationId: string }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const supabaseAdmin = getAdminSupabase();
+      const { consultationId } = ctx.data;
+
+      if (!consultationId) {
+        return { success: false, error: "ID konsultasi tidak valid." };
+      }
+
+      // SELECT ONLY public metadata: id, parent_name, child_name, level, created_at, status, whatsapp_number
+      // DO NOT SELECT ai_result, ai_prompt, summary, recommendation, answers, etc.
+      const { data, error } = await supabaseAdmin
+        .from("consultations")
+        .select("id, parent_name, child_name, level, created_at, status, whatsapp_number")
+        .eq("id", consultationId)
+        .maybeSingle();
+
+      if (error || !data) {
+        return { success: false, error: "Data konsultasi tidak ditemukan." };
+      }
+
+      return {
+        success: true,
+        consultation: {
+          id: data.id,
+          parent_name: data.parent_name,
+          child_name: data.child_name || "Ananda",
+          level: data.level,
+          created_at: data.created_at,
+          status: data.status,
+          whatsapp_number: data.whatsapp_number
+        }
+      };
+    } catch (e: any) {
+      console.error("[getPublicConsultationStatusAction] Error:", e);
+      return { success: false, error: "Gagal memuat informasi konsultasi." };
+    }
+  });
+

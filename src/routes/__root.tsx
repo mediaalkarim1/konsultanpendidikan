@@ -22,7 +22,6 @@ import {
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { handleDownloadPdfForConsultation } from "@/lib/pdf-generator";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -174,16 +173,6 @@ function RootComponent() {
     }
   };
 
-  const handleDownloadReport = (row: any) => {
-    if (!downloadingId) {
-      handleDownloadPdfForConsultation(
-        row,
-        () => setDownloadingId(row.id),
-        () => setDownloadingId(null)
-      );
-    }
-  };
-
   // Safe navigation scroll
   const handleJenjangClick = () => {
     if (window.location.pathname === "/") {
@@ -303,19 +292,9 @@ function RootComponent() {
                       </div>
 
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="text-[11px] font-bold text-slate-500 bg-slate-100 rounded px-1.5 py-0.5">{row.status}</span>
-                        <button
-                          onClick={() => handleDownloadReport(row)}
-                          disabled={downloadingId === row.id}
-                          className="inline-flex items-center gap-1 rounded bg-emerald-600 text-white px-2.5 py-1 text-xs font-bold hover:bg-emerald-700 disabled:opacity-60"
-                        >
-                          {downloadingId === row.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <FileText className="h-3.5 w-3.5" />
-                          )}
-                          <span>Laporan PDF</span>
-                        </button>
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1">
+                          Data Terkirim
+                        </span>
                       </div>
                     </div>
                   ))
