@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
+import { requireAdmin } from "./admin-guard";
 
 function getAdminSupabase() {
   const DEFAULT_URL = "https://muyugntbzspnincoaekj.supabase.co";
@@ -14,6 +15,7 @@ function verifyToken(token: string) {
 }
 
 export const getAdminSettings = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((token: string) => token)
   .handler(async (ctx) => {
     verifyToken(ctx.data);
@@ -24,6 +26,7 @@ export const getAdminSettings = createServerFn({ method: "POST" })
   });
 
 export const saveAdminSetting = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { token: string, key: string, value: any }) => payload)
   .handler(async (ctx) => {
     verifyToken(ctx.data.token);
@@ -35,6 +38,7 @@ export const saveAdminSetting = createServerFn({ method: "POST" })
 
 // Prompts Management
 export const getPrompts = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((token: string) => token)
   .handler(async (ctx) => {
     verifyToken(ctx.data);
@@ -45,6 +49,7 @@ export const getPrompts = createServerFn({ method: "POST" })
   });
 
 export const savePrompt = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { token: string, prompt: any }) => payload)
   .handler(async (ctx) => {
     verifyToken(ctx.data.token);
@@ -66,6 +71,7 @@ export const savePrompt = createServerFn({ method: "POST" })
   });
 
 export const deletePrompt = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { token: string, id: string }) => payload)
   .handler(async (ctx) => {
     verifyToken(ctx.data.token);
