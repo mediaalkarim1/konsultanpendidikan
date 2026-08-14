@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useAuth } from "@/lib/auth-context";
 import { updateConsultationStatus, deleteConsultation, reGenerateAnalysisAction, updateAnalysisAction, normalizeParentRow, getConsultationsListAction, bulkSyncConsultationStatusesAction, getConsultationDetailAction } from "@/actions/admin-actions";
+import { exportConsultationCsvAction } from "@/actions/process-consultation";
 import { handleDownloadPdfForConsultation, type Consultation, generateFallbackAnalysisResult, parseReportSections, sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
 import { Lightbulb, Target, ShieldCheck, Compass } from "lucide-react";
 
@@ -88,8 +89,35 @@ function KonsultasiPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null);
+  const [exportingCsvId, setExportingCsvId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+
+  async function handleDownloadCsv(consultationId: string, parentName: string, level: string) {
+    setExportingCsvId(consultationId);
+    try {
+      const res = await exportConsultationCsvAction({ data: { consultationId, renderChoicesAsHeaders: true } });
+      if (res.success && res.csvData) {
+        const blob = new Blob([res.csvData], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const cleanParentName = (parentName || "orang_tua").replace(/[^a-zA-Z0-9_-]/g, "_");
+        link.download = `kuesioner_${level || "edu"}_${cleanParentName}_${consultationId.substring(0, 6)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("File CSV kuesioner berhasil diunduh");
+      } else {
+        toast.error(res.error || "Gagal membuat file CSV");
+      }
+    } catch (e: any) {
+      toast.error("Gagal mengunduh CSV: " + e.message);
+    } finally {
+      setExportingCsvId(null);
+    }
+  }
 
   async function handleBulkSync() {
     setSyncing(true);
@@ -597,6 +625,25 @@ function KonsultasiPage() {
                           </button>
 
                           <button
+                            onClick={() => handleDownloadCsv(row.id, row.parent_name, row.level)}
+                            disabled={exportingCsvId === row.id}
+                            className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border border-teal-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-teal-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                            title="Download Kuesioner CSV"
+                          >
+                            {exportingCsvId === row.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-teal-600 shrink-0" />
+                                <span>CSV...</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileSpreadsheet className="h-3.5 w-3.5 text-teal-600 shrink-0" />
+                                <span>Export CSV</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
                             onClick={() => handleReAnalyze(row.id)}
                             disabled={regeneratingId === row.id}
                             className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-amber-100 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
@@ -675,6 +722,7 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
   const [editingAnalysis, setEditingAnalysis] = useState(false);
   const [savingAnalysis, setSavingAnalysis] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   // Edit fields
   const [editForm, setEditForm] = useState({
@@ -785,6 +833,33 @@ function DetailModal({ id: consultId, onClose, onRefreshList }: { id: string; on
         () => setDownloadingPdf(true),
         () => setDownloadingPdf(false)
       );
+    }
+  };
+
+  const handleDownloadCSVInModal = async () => {
+    if (!data || downloadingCsv) return;
+    setDownloadingCsv(true);
+    try {
+      const res = await exportConsultationCsvAction({ data: { consultationId: consultId, renderChoicesAsHeaders: true } });
+      if (res.success && res.csvData) {
+        const blob = new Blob([res.csvData], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const cleanParentName = (data.parent_name || "orang_tua").replace(/[^a-zA-Z0-9_-]/g, "_");
+        link.download = `kuesioner_${data.level || "edu"}_${cleanParentName}_${consultId.substring(0, 6)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast.success("File CSV kuesioner berhasil diunduh");
+      } else {
+        toast.error(res.error || "Gagal membuat file CSV");
+      }
+    } catch (e: any) {
+      toast.error("Gagal mengunduh CSV: " + e.message);
+    } finally {
+      setDownloadingCsv(false);
     }
   };
 
@@ -1154,6 +1229,24 @@ ${parsed.recommendations.map(r => `• ${r.title}${r.desc ? `: ${r.desc}` : ""}`
               </button>
 
               <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleDownloadCSVInModal}
+                  disabled={downloadingCsv}
+                  className="flex items-center gap-1.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 px-3.5 py-2 text-sm font-medium hover:bg-teal-100 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                  title="Download CSV Kuesioner"
+                >
+                  {downloadingCsv ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-teal-600 shrink-0" />
+                      <span>CSV...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileSpreadsheet className="h-4 w-4 text-teal-600 shrink-0" />
+                      <span>Download CSV</span>
+                    </>
+                  )}
+                </button>
                 <button onClick={handleCopy} className="flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-sm font-medium hover:bg-muted">
                   <FileText className="h-4 w-4" /> Salin Ringkasan
                 </button>

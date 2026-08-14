@@ -6,6 +6,7 @@ import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
 import { seedTKSDQuestionsDirect, DEFAULT_TKSD_QUESTIONS } from "./seed-tksd";
 import { seedSMPQuestionsDirect, DEFAULT_SMP_QUESTIONS } from "./seed-smp";
 import { seedSMAQuestionsDirect, DEFAULT_SMA_QUESTIONS } from "./seed-sma";
+import { generateConsultationAnswersCsv } from "@/lib/csv-exporter";
 
 const ALL_DEFAULT_QUESTIONS = [...DEFAULT_TKSD_QUESTIONS, ...DEFAULT_SMP_QUESTIONS, ...DEFAULT_SMA_QUESTIONS];
 const FALLBACK_QUESTIONS_MAP: Record<string, string> = {};
@@ -603,6 +604,19 @@ export const getPublicConsultationStatusAction = createServerFn({ method: "POST"
     } catch (e: any) {
       console.error("[getPublicConsultationStatusAction] Error:", e);
       return { success: false, error: "Gagal memuat informasi konsultasi." };
+    }
+  });
+
+export const exportConsultationCsvAction = createServerFn({ method: "POST" })
+  .validator((payload: { consultationId: string; renderChoicesAsHeaders?: boolean }) => payload)
+  .handler(async (ctx) => {
+    try {
+      const { consultationId, renderChoicesAsHeaders } = ctx.data;
+      const csvString = await generateConsultationAnswersCsv(consultationId, { renderChoicesAsHeaders });
+      return { success: true, csvData: csvString };
+    } catch (err: any) {
+      console.error("[exportConsultationCsvAction Error]:", err);
+      return { success: false, error: err.message || "Gagal membuat berkas CSV" };
     }
   });
 
