@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { CheckCircle2, Home, MessageSquare, Loader2 } from "lucide-react";
+import { CheckCircle2, Home, MessageSquare, Loader2, ShieldCheck } from "lucide-react";
 import { getPublicConsultationStatusAction } from "@/actions/process-consultation";
 
 const searchSchema = z.object({
@@ -10,38 +10,47 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/sukses")({
   validateSearch: (search) => searchSchema.parse(search),
+  head: () => ({
+    meta: [
+      { title: "Konsultasi Berhasil Dikirim — EduKonsul" },
+      { name: "description", content: "Data konsultasi Anda sudah kami terima. Tim konsultan akan segera menghubungi Anda." },
+      { name: "robots", content: "noindex" },
+      { property: "og:title", content: "Konsultasi Berhasil Dikirim — EduKonsul" },
+      { property: "og:description", content: "Data konsultasi Anda sudah kami terima. Tim konsultan akan segera menghubungi Anda." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   component: SuksesPage,
 });
 
 const LEVEL_LABELS: Record<string, string> = { tksd: "TK & SD", smp: "SMP", sma: "SMA" };
 
-type PublicConsultationInfo = {
-  id: string;
+type Confirmation = {
   parent_name: string;
   child_name: string;
   level: string;
-  whatsapp_number?: string;
-  created_at: string;
+  created_at?: string;
 };
 
 function SuksesPage() {
   const { id: consultId } = Route.useSearch();
   const [loading, setLoading] = useState(!!consultId);
-  const [consult, setConsult] = useState<PublicConsultationInfo | null>(null);
+  const [info, setInfo] = useState<Confirmation | null>(null);
 
   useEffect(() => {
     if (!consultId) return;
-
     let cancelled = false;
+
     (async () => {
       setLoading(true);
       try {
         const res = await getPublicConsultationStatusAction({ data: { consultationId: consultId } });
         if (!cancelled && res.success && res.consultation) {
-          setConsult(res.consultation as PublicConsultationInfo);
+          setInfo(res.consultation as Confirmation);
         }
       } catch (err) {
-        console.warn("Failed to load consultation status:", err);
+        console.warn("Gagal memuat konfirmasi konsultasi:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,68 +62,48 @@ function SuksesPage() {
   }, [consultId]);
 
   const handleContactWhatsApp = () => {
-    const parentName = consult?.parent_name || "Orang Tua";
-    const childName = consult?.child_name || "Ananda";
-    const levelLabel = consult ? (LEVEL_LABELS[consult.level] || consult.level) : "EduKonsul";
-    const text = `Assalamu'alaikum Tim Konsultan Sekolah Alam Al-Karim,\n\nSaya ${parentName} (Orang tua dari ${childName}). Saya telah menyelesaikan kuesioner EduKonsul jenjang ${levelLabel}.\n\nSaya ingin menanyakan tindak lanjut proses konsultasi ini. Terima kasih.`;
+    const namaOrtu = info?.parent_name || "Orang Tua";
+    const namaAnak = info?.child_name || "Ananda";
+    const jenjang = info ? LEVEL_LABELS[info.level] || info.level : "";
+    const text = `Assalamu'alaikum Tim Konsultan Sekolah Alam Al-Karim,\n\nSaya ${namaOrtu} (Orang tua dari ${namaAnak}). Saya telah menyelesaikan kuesioner EduKonsul${jenjang ? ` jenjang ${jenjang}` : ""}.\n\nSaya ingin menindaklanjuti proses konsultasi ini. Terima kasih.`;
     window.open(`https://wa.me/6281234567890?text=${encodeURIComponent(text)}`, "_blank");
   };
 
   return (
-    <div className="min-h-screen bg-background font-sans py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl space-y-6">
-        
-        {/* MAIN CONFIRMATION CARD */}
-        <div className="rounded-3xl border border-emerald-200/80 bg-card p-6 sm:p-10 text-center shadow-lg shadow-emerald-500/5 space-y-6">
-          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 shadow-inner">
-            <CheckCircle2 className="h-12 w-12" strokeWidth={2.2} />
+    <div className="min-h-screen bg-background font-sans py-10 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-xl space-y-6">
+        <div className="rounded-3xl border border-emerald-200/80 bg-card p-6 sm:p-8 text-center shadow-lg shadow-emerald-500/5">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-9 w-9" strokeWidth={2.2} />
           </div>
+          <h1 className="mt-4 text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+            Konsultasi Berhasil Dikirim
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Terima kasih, data konsultasi Anda sudah kami terima. Tim konsultan akan meninjau data
+            yang Anda berikan dan segera menghubungi Anda untuk langkah selanjutnya.
+          </p>
 
-          <div className="space-y-3">
-            <h1 className="text-2xl font-extrabold text-foreground sm:text-3xl tracking-tight flex items-center justify-center gap-2">
-              Konsultasi Berhasil Dikirim
-            </h1>
-            <p className="text-base sm:text-lg text-emerald-700 dark:text-emerald-400 font-semibold max-w-lg mx-auto leading-relaxed">
-              Terima kasih, data konsultasi Anda sudah kami terima. Tim konsultan akan meninjau data yang Anda berikan dan segera menghubungi Anda untuk langkah selanjutnya.
-            </p>
-          </div>
-
-          {/* LOADING STATE */}
           {loading && (
-            <div className="py-6 flex items-center justify-center gap-2 text-sm text-muted-foreground font-medium">
-              <Loader2 className="h-5 w-5 animate-spin text-brand" />
-              <span>Memuat rincian konfirmasi...</span>
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Memuat data konfirmasi...
             </div>
           )}
 
-          {/* METADATA IDENTITAS SINGKAT */}
-          {!loading && consult && (
-            <div className="rounded-2xl bg-muted/50 border border-border p-5 text-left space-y-3 max-w-lg mx-auto">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 pb-2 flex items-center justify-between">
-                <span>Rincian Konfirmasi</span>
-                <span className="rounded-full bg-emerald-600 text-white text-[10px] px-2.5 py-0.5 font-bold">
-                  {LEVEL_LABELS[consult.level] || consult.level}
-                </span>
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <div>
-                  <span className="text-xs text-muted-foreground block font-medium">Nama Orang Tua</span>
-                  <span className="font-bold text-foreground">{consult.parent_name}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block font-medium">Nama Anak</span>
-                  <span className="font-bold text-foreground">{consult.child_name || "Ananda"}</span>
-                </div>
-              </div>
+          {!loading && info && (
+            <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-muted/30 text-left">
+              <Row label="Nama Orang Tua" value={info.parent_name} />
+              <Row label="Nama Anak" value={info.child_name || "Ananda"} />
+              <Row label="Jenjang" value={LEVEL_LABELS[info.level] || info.level} />
             </div>
           )}
 
-          {/* ACTION BUTTONS */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <button
               type="button"
               onClick={handleContactWhatsApp}
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 px-6 text-sm font-bold text-white shadow-md transition"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
             >
               <MessageSquare className="h-4 w-4" />
               Hubungi Konsultan via WhatsApp
@@ -122,16 +111,32 @@ function SuksesPage() {
 
             <Link
               to="/"
-              className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-background px-6 text-sm font-semibold text-foreground hover:bg-muted transition"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-card px-6 text-sm font-semibold text-foreground transition hover:bg-muted"
             >
               <Home className="h-4 w-4" />
               Kembali ke Beranda
             </Link>
           </div>
-
         </div>
 
+        <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+          <p>
+            Demi menjaga kerahasiaan data ananda, hasil analisis dan laporan konsultasi hanya dapat
+            diakses oleh tim konsultan. Hasilnya akan disampaikan langsung kepada Anda oleh konsultan
+            kami.
+          </p>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-sm font-bold text-foreground">{value}</span>
     </div>
   );
 }

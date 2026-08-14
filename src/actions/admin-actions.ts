@@ -20,6 +20,7 @@ export async function logActivityInternal(adminEmail: string, action: string, de
 }
 
 export const logActivity = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { email: string; action: string; details?: any }) => payload)
   .handler(async (ctx) => {
     await logActivityInternal(ctx.data.email, ctx.data.action, ctx.data.details);
@@ -27,6 +28,7 @@ export const logActivity = createServerFn({ method: "POST" })
   });
 
 export const saveSettingsAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { updates: Array<{ key: string; value: any; is_public: boolean }> }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -57,6 +59,7 @@ export const saveSettingsAction = createServerFn({ method: "POST" })
 
 // --- AI Providers Management ---
 export const getAiProvidersAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
@@ -73,6 +76,7 @@ export const getAiProvidersAction = createServerFn({ method: "POST" })
   });
 
 export const saveAiProviderAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { provider: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -117,6 +121,7 @@ export const saveAiProviderAction = createServerFn({ method: "POST" })
 
 // --- Multi-Prompts Management ---
 export const getMultiPromptsAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
@@ -153,6 +158,7 @@ export const getMultiPromptsAction = createServerFn({ method: "POST" })
   });
 
 export const saveMultiPromptsAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { prompts: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -227,6 +233,7 @@ export const saveMultiPromptsAction = createServerFn({ method: "POST" })
 // This action writes the new 4-section structured prompt directly to DB,
 // overwriting any old narrative-format prompt that may exist.
 export const forceActivateNewPromptAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((email: string) => email)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -276,6 +283,7 @@ export const forceActivateNewPromptAction = createServerFn({ method: "POST" })
 
 
 export const reGenerateAnalysisAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { consultationId: string; email: string }) => payload)
   .handler(async (ctx) => {
     const { consultationId, email } = ctx.data;
@@ -287,6 +295,7 @@ export const reGenerateAnalysisAction = createServerFn({ method: "POST" })
 import { sanitizeAnalysisMarkdown } from "@/lib/pdf-generator";
 
 export const updateAnalysisAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { consultationId: string; analysisData: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -323,6 +332,7 @@ export const updateAnalysisAction = createServerFn({ method: "POST" })
 
 // --- Existing Status & Deletion ---
 export const updateConsultationStatus = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { id: string; status: string; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -333,6 +343,7 @@ export const updateConsultationStatus = createServerFn({ method: "POST" })
   });
 
 export const deleteConsultation = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { id: string; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -345,6 +356,7 @@ export const deleteConsultation = createServerFn({ method: "POST" })
 
 // --- WhatsApp Templates Management ---
 export const getWaTemplatesAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
@@ -390,6 +402,7 @@ export const getWaTemplatesAction = createServerFn({ method: "POST" })
   });
 
 export const saveWaTemplatesAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { templates: Array<{ template_key: string; template_name: string; content: string }>; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -446,6 +459,7 @@ export const saveWaTemplatesAction = createServerFn({ method: "POST" })
 
 // --- Homepage Settings Management (Server Action - Bypasses RLS) ---
 export const saveHomepageSettingsAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { config: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -488,6 +502,7 @@ export const saveHomepageSettingsAction = createServerFn({ method: "POST" })
 
 // --- AI Workflow Config Management ---
 export const getAiWorkflowConfigAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
@@ -500,6 +515,7 @@ export const getAiWorkflowConfigAction = createServerFn({ method: "POST" })
   });
 
 export const saveAiWorkflowConfigAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { config: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -519,6 +535,7 @@ export const saveAiWorkflowConfigAction = createServerFn({ method: "POST" })
 
 // --- WhatsApp Provider Configuration ---
 export const getWaProviderConfigAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .handler(async () => {
     try {
       const supabaseAdmin = getAdminSupabase();
@@ -546,6 +563,7 @@ export const getWaProviderConfigAction = createServerFn({ method: "POST" })
   });
 
 export const saveWaProviderConfigAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { config: any; email: string }) => payload)
   .handler(async (ctx) => {
     const supabaseAdmin = getAdminSupabase();
@@ -612,6 +630,7 @@ export function normalizeParentRow(row: any) {
 
 // --- Database Orang Tua Server Action ---
 export const getParentsDatabaseAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { page?: number; limit?: number; search?: string; level?: string; date?: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -708,6 +727,7 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
 
 // --- Single Consultation Detail Action (Bypasses RLS & Guarantees Analysis) ---
 export const getConsultationDetailAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { consultationId: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -864,6 +884,7 @@ export const getConsultationDetailAction = createServerFn({ method: "POST" })
 
 // --- Consultation Management Server Action (Bypasses Client RLS) ---
 export const getConsultationsListAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { page?: number; limit?: number; search?: string; status?: string; level?: string; date?: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -965,6 +986,7 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
 
 // --- Clean Database Markdown Action ---
 export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { email: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -1017,8 +1039,10 @@ export const sanitizeDatabaseAnalysisMarkdownAction = createServerFn({ method: "
   });
 
 import { generateFallbackAnalysisResult } from "@/lib/pdf-generator";
+import { requireAdmin } from "./admin-guard";
 
 export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { email: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -1093,6 +1117,7 @@ export const sanitizeAndUpgradeAllDatabaseAnalysisAction = createServerFn({ meth
   });
 
 export const bulkSyncConsultationStatusesAction = createServerFn({ method: "POST" })
+  .middleware([requireAdmin])
   .validator((payload: { email: string }) => payload)
   .handler(async (ctx) => {
     try {
