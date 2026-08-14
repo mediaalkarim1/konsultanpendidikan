@@ -297,46 +297,56 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         await supabaseAdmin.from("consultations").update({ status: "Sedang Dianalisis" }).eq("id", consultation.id);
 
         // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI
-        let aiResult = await runAiEngineAnalysis(
-          parent_name,
-          child_name,
-          level,
-          whatsapp_number,
-          formattedAnswers
-        );
-
-        if (!aiResult.success || !aiResult.data) {
-          const errMsg = aiResult.error || "Analisis gagal dibuat. Silakan coba kembali.";
-          await supabaseAdmin.from("consultations").update({ status: "Gagal Analisis", error_message: errMsg }).eq("id", consultation.id);
-          return { success: false, error: errMsg };
+        let aiResult: any = null;
+        try {
+          aiResult = await runAiEngineAnalysis(
+            parent_name,
+            child_name,
+            level,
+            whatsapp_number,
+            formattedAnswers
+          );
+        } catch (aiErr: any) {
+          console.error("[submitConsultationAction] runAiEngineAnalysis exception:", aiErr);
+          aiResult = { success: false, error: aiErr.message };
         }
 
-        // 4. SIMPAN HASIL ANALISIS KE DATABASE
-        const d = aiResult.data;
-        const { data: savedAnalysisRow } = await supabaseAdmin.from("consultation_analysis").upsert({
-          consultation_id: consultation.id,
-          summary: d.summary || "",
-          analysis: d.analysis || "",
-          strengths: d.strengths || "",
-          weaknesses: d.weaknesses || "",
-          potential: d.potential || d.strengths || "",
-          risk: d.risk || d.weaknesses || "",
-          education_recommendation: d.education_recommendation || "",
-          updated_at: new Date().toISOString()
-        }, { onConflict: "consultation_id" }).select("*").single();
+        if (!aiResult || !aiResult.success || !aiResult.data) {
+          const errMsg = aiResult?.error || "Analisis gagal dibuat secara otomatis.";
+          console.warn(`[Submit Info]: AI Engine error for consultation ${consultation.id}: ${errMsg}. Consultation and answers are safely saved in DB.`);
+          await supabaseAdmin.from("consultations").update({ status: "Menunggu Analisis", error_message: errMsg }).eq("id", consultation.id);
+        } else {
+          // 4. SIMPAN HASIL ANALISIS KE DATABASE
+          const d = aiResult.data;
+          try {
+            await supabaseAdmin.from("consultation_analysis").upsert({
+              consultation_id: consultation.id,
+              summary: d.summary || "",
+              analysis: d.analysis || "",
+              strengths: d.strengths || "",
+              weaknesses: d.weaknesses || "",
+              potential: d.potential || d.strengths || "",
+              risk: d.risk || d.weaknesses || "",
+              education_recommendation: d.education_recommendation || "",
+              updated_at: new Date().toISOString()
+            }, { onConflict: "consultation_id" });
+          } catch (caErr) {
+            console.warn("[processConsultation] consultation_analysis upsert notice:", caErr);
+          }
 
-        try {
-          await supabaseAdmin.from("settings").upsert({
-            key: `analysis.${consultation.id}`,
-            value: aiResult.data
-          }, { onConflict: "key" });
-        } catch (_) {}
+          try {
+            await supabaseAdmin.from("settings").upsert({
+              key: `analysis.${consultation.id}`,
+              value: aiResult.data
+            }, { onConflict: "key" });
+          } catch (_) {}
 
-        // Update Status on consultations table
-        await supabaseAdmin.from("consultations").update({
-          status: "Analisis AI Selesai",
-          ai_result: d.analysis || null
-        }).eq("id", consultation.id);
+          // Update Status on consultations table
+          await supabaseAdmin.from("consultations").update({
+            status: "Analisis AI Selesai",
+            ai_result: d.analysis || null
+          }).eq("id", consultation.id);
+        }
 
         // [TAHAP 10 AUDIT LOG: DATABASE ANALYSIS AFTER SAVE]
         console.log("==================================================");
