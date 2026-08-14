@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      consultation_analysis: {
+        Row: {
+          analysis: string | null
+          consultation_id: string
+          created_at: string
+          education_recommendation: string | null
+          id: string
+          potential: string | null
+          risk: string | null
+          strengths: string | null
+          summary: string | null
+          updated_at: string
+          weaknesses: string | null
+        }
+        Insert: {
+          analysis?: string | null
+          consultation_id: string
+          created_at?: string
+          education_recommendation?: string | null
+          id?: string
+          potential?: string | null
+          risk?: string | null
+          strengths?: string | null
+          summary?: string | null
+          updated_at?: string
+          weaknesses?: string | null
+        }
+        Update: {
+          analysis?: string | null
+          consultation_id?: string
+          created_at?: string
+          education_recommendation?: string | null
+          id?: string
+          potential?: string | null
+          risk?: string | null
+          strengths?: string | null
+          summary?: string | null
+          updated_at?: string
+          weaknesses?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_analysis_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: true
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultation_answers: {
         Row: {
           answer_text: string | null
@@ -58,6 +108,8 @@ export type Database = {
       }
       consultations: {
         Row: {
+          ai_result: string | null
+          child_name: string | null
           created_at: string
           id: string
           level: Database["public"]["Enums"]["education_level"]
@@ -66,6 +118,8 @@ export type Database = {
           whatsapp_number: string
         }
         Insert: {
+          ai_result?: string | null
+          child_name?: string | null
           created_at?: string
           id?: string
           level: Database["public"]["Enums"]["education_level"]
@@ -74,6 +128,8 @@ export type Database = {
           whatsapp_number: string
         }
         Update: {
+          ai_result?: string | null
+          child_name?: string | null
           created_at?: string
           id?: string
           level?: Database["public"]["Enums"]["education_level"]
@@ -172,14 +228,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "user"
       education_level: "tksd" | "smp" | "sma"
       question_type: "text" | "textarea" | "single_choice" | "multi_choice"
     }
@@ -309,6 +393,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "user"],
       education_level: ["tksd", "smp", "sma"],
       question_type: ["text", "textarea", "single_choice", "multi_choice"],
     },
