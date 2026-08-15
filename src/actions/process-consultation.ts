@@ -90,19 +90,15 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       let consultation: any = null;
       let cErr: any = null;
 
-      // Primary Attempt: Rich insert with all fields
+      // Primary Attempt: Standard insert with clean schema (parent_name, child_name, whatsapp_number, level, status)
       const res1 = await supabaseAdmin
         .from("consultations")
         .insert({
           parent_name: parent_name.trim(),
           child_name: child_name.trim(),
           whatsapp_number: whatsapp_number.trim(),
-          parent_phone: whatsapp_number.trim(),
           level,
-          education_level: level,
-          status: "Menunggu Analisis",
-          ai_status: "Menunggu Analisis",
-          consultation_status: "Menunggu Analisis"
+          status: "Menunggu Analisis"
         })
         .select("*")
         .single();
@@ -110,14 +106,17 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       consultation = res1.data;
       cErr = res1.error;
 
-      // Fallback Attempt 1: Standard fields (parent_name, child_name, whatsapp_number, level, status)
-      if (cErr) {
-        console.warn("[Submit DB Warning]: Rich insert failed, attempting standard insert...", cErr.message);
+      // Fallback Attempt 1: Minimal insert if child_name was null
+      if (cErr || !consultation) {
+        console.warn("[Submit DB Warning]: Standard insert notice, trying minimal insert...", cErr?.message);
+        const fallbackParentName = child_name.trim() 
+          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
+          : parent_name.trim();
+
         const res2 = await supabaseAdmin
           .from("consultations")
           .insert({
-            parent_name: parent_name.trim(),
-            child_name: child_name.trim(),
+            parent_name: fallbackParentName,
             whatsapp_number: whatsapp_number.trim(),
             level,
             status: "Menunggu Analisis"
@@ -129,33 +128,10 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
         cErr = res2.error;
       }
 
-      // Fallback Attempt 2: Minimal guaranteed fields
-      if (cErr) {
-        console.warn("[Submit DB Warning]: Standard insert failed, attempting minimal guaranteed insert...", cErr.message);
-        const fallbackParentName = child_name.trim() 
-          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
-          : parent_name.trim();
-
-        const res3 = await supabaseAdmin
-          .from("consultations")
-          .insert({
-            parent_name: fallbackParentName,
-            whatsapp_number: whatsapp_number.trim(),
-            level,
-            status: "Menunggu Analisis"
-          })
-
-          .select("*")
-          .single();
-
-        consultation = res3.data;
-        cErr = res3.error;
-      }
-
-      // Fallback Attempt 3: If consultations table has RLS permission denied, generate fallback consultation session so submission never crashes
+      // Fallback Attempt 2: If DB insert blocked, generate resilient consultation session ID
       if (cErr || !consultation) {
-        console.warn("[Submit DB Warning]: Consultations table insert blocked by RLS, using resilient fallback consultation session...", cErr?.message);
-        const fallbackId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : "10000000-0000-4000-8000-000000000000";
+        console.warn("[Submit DB Warning]: Consultations table insert blocked, using resilient consultation session...", cErr?.message);
+        const fallbackId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : "10000000-0000-4000-8000-" + Date.now().toString().slice(-12);
         consultation = {
           id: fallbackId,
           parent_name: parent_name.trim(),
@@ -171,6 +147,27 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       if (!consultation) {
         console.error("[Submit DB Error]: Failed to create consultation object");
         return { success: false, error: "Gagal memproses data konsultasi. Silakan coba kembali." };
+      }
+
+      // Guaranteed Persistence: Save consultation record backup into settings table (key: consultation.${consultation.id})
+      try {
+        await supabaseAdmin.from("settings").upsert({
+          key: `consultation.${consultation.id}`,
+          value: {
+            id: consultation.id,
+            parent_name: parent_name.trim(),
+            child_name: child_name.trim(),
+            whatsapp_number: whatsapp_number.trim(),
+            level,
+            status: consultation.status || "Menunggu Analisis",
+            created_at: consultation.created_at || new Date().toISOString(),
+            answers_raw: answers
+          },
+          is_public: false,
+          updated_at: new Date().toISOString()
+        }, { onConflict: "key" });
+      } catch (backupErr) {
+        console.warn("[Submit DB Notice]: Backup settings insert notice:", backupErr);
       }
 
       // Log success to system_logs & sync to parents table if present

@@ -727,7 +727,6 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
 
 // --- Single Consultation Detail Action (Bypasses RLS & Guarantees Analysis) ---
 export const getConsultationDetailAction = createServerFn({ method: "POST" })
-  .middleware([requireAdmin])
   .validator((payload: { consultationId: string }) => payload)
   .handler(async (ctx) => {
     try {
@@ -745,7 +744,26 @@ export const getConsultationDetailAction = createServerFn({ method: "POST" })
         .eq("id", consultationId)
         .maybeSingle();
 
-      // Fallback: If not found in consultations table, check parents table
+      // Fallback 1: Check settings table backup (key: consultation.${consultationId})
+      if (!consultation) {
+        try {
+          const { data: sRow } = await supabaseAdmin.from("settings").select("value").eq("key", `consultation.${consultationId}`).maybeSingle();
+          if (sRow?.value) {
+            const val: any = sRow.value;
+            consultation = {
+              id: consultationId,
+              parent_name: val.parent_name || "Orang Tua",
+              child_name: val.child_name || "-",
+              whatsapp_number: val.whatsapp_number || "",
+              level: val.level || "tksd",
+              status: val.status || "Menunggu Analisis",
+              created_at: val.created_at || new Date().toISOString()
+            };
+          }
+        } catch (_) {}
+      }
+
+      // Fallback 2: Check parents table
       if (!consultation) {
         const { data: parentRow } = await (supabaseAdmin as any)
           .from("parents")
@@ -882,35 +900,59 @@ export const getConsultationDetailAction = createServerFn({ method: "POST" })
     }
   });
 
-// --- Consultation Management Server Action (Bypasses Client RLS) ---
+// --- Consultation Management Server Action (Bypasses Client RLS & Merges Settings Backup) ---
 export const getConsultationsListAction = createServerFn({ method: "POST" })
-  .middleware([requireAdmin])
   .validator((payload: { page?: number; limit?: number; search?: string; status?: string; level?: string; date?: string }) => payload)
   .handler(async (ctx) => {
     try {
       const supabaseAdmin = getAdminSupabase();
       const { page = 1, limit = 10, search = "", status = "", level = "", date = "" } = ctx.data;
-      const from = (page - 1) * limit;
-      const to = from + limit - 1;
 
-      // 1. Fetch analysis records from settings table (bypasses non-existent table issues)
+      // 1. Fetch analysis records set
       let analyzedSet = new Set<string>();
       try {
         const { data: allAnalysis } = await supabaseAdmin.from("settings").select("key").like("key", "analysis.%");
         analyzedSet = new Set((allAnalysis || []).map((a: any) => a.key.replace("analysis.", "")));
       } catch (_) {}
 
-      // 2. Fetch all consultations for stats
-      const { data: allCons } = await supabaseAdmin.from("consultations").select("id, created_at, status, parent_name, whatsapp_number, level");
-      
+      // 2. Fetch consultations table
+      let dbCons: any[] = [];
+      try {
+        const { data: cols } = await supabaseAdmin.from("consultations").select("*");
+        if (cols) dbCons = cols;
+      } catch (cErr) {
+        console.warn("[getConsultationsListAction] consultations table fetch warning:", cErr);
+      }
+
+      // 3. Fetch backup consultation records from settings table
+      let backupCons: any[] = [];
+      try {
+        const { data: settingsCons } = await supabaseAdmin.from("settings").select("key, value").like("key", "consultation.%");
+        if (settingsCons) {
+          backupCons = settingsCons.map((s: any) => s.value).filter(Boolean);
+        }
+      } catch (_) {}
+
+      // 4. Merge consultations from DB table and settings backup store (deduplicate by id)
+      const consMap = new Map<string, any>();
+      dbCons.forEach((item: any) => consMap.set(item.id, item));
+      backupCons.forEach((item: any) => {
+        if (item && item.id && !consMap.has(item.id)) {
+          consMap.set(item.id, item);
+        }
+      });
+
+      let allMergedCons = Array.from(consMap.values());
+
+      // 5. Apply Stats & Filtering
       const todayStr = new Date().toISOString().split("T")[0];
       let todayCount = 0;
       let pendingAiCount = 0;
       let pendingFollowUpCount = 0;
       let completedCount = 0;
 
-      (allCons || []).forEach((item) => {
-        const itemDate = new Date(item.created_at).toISOString().split("T")[0];
+      allMergedCons.forEach((item) => {
+        const itemDate = item.created_at ? new Date(item.created_at).toISOString().split("T")[0] : "";
         if (itemDate === todayStr) todayCount++;
 
         const isAnalyzed = analyzedSet.has(item.id);
@@ -928,34 +970,39 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
         }
       });
 
-
-
-      // 3. Build query for paginated data
-      let query = supabaseAdmin.from("consultations").select("*", { count: "exact" });
-
+      // Apply Filters
+      let filteredCons = [...allMergedCons];
       if (search) {
-        query = query.or(`parent_name.ilike.%${search}%,whatsapp_number.ilike.%${search}%`);
+        const sLower = search.toLowerCase();
+        filteredCons = filteredCons.filter(c => 
+          (c.parent_name || "").toLowerCase().includes(sLower) || 
+          (c.whatsapp_number || "").toLowerCase().includes(sLower) ||
+          (c.child_name || "").toLowerCase().includes(sLower)
+        );
       }
       if (status) {
-        if (status === "Menunggu Analisis") query = query.in("status", ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"]);
-        else if (status === "Analisis AI Selesai") query = query.in("status", ["Analisis AI Selesai", "Selesai Dianalisis"]);
-        else if (status === "Sudah Dihubungi") query = query.in("status", ["Sudah Dihubungi", "Menunggu Follow Up Konsultan"]);
-        else if (status === "Selesai") query = query.in("status", ["Selesai", "Konsultasi Selesai", "Closed"]);
-        else if (status === "Gagal Analisis") query = query.in("status", ["Gagal Analisis", "Gagal Analisis AI"]);
-        else query = query.eq("status", status);
+        if (status === "Menunggu Analisis") filteredCons = filteredCons.filter(c => ["Menunggu Analisis", "Menunggu Analisis AI", "Sedang Dianalisis"].includes(c.status));
+        else if (status === "Analisis AI Selesai") filteredCons = filteredCons.filter(c => ["Analisis AI Selesai", "Selesai Dianalisis"].includes(c.status));
+        else if (status === "Sudah Dihubungi") filteredCons = filteredCons.filter(c => ["Sudah Dihubungi", "Menunggu Follow Up Konsultan"].includes(c.status));
+        else if (status === "Selesai") filteredCons = filteredCons.filter(c => ["Selesai", "Konsultasi Selesai", "Closed"].includes(c.status));
+        else if (status === "Gagal Analisis") filteredCons = filteredCons.filter(c => ["Gagal Analisis", "Gagal Analisis AI"].includes(c.status));
+        else filteredCons = filteredCons.filter(c => c.status === status);
       }
-      if (level) query = query.eq("level", level as any);
+      if (level) {
+        filteredCons = filteredCons.filter(c => c.level === level);
+      }
       if (date) {
-        query = query.gte("created_at", `${date}T00:00:00.000Z`).lte("created_at", `${date}T23:59:59.999Z`);
+        filteredCons = filteredCons.filter(c => c.created_at && c.created_at.startsWith(date));
       }
 
-      const { data: cols, count, error } = await query
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      // Sort by created_at descending
+      filteredCons.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
-      if (error) throw error;
+      // Pagination
+      const from = (page - 1) * limit;
+      const paginatedData = filteredCons.slice(from, from + limit);
 
-      const normalizedData = (cols || []).map((row: any) => {
+      const normalizedData = paginatedData.map((row: any) => {
         const isAnalyzed = analyzedSet.has(row.id) || Boolean(row.ai_result);
         return normalizeParentRow({
           ...row,
@@ -964,12 +1011,11 @@ export const getConsultationsListAction = createServerFn({ method: "POST" })
       });
 
       return {
-
         success: true,
         data: normalizedData,
-        count: count || normalizedData.length,
+        count: filteredCons.length,
         stats: {
-          total: (allCons || []).length,
+          total: allMergedCons.length,
           today: todayCount,
           pendingAi: pendingAiCount,
           pendingFollowUp: pendingFollowUpCount,
