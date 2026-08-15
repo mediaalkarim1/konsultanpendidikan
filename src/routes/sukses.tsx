@@ -93,9 +93,13 @@ function SuksesPage() {
 
           {!loading && info && (
             <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-muted/30 text-left">
+              <div className="px-4 py-3 bg-muted/50 font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                Data Konsultasi:
+              </div>
               <Row label="Nama Orang Tua" value={info.parent_name} />
               <Row label="Nama Anak" value={info.child_name || "Ananda"} />
-              <Row label="Jenjang" value={LEVEL_LABELS[info.level] || info.level} />
+              <Row label="Jenjang" value={LEVEL_LABELS[info.level] || info.level.toUpperCase()} />
+              <Row label="Status" value="✓ Data berhasil diterima" isStatus />
             </div>
           )}
 
@@ -103,7 +107,7 @@ function SuksesPage() {
             <button
               type="button"
               onClick={handleContactWhatsApp}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
             >
               <MessageSquare className="h-4 w-4" />
               Hubungi Konsultan via WhatsApp
@@ -119,12 +123,10 @@ function SuksesPage() {
           </div>
         </div>
 
-        <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
+        <div className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground sm:text-sm shadow-xs">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
           <p>
-            Demi menjaga kerahasiaan data ananda, hasil analisis dan laporan konsultasi hanya dapat
-            diakses oleh tim konsultan. Hasilnya akan disampaikan langsung kepada Anda oleh konsultan
-            kami.
+            Data konsultasi dan informasi anak Anda kami jaga kerahasiaannya. Hasil evaluasi hanya dapat diakses oleh tim konsultan untuk peninjauan langsung.
           </p>
         </div>
       </div>
@@ -132,11 +134,13 @@ function SuksesPage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({ label, value, isStatus }: { label: string; value: string; isStatus?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3">
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <span className="text-sm font-bold text-foreground">{value}</span>
+      <span className={`text-sm font-bold ${isStatus ? "text-emerald-600 dark:text-emerald-400 flex items-center gap-1" : "text-foreground"}`}>
+        {value}
+      </span>
     </div>
   );
 }
