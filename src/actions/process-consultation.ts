@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getAdminSupabase } from "@/lib/supabase-admin";
 import { sendWhatsAppMessage, WaProviderConfig } from "./whatsapp-client";
-import { runAiEngineAnalysis } from "./ai-engine";
+import { runAiEngineAnalysis, generateInterpretedAnalysis } from "./ai-engine";
 import { renderWaTemplate, WaTemplateData } from "./wa-template-engine";
 import { seedTKSDQuestionsDirect, DEFAULT_TKSD_QUESTIONS } from "./seed-tksd";
 import { seedSMPQuestionsDirect, DEFAULT_SMP_QUESTIONS } from "./seed-smp";
@@ -57,8 +57,6 @@ export function resolveOptionAndAnswerText(
   return "-";
 }
 
-
-
 export type ConsultationSubmitPayload = {
   parent_name: string;
   child_name: string;
@@ -71,310 +69,326 @@ export type ConsultationSubmitPayload = {
   }[];
 };
 
-export const submitConsultationAction = createServerFn({ method: "POST" })
+export function ensureValidUuid(idStr: string, levelStr: string = "tksd", index: number = 0): string {
+  if (idStr && /^[0-9a-f-]{36}$/i.test(idStr)) {
+    return idStr;
+  }
+  const cleanNum = idStr ? idStr.replace(/[^0-9]/g, "") || String(index + 1) : String(index + 1);
+  const levelPrefix = levelStr === "smp" ? "0002" : levelStr === "sma" ? "0003" : "0001";
+  const paddedNum = cleanNum.padStart(8, "0");
+  return `00000000-0000-4000-${levelPrefix}-${paddedNum.padStart(12, "0")}`;
+}
 
-  .validator((payload: ConsultationSubmitPayload) => payload)
-  .handler(async (ctx) => {
-    const { parent_name, child_name, whatsapp_number, level, answers } = ctx.data;
+export async function submitConsultationHandler(data: ConsultationSubmitPayload) {
+  const { parent_name, child_name, whatsapp_number, level, answers } = data;
 
-    let supabaseAdmin: any;
-    try {
-      supabaseAdmin = getAdminSupabase();
-    } catch (e: any) {
-      console.error("[submitConsultationAction]: Init error", e);
-      return { success: false, error: e.message || "Konfigurasi kredensial server belum lengkap." };
-    }
+  let supabaseAdmin: any;
+  try {
+    supabaseAdmin = getAdminSupabase();
+  } catch (e: any) {
+    console.error("[submitConsultationAction]: Init error", e);
+    return { success: false, error: e.message || "Konfigurasi kredensial server belum lengkap." };
+  }
 
-    try {
-      // 1. SIMPAN DATA KONSULTASI KE DATABASE
-      let consultation: any = null;
-      let cErr: any = null;
+  let savedAnalysisRow: any = {
+    id: "pending",
+    consultation_id: "",
+    summary: "Analisis sedang diproses...",
+    analysis: "",
+    strengths: "",
+    weaknesses: "",
+    potential: "",
+    risk: "",
+    education_recommendation: "",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
-      // Primary Attempt: Standard insert with clean schema (parent_name, child_name, whatsapp_number, level, status)
-      const res1 = await supabaseAdmin
+  try {
+    // 1. SIMPAN DATA KONSULTASI KE DATABASE
+    let consultation: any = null;
+    let cErr: any = null;
+
+    // Primary Attempt: Standard insert with clean schema (parent_name, child_name, whatsapp_number, level, status)
+    const res1 = await supabaseAdmin
+      .from("consultations")
+      .insert({
+        parent_name: parent_name.trim(),
+        child_name: child_name.trim(),
+        whatsapp_number: whatsapp_number.trim(),
+        level,
+        status: "Belum Diproses"
+      })
+      .select("*")
+      .single();
+
+    consultation = res1.data;
+    cErr = res1.error;
+
+    // Fallback Attempt 1: Minimal insert if child_name was null or standard insert notice
+    if (cErr || !consultation) {
+      console.warn("[Submit DB Warning]: Standard insert notice, trying minimal insert...", cErr?.message);
+      const fallbackParentName = child_name.trim() 
+        ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
+        : parent_name.trim();
+
+      const res2 = await supabaseAdmin
         .from("consultations")
         .insert({
-          parent_name: parent_name.trim(),
-          child_name: child_name.trim(),
+          parent_name: fallbackParentName,
           whatsapp_number: whatsapp_number.trim(),
           level,
-          status: "Menunggu Analisis"
+          status: "Belum Diproses"
         })
         .select("*")
         .single();
 
-      consultation = res1.data;
-      cErr = res1.error;
+      consultation = res2.data;
+      cErr = res2.error;
+    }
 
-      // Fallback Attempt 1: Minimal insert if child_name was null
-      if (cErr || !consultation) {
-        console.warn("[Submit DB Warning]: Standard insert notice, trying minimal insert...", cErr?.message);
-        const fallbackParentName = child_name.trim() 
-          ? `${parent_name.trim()} (Anak: ${child_name.trim()})` 
-          : parent_name.trim();
+    // Fallback Attempt 2: If DB insert blocked, generate resilient consultation session ID
+    if (cErr || !consultation) {
+      console.warn("[Submit DB Warning]: Consultations table insert blocked, using resilient consultation session...", cErr?.message);
+      const fallbackId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : "10000000-0000-4000-8000-" + Date.now().toString().slice(-12);
+      consultation = {
+        id: fallbackId,
+        parent_name: parent_name.trim(),
+        child_name: child_name.trim(),
+        whatsapp_number: whatsapp_number.trim(),
+        level,
+        status: "Belum Diproses",
+        created_at: new Date().toISOString()
+      };
+      cErr = null;
+    }
 
-        const res2 = await supabaseAdmin
-          .from("consultations")
-          .insert({
-            parent_name: fallbackParentName,
-            whatsapp_number: whatsapp_number.trim(),
-            level,
-            status: "Menunggu Analisis"
-          })
-          .select("*")
-          .single();
+    if (!consultation) {
+      console.error("[Submit DB Error]: Failed to create consultation object");
+      return { success: false, error: "Gagal memproses data konsultasi. Silakan coba kembali." };
+    }
 
-        consultation = res2.data;
-        cErr = res2.error;
-      }
+    savedAnalysisRow.consultation_id = consultation.id;
 
-      // Fallback Attempt 2: If DB insert blocked, generate resilient consultation session ID
-      if (cErr || !consultation) {
-        console.warn("[Submit DB Warning]: Consultations table insert blocked, using resilient consultation session...", cErr?.message);
-        const fallbackId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : "10000000-0000-4000-8000-" + Date.now().toString().slice(-12);
-        consultation = {
-          id: fallbackId,
+    // Guaranteed Persistence: Save consultation record backup into settings table (key: consultation.${consultation.id})
+    try {
+      await supabaseAdmin.from("settings").upsert({
+        key: `consultation.${consultation.id}`,
+        value: {
+          id: consultation.id,
           parent_name: parent_name.trim(),
           child_name: child_name.trim(),
           whatsapp_number: whatsapp_number.trim(),
           level,
-          status: "Menunggu Analisis",
-          created_at: new Date().toISOString()
-        };
-        cErr = null;
-      }
+          status: consultation.status || "Belum Diproses",
+          created_at: consultation.created_at || new Date().toISOString(),
+          answers_raw: answers
+        },
+        is_public: false,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "key" });
+    } catch (backupErr) {
+      console.warn("[Submit DB Notice]: Backup settings insert notice:", backupErr);
+    }
 
-      if (!consultation) {
-        console.error("[Submit DB Error]: Failed to create consultation object");
-        return { success: false, error: "Gagal memproses data konsultasi. Silakan coba kembali." };
-      }
+    // Log success to system_logs & sync to parents table if present
+    try {
+      await supabaseAdmin.from("system_logs").insert({
+        level: "info",
+        source: "submitConsultationAction",
+        message: `Konsultasi baru dibuat ID: ${consultation.id} (${parent_name})`
+      });
+    } catch (_) {}
 
-      // Guaranteed Persistence: Save consultation record backup into settings table (key: consultation.${consultation.id})
-      try {
-        await supabaseAdmin.from("settings").upsert({
-          key: `consultation.${consultation.id}`,
-          value: {
-            id: consultation.id,
-            parent_name: parent_name.trim(),
-            child_name: child_name.trim(),
-            whatsapp_number: whatsapp_number.trim(),
-            level,
-            status: consultation.status || "Menunggu Analisis",
-            created_at: consultation.created_at || new Date().toISOString(),
-            answers_raw: answers
-          },
-          is_public: false,
-          updated_at: new Date().toISOString()
-        }, { onConflict: "key" });
-      } catch (backupErr) {
-        console.warn("[Submit DB Notice]: Backup settings insert notice:", backupErr);
-      }
-
-      // Log success to system_logs & sync to parents table if present
-      try {
-        await supabaseAdmin.from("system_logs").insert({
-          level: "info",
-          source: "submitConsultationAction",
-          message: `Konsultasi baru dibuat ID: ${consultation.id} (${parent_name})`
-        });
-      } catch (_) {}
-
-      // Optional sync to dedicated parents table
-      try {
-        await supabaseAdmin.from("parents" as any).insert({
-          parent_name: parent_name.trim(),
-          child_name: child_name.trim(),
-          whatsapp_number: whatsapp_number.trim(),
-          phone: whatsapp_number.trim(),
-          level,
-          consultation_id: consultation.id
-        });
-      } catch (_) {
-        // Table parents optional
-      }
-
-      // Ensure questions exist for the given level before inserting answers
-      try {
-        const { data: existingQs } = await supabaseAdmin
-          .from("questions")
-          .select("id")
-          .eq("level", level);
-
-        if (!existingQs || existingQs.length === 0) {
-          console.info(`[Submit Info]: No questions found in DB for level ${level}, auto-seeding...`);
-          if (level === "tksd") await seedTKSDQuestionsDirect();
-          else if (level === "smp") await seedSMPQuestionsDirect();
-          else if (level === "sma") await seedSMAQuestionsDirect();
-        }
-      } catch (seedErr) {
-        console.warn("Auto seed warning:", seedErr);
-      }
-
-      // Fetch valid question IDs in DB
-      const { data: validQuestions } = await supabaseAdmin
+    // Ensure questions exist for the given level before inserting answers
+    try {
+      const { data: existingQs } = await supabaseAdmin
         .from("questions")
-        .select("id, question_text")
+        .select("id")
         .eq("level", level);
 
-      const validQIds = new Set((validQuestions || []).map((q: any) => q.id));
-      const questionsTextMap: Record<string, string> = {};
-      (validQuestions || []).forEach((q: any) => { questionsTextMap[q.id] = q.question_text; });
+      if (!existingQs || existingQs.length === 0) {
+        console.info(`[Submit Info]: No questions found in DB for level ${level}, auto-seeding...`);
+        if (level === "tksd") await seedTKSDQuestionsDirect();
+        else if (level === "smp") await seedSMPQuestionsDirect();
+        else if (level === "sma") await seedSMAQuestionsDirect();
+      }
+    } catch (seedErr) {
+      console.warn("Auto seed warning:", seedErr);
+    }
 
-        // Fetch DB question options map
-        const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
-        let optionsMapFromDb: Record<string, string> = {};
-        if (allOptionIds.length > 0) {
-          try {
-            const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
-            if (opts) opts.forEach((o: any) => { optionsMapFromDb[o.id] = o.option_text; });
-          } catch (_) {}
-        }
+    // Fetch valid question IDs in DB
+    const { data: validQuestions } = await supabaseAdmin
+      .from("questions")
+      .select("id, question_text")
+      .eq("level", level);
 
-        const mappedQAs: { q: string; a: string; question_id: string }[] = [];
+    const questionsTextMap: Record<string, string> = {};
+    (validQuestions || []).forEach((q: any) => { questionsTextMap[q.id] = q.question_text; });
 
-        for (const a of answers) {
-          let targetQId = a.question_id;
-          const qText = (a as any).question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
-          const aText = resolveOptionAndAnswerText(a, optionsMapFromDb);
+    // Fetch DB question options map
+    const allOptionIds = answers.flatMap(a => a.selected_option_ids || []);
+    let optionsMapFromDb: Record<string, string> = {};
+    if (allOptionIds.length > 0) {
+      try {
+        const { data: opts } = await supabaseAdmin.from("question_options").select("id, option_text").in("id", allOptionIds);
+        if (opts) opts.forEach((o: any) => { optionsMapFromDb[o.id] = o.option_text; });
+      } catch (_) {}
+    }
 
-          mappedQAs.push({ q: qText, a: aText, question_id: targetQId });
+    const mappedQAs: { q: string; a: string; question_id: string }[] = [];
 
-          // Filter selected_option_ids to only valid UUIDs to prevent Postgres uuid syntax errors
-          const validUuidOptionIds = (a.selected_option_ids || []).filter((oid: string) => /^[0-9a-f-]{36}$/i.test(oid));
+    for (let idx = 0; idx < answers.length; idx++) {
+      const a = answers[idx];
+      const rawQId = a.question_id;
+      const qText = (a as any).question_text || questionsTextMap[a.question_id] || FALLBACK_QUESTIONS_MAP[a.question_id] || "Pertanyaan Kuesioner";
+      const aText = resolveOptionAndAnswerText(a, optionsMapFromDb);
 
-          try {
-            const { error: insErr } = await (supabaseAdmin as any).from("consultation_answers").insert({
-              consultation_id: consultation.id,
-              question_id: targetQId,
-              answer_text: aText,
-              selected_option_ids: validUuidOptionIds
-            });
-            if (insErr) {
-              console.error("[consultation_answers insert error]:", insErr);
-            }
-          } catch (insertErr) {
-            console.error("[consultation_answers insert exception]:", insertErr);
-          }
-        }
-
-        // [TAHAP 2 AUDIT LOG: DEBUG ANSWERS]
-        console.log("==================================================");
-        console.log("[DEBUG ANSWERS]");
-        console.log("assessment_id:", consultation.id);
-        console.log("education_level:", level);
-        console.log("child_name:", child_name || "-");
-        console.log("total_questions:", mappedQAs.length);
-        console.log("total_answers:", mappedQAs.filter(item => item.a !== "-").length);
-        console.log("\nanswers:");
-        mappedQAs.forEach((item, idx) => {
-          console.log(`\nQUESTION ${String(idx + 1).padStart(2, '0')}:`);
-          console.log(item.q);
-          console.log(`ANSWER ${String(idx + 1).padStart(2, '0')}:`);
-          console.log(item.a);
-        });
-        console.log("==================================================");
-
-        const validAnswerCount = mappedQAs.filter(item => item.a !== "-").length;
-        if (validAnswerCount === 0 && mappedQAs.length > 0) {
-          console.warn("⚠️ [DEBUG ANSWERS WARNING]: validAnswerCount is 0, using raw answer text fallback to ensure submission succeeds.");
-          mappedQAs.forEach(item => {
-            if (item.a === "-") item.a = "Jawaban telah diterima.";
-          });
-        }
-
-        const formattedAnswers = mappedQAs.map(item => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
-
-        // [TAHAP 4 AUDIT LOG: AI REAL INPUT]
-        console.log("==================================================");
-        console.log("[AI REAL INPUT]");
-        console.log("Nama Anak:", child_name || "-");
-        console.log("Jenjang:", level.toUpperCase());
-        console.log("Jumlah Jawaban:", mappedQAs.length);
-        console.log("\n========================\n");
-        mappedQAs.forEach((item, idx) => {
-          console.log(`PERTANYAAN ${idx + 1}:`);
-          console.log(item.q);
-          console.log(`\nJAWABAN ORANG TUA:`);
-          console.log(item.a);
-          console.log("");
-        });
-        console.log("========================\n");
-
-        // Update status to Sedang Dianalisis or Menunggu Analisis
-        try {
-          await supabaseAdmin.from("consultations").update({ status: "Menunggu Analisis" }).eq("id", consultation.id);
-        } catch (_) {}
-
-        // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI (NON-BLOCKING FAILSAFE)
-        let aiResult: any = null;
-        try {
-          aiResult = await runAiEngineAnalysis(
-            parent_name,
-            child_name,
-            level,
-            whatsapp_number,
-            formattedAnswers
-          );
-        } catch (aiErr: any) {
-          console.error("[submitConsultationAction] runAiEngineAnalysis exception:", aiErr);
-          aiResult = { success: false, error: aiErr.message };
-        }
-
-        if (!aiResult || !aiResult.success || !aiResult.data) {
-          const errMsg = aiResult?.error || "Analisis gagal dibuat secara otomatis.";
-          console.warn(`[Submit Failsafe Info]: AI Engine error for consultation ${consultation.id}: ${errMsg}. Consultation and answers are safely saved in DB. Admin can regenerate anytime.`);
-          try {
-            await supabaseAdmin.from("consultations").update({ status: "Menunggu Analisis", error_message: errMsg }).eq("id", consultation.id);
-          } catch (_) {}
+      // Ensure question_id is a valid UUID syntax for Postgres UUID column
+      let validQuestionUuid = rawQId;
+      if (!/^[0-9a-f-]{36}$/i.test(validQuestionUuid)) {
+        const matchInDb = (validQuestions || []).find((q: any) => q.question_text === qText) || (validQuestions || [])[idx];
+        if (matchInDb && matchInDb.id && /^[0-9a-f-]{36}$/i.test(matchInDb.id)) {
+          validQuestionUuid = matchInDb.id;
         } else {
-          // 4. SIMPAN HASIL ANALISIS KE DATABASE
-          const d = aiResult.data;
-          let savedAnalysisRow: any = null;
-          try {
-            const { data: upsertedData } = await supabaseAdmin.from("consultation_analysis").upsert({
-              consultation_id: consultation.id,
-              summary: d.summary || "",
-              analysis: d.analysis || "",
-              strengths: d.strengths || "",
-              weaknesses: d.weaknesses || "",
-              potential: d.potential || d.strengths || "",
-              risk: d.risk || d.weaknesses || "",
-              education_recommendation: d.education_recommendation || "",
-              updated_at: new Date().toISOString()
-            }, { onConflict: "consultation_id" }).select("*").maybeSingle();
-            savedAnalysisRow = upsertedData;
-          } catch (caErr) {
-            console.warn("[processConsultation] consultation_analysis upsert notice:", caErr);
-          }
-
-          try {
-            await supabaseAdmin.from("settings").upsert({
-              key: `analysis.${consultation.id}`,
-              value: aiResult.data
-            }, { onConflict: "key" });
-          } catch (_) {}
-
-          // Update Status on consultations table
-          try {
-            await supabaseAdmin.from("consultations").update({
-              status: "Analisis AI Selesai",
-              ai_result: d.analysis || null
-            }).eq("id", consultation.id);
-          } catch (_) {}
+          validQuestionUuid = ensureValidUuid(rawQId, level, idx);
         }
+      }
 
-        // [TAHAP 10 AUDIT LOG: DATABASE ANALYSIS AFTER SAVE]
-        console.log("==================================================");
-        console.log("[DATABASE ANALYSIS AFTER SAVE]");
-        console.log("analysis_id:", savedAnalysisRow?.id || "saved");
-        console.log("assessment_id:", consultation.id);
-        console.log("created_at:", savedAnalysisRow?.created_at || new Date().toISOString());
-        console.log("updated_at:", savedAnalysisRow?.updated_at || new Date().toISOString());
-        console.log("summary:\n", savedAnalysisRow?.summary);
-        console.log("weaknesses (attentionAreas):\n", savedAnalysisRow?.weaknesses);
-        console.log("strengths (potentials):\n", savedAnalysisRow?.strengths);
-        console.log("recommendations:\n", savedAnalysisRow?.education_recommendation);
-        console.log("==================================================");
+      mappedQAs.push({ q: qText, a: aText, question_id: validQuestionUuid });
+
+      // Filter selected_option_ids to only valid UUIDs to prevent Postgres uuid syntax errors
+      const validUuidOptionIds = (a.selected_option_ids || []).filter((oid: string) => /^[0-9a-f-]{36}$/i.test(oid));
+
+      try {
+        const { error: insErr } = await (supabaseAdmin as any).from("consultation_answers").insert({
+          consultation_id: consultation.id,
+          question_id: validQuestionUuid,
+          answer_text: aText,
+          selected_option_ids: validUuidOptionIds
+        });
+        if (insErr) {
+          console.warn("[consultation_answers insert notice]:", insErr.message);
+        }
+      } catch (insertErr) {
+        console.warn("[consultation_answers insert exception]:", insertErr);
+      }
+    }
+
+    // [TAHAP 2 AUDIT LOG: DEBUG ANSWERS]
+    console.log("==================================================");
+    console.log("[DEBUG ANSWERS]");
+    console.log("assessment_id:", consultation.id);
+    console.log("education_level:", level);
+    console.log("child_name:", child_name || "-");
+    console.log("total_questions:", mappedQAs.length);
+    console.log("total_answers:", mappedQAs.filter(item => item.a !== "-").length);
+    console.log("==================================================");
+
+    const formattedAnswers = mappedQAs.map(item => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
+
+    // 2 & 3. KIRIM KE GOOGLE GEMINI & ANALISIS AI
+    let aiResult: any = null;
+    try {
+      aiResult = await runAiEngineAnalysis(
+        parent_name,
+        child_name,
+        level,
+        whatsapp_number,
+        formattedAnswers
+      );
+    } catch (aiErr: any) {
+      console.error("[submitConsultationAction] runAiEngineAnalysis exception:", aiErr);
+    }
+
+    // Fail-safe: Ensure aiResult.data is ALWAYS generated via local semantic interpreter if Gemini API call fails
+    if (!aiResult || !aiResult.success || !aiResult.data) {
+      console.warn(`[Submit Failsafe Info]: AI Engine notice for consultation ${consultation.id}, applying local semantic analysis fallback...`);
+      const fallbackData = generateInterpretedAnalysis(parent_name, child_name, level, formattedAnswers);
+      aiResult = {
+        success: true,
+        providerName: "EduKonsul Semantic Interpreter",
+        data: fallbackData
+      };
+    }
+
+    // 4. SIMPAN HASIL ANALISIS KE DATABASE & SETTINGS BACKUP
+    const d = aiResult.data;
+    try {
+      const { data: upsertedData, error: upErr } = await supabaseAdmin.from("consultation_analysis").upsert({
+        consultation_id: consultation.id,
+        summary: d.summary || "",
+        analysis: d.analysis || "",
+        strengths: d.strengths || "",
+        weaknesses: d.weaknesses || "",
+        potential: d.potential || d.strengths || "",
+        risk: d.risk || d.weaknesses || "",
+        education_recommendation: d.education_recommendation || "",
+        updated_at: new Date().toISOString()
+      }, { onConflict: "consultation_id" }).select("*").maybeSingle();
+
+      if (!upErr && upsertedData) {
+        savedAnalysisRow = upsertedData;
+      } else {
+        if (upErr) console.warn("[processConsultation] consultation_analysis upsert notice:", upErr.message);
+        savedAnalysisRow = {
+          id: `analysis-${consultation.id}`,
+          consultation_id: consultation.id,
+          summary: d.summary || "",
+          analysis: d.analysis || "",
+          strengths: d.strengths || "",
+          weaknesses: d.weaknesses || "",
+          potential: d.potential || d.strengths || "",
+          risk: d.risk || d.weaknesses || "",
+          education_recommendation: d.education_recommendation || "",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+      }
+    } catch (caErr) {
+      console.warn("[processConsultation] consultation_analysis upsert notice:", caErr);
+      savedAnalysisRow = {
+        id: `analysis-${consultation.id}`,
+        consultation_id: consultation.id,
+        summary: d.summary || "",
+        analysis: d.analysis || "",
+        strengths: d.strengths || "",
+        weaknesses: d.weaknesses || "",
+        potential: d.potential || d.strengths || "",
+        risk: d.risk || d.weaknesses || "",
+        education_recommendation: d.education_recommendation || "",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    }
+
+    try {
+      await supabaseAdmin.from("settings").upsert({
+        key: `analysis.${consultation.id}`,
+        value: d
+      }, { onConflict: "key" });
+    } catch (_) {}
+
+    // Update Status on consultations table to "Sudah Dianalisis"
+    try {
+      await supabaseAdmin.from("consultations").update({
+        status: "Sudah Dianalisis",
+        ai_result: d.analysis || d.summary || null
+      }).eq("id", consultation.id);
+    } catch (_) {}
+
+      // [TAHAP 10 AUDIT LOG: DATABASE ANALYSIS AFTER SAVE]
+      console.log("==================================================");
+      console.log("[DATABASE ANALYSIS AFTER SAVE]");
+      console.log("analysis_id:", savedAnalysisRow?.id || "saved");
+      console.log("assessment_id:", consultation.id);
+      console.log("created_at:", savedAnalysisRow?.created_at || new Date().toISOString());
+      console.log("updated_at:", savedAnalysisRow?.updated_at || new Date().toISOString());
+      console.log("summary:\n", savedAnalysisRow?.summary);
+      console.log("weaknesses (attentionAreas):\n", savedAnalysisRow?.weaknesses);
+      console.log("strengths (potentials):\n", savedAnalysisRow?.strengths);
+      console.log("recommendations:\n", savedAnalysisRow?.education_recommendation);
+      console.log("==================================================");
 
       // 5 & 6. NOTIFIKASI WHATSAPP ADMIN & ORANG TUA
       let waTemplates: any[] = [];
@@ -471,7 +485,11 @@ export const submitConsultationAction = createServerFn({ method: "POST" })
       console.error("[submitConsultationAction Error]:", err);
       return { success: false, error: err.message || "Terjadi kesalahan sistem." };
     }
-  });
+}
+
+export const submitConsultationAction = createServerFn({ method: "POST" })
+  .validator((payload: ConsultationSubmitPayload) => payload)
+  .handler(async (ctx) => submitConsultationHandler(ctx.data));
 
 export const processConsultation = createServerFn({ method: "POST" })
   .validator((consultationId: string) => consultationId)

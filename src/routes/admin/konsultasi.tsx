@@ -38,8 +38,8 @@ export const Route = createFileRoute("/admin/konsultasi")({
 });
 
 const STATUS_OPTIONS = [
-  { value: "Menunggu Analisis", label: "Menunggu Analisis", color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300" },
-  { value: "Analisis AI Selesai", label: "Analisis AI Selesai", color: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" },
+  { value: "Belum Diproses", label: "Belum Diproses", color: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300" },
+  { value: "Sudah Dianalisis", label: "Sudah Dianalisis", color: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300" },
   { value: "Sudah Dihubungi", label: "Sudah Dihubungi", color: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/40 dark:text-blue-300" },
   { value: "Selesai", label: "Selesai", color: "bg-zinc-100 text-zinc-800 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-300" },
   { value: "Gagal Analisis", label: "Gagal Analisis", color: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-300" },
@@ -48,8 +48,8 @@ const STATUS_OPTIONS = [
 function getStatusInfo(status?: string) {
   if (!status) return STATUS_OPTIONS[0];
   const s = status.trim();
-  if (s.includes("Menunggu") || s.includes("Sedang")) return STATUS_OPTIONS[0];
-  if (s.includes("AI Selesai") || s.includes("Selesai Dianalisis")) return STATUS_OPTIONS[1];
+  if (s.includes("Dianalisis") || s.includes("AI Selesai") || s.includes("Selesai Dianalisis")) return STATUS_OPTIONS[1];
+  if (s.includes("Menunggu") || s.includes("Sedang") || s.includes("Belum")) return STATUS_OPTIONS[0];
   if (s.includes("Dihubungi") || s.includes("Follow Up")) return STATUS_OPTIONS[2];
   if (s === "Selesai" || s.includes("Konsultasi Selesai") || s === "Closed") return STATUS_OPTIONS[3];
   if (s.includes("Gagal")) return STATUS_OPTIONS[4];

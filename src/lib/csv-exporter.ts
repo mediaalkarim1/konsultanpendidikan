@@ -75,7 +75,8 @@ export async function generateConsultationAnswersCsv(
     const mappedChoices: Array<{ code: string; text: string; optionId: string }> = [];
 
     questions.forEach((q) => {
-      const opts = (q.options || []).sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+      const rawOpts = (q as any).options || (q as any).question_options || [];
+      const opts = Array.isArray(rawOpts) ? [...rawOpts].sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)) : [];
       opts.forEach((o: any, idx: number) => {
         if (o.id && o.option_text) {
           optionsMapFromDb[o.id] = o.option_text;

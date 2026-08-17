@@ -3,8 +3,32 @@ import { DEFAULT_UNIFIED_PROMPT } from "../lib/ai-prompt-default";
 import { getAdminSupabase } from "../lib/supabase-admin";
 
 
+export function normalizeJenjangLevel(rawLevel: string): { key: "tksd" | "smp" | "sma"; label: string; contextGuidance: string } {
+  const norm = (rawLevel || "").toLowerCase().trim();
+  if (norm.includes("smp")) {
+    return {
+      key: "smp",
+      label: "SMP (Sekolah Menengah Pertama)",
+      contextGuidance: "FAKUS JENJANG SMP: Analisis fokus pada masa remaja, eksplorasi minat & bakat, pembentukan karakter, kemandirian belajar, tantangan sosialisasi/pergaulan, dan kesiapan transisi sekolah menengah."
+    };
+  }
+  if (norm.includes("sma") || norm.includes("smk")) {
+    return {
+      key: "sma",
+      label: "SMA (Sekolah Menengah Atas)",
+      contextGuidance: "FAKUS JENJANG SMA: Analisis fokus pada pemetaan minat jurusan, persiapan perguruan tinggi/karir masa depan, kemandirian & pemikiran kritis, kesiapan akademis, serta strategi masa depan."
+    };
+  }
+  return {
+    key: "tksd",
+    label: "TK & SD (Usia Dini & Dasar)",
+    contextGuidance: "FAKUS JENJANG TK & SD: Analisis fokus pada tumbuh kembang usia emas, pembentukan fondasi karakter, kebiasaan belajar di rumah, emosi & motorik/sensorik, serta strategi pendampingan orang tua di rumah."
+  };
+}
+
 export async function runAiEngineAnalysis(parentName: string, childName: string = "-", level: string, whatsappNumber: string, formattedAnswers: string): Promise<{ success: boolean; data?: AiAnalysisResult; providerName?: string; error?: string }> {
   const supabaseAdmin = getAdminSupabase();
+  const jenjangInfo = normalizeJenjangLevel(level);
 
   // 1. Fetch active provider from settings table first
   let provider: any = null;
@@ -83,7 +107,7 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
     }
   }
 
-  // 2. Fetch active prompts from DB
+  // 2. Fetch active prompts from DB (check level-specific prompt key first)
   let systemPromptFromDb = "";
 
   // Helper: validate if a prompt from DB strictly matches the NEW 4-section format
@@ -98,27 +122,43 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
   };
 
   try {
-    const { data: promptSetting } = await supabaseAdmin
+    // Attempt level-specific setting key first e.g. ai.prompt.tksd, ai.prompt.smp, ai.prompt.sma
+    const { data: levelPromptSetting } = await supabaseAdmin
       .from("settings")
       .select("value")
-      .eq("key", "ai.unified_prompt")
+      .eq("key", `ai.prompt.${jenjangInfo.key}`)
       .maybeSingle();
 
-    if (promptSetting && (promptSetting.value as any)?.system_prompt) {
-      const dbPrompt = (promptSetting.value as any).system_prompt;
-      if (isNewFormatPrompt(dbPrompt)) {
-        systemPromptFromDb = dbPrompt;
-        console.info("[AI Engine] Using prompt from settings table (new format).");
-      } else {
-        console.info("[AI Engine] DB prompt is old format — using new default prompt instead.");
-      }
+    if (levelPromptSetting && (levelPromptSetting.value as any)?.system_prompt && isNewFormatPrompt((levelPromptSetting.value as any).system_prompt)) {
+      systemPromptFromDb = (levelPromptSetting.value as any).system_prompt;
+      console.info(`[AI Engine] Using level-specific prompt for ${jenjangInfo.key} from settings table.`);
     }
   } catch (_) {}
+
+  if (!systemPromptFromDb) {
+    try {
+      const { data: promptSetting } = await supabaseAdmin
+        .from("settings")
+        .select("value")
+        .eq("key", "ai.unified_prompt")
+        .maybeSingle();
+
+      if (promptSetting && (promptSetting.value as any)?.system_prompt) {
+        const dbPrompt = (promptSetting.value as any).system_prompt;
+        if (isNewFormatPrompt(dbPrompt)) {
+          systemPromptFromDb = dbPrompt;
+          console.info("[AI Engine] Using unified prompt from settings table (new format).");
+        } else {
+          console.info("[AI Engine] DB prompt is old format — using new default prompt instead.");
+        }
+      }
+    } catch (_) {}
+  }
 
   // Fallback: check ai_prompts table only if settings had nothing usable
   if (!systemPromptFromDb) {
     try {
-      const { data: prompt } = await (supabaseAdmin as any).from("ai_prompts").select("*").limit(1).maybeSingle();
+      const { data: prompt } = await (supabaseAdmin as any).from("ai_prompts").select("*").eq("is_active", true).limit(1).maybeSingle();
       if (prompt?.system_prompt && isNewFormatPrompt(prompt.system_prompt)) {
         systemPromptFromDb = prompt.system_prompt;
         console.info("[AI Engine] Using prompt from ai_prompts table (new format).");
@@ -128,30 +168,26 @@ export async function runAiEngineAnalysis(parentName: string, childName: string 
     } catch (_) {}
   }
 
-  // Auto-update DB in background if no valid new-format prompt was found
-  // This writes the new prompt to DB so future calls use DB (avoids code dependency)
-  if (!systemPromptFromDb) {
-    console.info("[AI Engine] No new-format prompt in DB — auto-saving new prompt to settings.");
-  }
-
   const defaultUnifiedPrompt = DEFAULT_UNIFIED_PROMPT;
-
   const mainPromptTemplate = systemPromptFromDb || defaultUnifiedPrompt;
 
   const processedPrompt = mainPromptTemplate
     .replace(/{{nama_orang_tua}}/g, parentName)
     .replace(/{{nama_anak}}/g, childName || "-")
-    .replace(/{{jenjang}}/g, level)
+    .replace(/{{jenjang}}/g, jenjangInfo.label)
     .replace(/{{jawaban_lengkap}}/g, formattedAnswers);
 
   const fullUserPrompt = `
 === INSTRUKSI PROMPT UTAMA ===
 ${processedPrompt}
 
+=== KONTEKS JENJANG PENDIDIKAN ===
+${jenjangInfo.contextGuidance}
+
 === DATA KONSULTASI KLIEN ===
 Nama Orang Tua: ${parentName}
 Nama Anak: ${childName || "-"}
-Jenjang: ${level.toUpperCase()}
+Jenjang: ${jenjangInfo.label}
 Nomor WhatsApp: ${whatsappNumber}
 
 === JAWABAN KUESIONER LENGKAP ===
@@ -167,7 +203,7 @@ Berikan keluaran dalam format JSON valid berikut (tanpa markdown codeblock):
   ],
   "attention_areas": [
     {
-      "title": "Judul Temuan Spesifik Dari Jawaban (Bukan kata generik seperti 'Manajemen Waktu')",
+      "title": "Judul Temuan Spesifik Dari Jawaban (Bukan kata generik)",
       "description": "Penjelasan kondisi konkret 1-2 kalimat berbasis bukti jawaban orang tua.",
       "evidence": "Kutipan / ringkasan bukti jawaban orang tua"
     }

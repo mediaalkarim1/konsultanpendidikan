@@ -604,14 +604,14 @@ export function normalizeParentRow(row: any) {
   // Normalize status strings according to standard values
   if (status.toLowerCase().includes("gagal")) {
     status = "Gagal Analisis";
-  } else if (status.includes("AI Selesai") || status.includes("Selesai Dianalisis") || status === "Analisis AI Selesai") {
-    status = "Analisis AI Selesai";
+  } else if (status.includes("AI Selesai") || status.includes("Selesai Dianalisis") || status === "Analisis AI Selesai" || status === "Sudah Dianalisis") {
+    status = "Sudah Dianalisis";
   } else if (status === "Sudah Dihubungi" || status.includes("Follow Up")) {
     status = "Sudah Dihubungi";
   } else if (status === "Selesai" || status === "Closed" || status.includes("Konsultasi Selesai")) {
     status = "Selesai";
   } else {
-    status = "Menunggu Analisis";
+    status = "Belum Diproses";
   }
 
 
@@ -725,180 +725,180 @@ export const getParentsDatabaseAction = createServerFn({ method: "POST" })
     }
   });
 
-// --- Single Consultation Detail Action (Bypasses RLS & Guarantees Analysis) ---
-export const getConsultationDetailAction = createServerFn({ method: "POST" })
-  .validator((payload: { consultationId: string }) => payload)
-  .handler(async (ctx) => {
-    try {
-      const supabaseAdmin = getAdminSupabase();
-      const { consultationId } = ctx.data;
+export async function getConsultationDetailHandler(consultationId: string) {
+  try {
+    const supabaseAdmin = getAdminSupabase();
 
-      if (!consultationId) {
-        return { success: false, error: "ID konsultasi tidak diberikan." };
-      }
+    if (!consultationId) {
+      return { success: false, error: "ID konsultasi tidak diberikan." };
+    }
 
-      // 1. Fetch consultation row using admin client
-      let { data: consultation } = await (supabaseAdmin as any)
-        .from("consultations")
-        .select("*")
-        .eq("id", consultationId)
-        .maybeSingle();
+    // 1. Fetch consultation row using admin client
+    let { data: consultation } = await (supabaseAdmin as any)
+      .from("consultations")
+      .select("*")
+      .eq("id", consultationId)
+      .maybeSingle();
 
-      // Fallback 1: Check settings table backup (key: consultation.${consultationId})
-      if (!consultation) {
-        try {
-          const { data: sRow } = await supabaseAdmin.from("settings").select("value").eq("key", `consultation.${consultationId}`).maybeSingle();
-          if (sRow?.value) {
-            const val: any = sRow.value;
-            consultation = {
-              id: consultationId,
-              parent_name: val.parent_name || "Orang Tua",
-              child_name: val.child_name || "-",
-              whatsapp_number: val.whatsapp_number || "",
-              level: val.level || "tksd",
-              status: val.status || "Menunggu Analisis",
-              created_at: val.created_at || new Date().toISOString()
-            };
-          }
-        } catch (_) {}
-      }
-
-      // Fallback 2: Check parents table
-      if (!consultation) {
-        const { data: parentRow } = await (supabaseAdmin as any)
-          .from("parents")
-          .select("*")
-          .eq("consultation_id", consultationId)
-          .maybeSingle();
-
-        if (parentRow) {
+    // Fallback 1: Check settings table backup (key: consultation.${consultationId})
+    if (!consultation) {
+      try {
+        const { data: sRow } = await supabaseAdmin.from("settings").select("value").eq("key", `consultation.${consultationId}`).maybeSingle();
+        if (sRow?.value) {
+          const val: any = sRow.value;
           consultation = {
             id: consultationId,
-            parent_name: parentRow.parent_name || parentRow.name || "Orang Tua",
-            child_name: parentRow.child_name || "-",
-            whatsapp_number: parentRow.whatsapp_number || parentRow.phone || "",
-            level: parentRow.level || "tksd",
-            status: "Analisis AI Selesai",
-            created_at: parentRow.created_at || new Date().toISOString()
+            parent_name: val.parent_name || "Orang Tua",
+            child_name: val.child_name || "-",
+            whatsapp_number: val.whatsapp_number || "",
+            level: val.level || "tksd",
+            status: val.status || "Belum Diproses",
+            created_at: val.created_at || new Date().toISOString()
           };
         }
-      }
+      } catch (_) {}
+    }
 
-      if (!consultation) {
-        return { success: false, error: "Data konsultasi tidak ditemukan." };
-      }
-
-      // 2. Fetch answers
-      const { data: answers } = await (supabaseAdmin as any)
-        .from("consultation_answers")
-        .select("*, questions(question_text)")
-        .eq("consultation_id", consultationId);
-
-      const allOptionIds = answers?.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean) || [];
-      let optionsMap: Record<string, string> = {};
-      if (allOptionIds.length > 0) {
-        try {
-          const { data: opts } = await (supabaseAdmin as any)
-            .from("question_options")
-            .select("id, option_text")
-            .in("id", allOptionIds);
-          if (opts) optionsMap = opts.reduce((acc: any, o: any) => ({ ...acc, [o.id]: o.option_text }), {});
-        } catch (_) {}
-      }
-
-      const mappedAnswers = (answers || []).map((a: any) => {
-        const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
-        const optTexts = (a.selected_option_ids || [])
-          .map((oid: string) => optionsMap[oid] || oid)
-          .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t));
-        const rawAns = a.answer_text || a.answer;
-        const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
-        const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns || "-"));
-        return { q: qText, a: aText };
-      });
-
-      const formattedAnsStr = mappedAnswers.map((item: any) => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
-
-      // 3. Fetch latest analysis row ORDER BY updated_at DESC
-      const { data: analysisRows } = await (supabaseAdmin as any)
-        .from("consultation_analysis")
+    // Fallback 2: Check parents table
+    if (!consultation) {
+      const { data: parentRow } = await (supabaseAdmin as any)
+        .from("parents")
         .select("*")
         .eq("consultation_id", consultationId)
-        .order("updated_at", { ascending: false, nullsFirst: false });
+        .maybeSingle();
 
-      let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
-
-      // Also check settings table for analysis
-      if (!latestAnalysisRow) {
-        try {
-          const { data: settingRow } = await (supabaseAdmin as any)
-            .from("settings")
-            .select("value")
-            .eq("key", `analysis.${consultationId}`)
-            .maybeSingle();
-          if (settingRow?.value) {
-            latestAnalysisRow = settingRow.value;
-          }
-        } catch (_) {}
-      }
-
-      let effectiveAnalysis = latestAnalysisRow;
-
-      // 4. Generate interpreted analysis if analysis row is missing or legacy
-      if (!effectiveAnalysis || !effectiveAnalysis.summary || effectiveAnalysis.summary === "-") {
-        const { generateInterpretedAnalysis } = require("./ai-engine");
-        const generated = generateInterpretedAnalysis(
-          consultation.parent_name,
-          consultation.child_name || "-",
-          consultation.level,
-          formattedAnsStr
-        );
-        effectiveAnalysis = {
-          consultation_id: consultationId,
-          summary: generated.summary,
-          analysis: generated.analysis,
-          strengths: generated.strengths,
-          weaknesses: generated.weaknesses,
-          potential: generated.potential,
-          risk: generated.risk,
-          education_recommendation: generated.education_recommendation,
-          updated_at: new Date().toISOString()
+      if (parentRow) {
+        consultation = {
+          id: consultationId,
+          parent_name: parentRow.parent_name || parentRow.name || "Orang Tua",
+          child_name: parentRow.child_name || "-",
+          whatsapp_number: parentRow.whatsapp_number || parentRow.phone || "",
+          level: parentRow.level || "tksd",
+          status: "Sudah Dianalisis",
+          created_at: parentRow.created_at || new Date().toISOString()
         };
-
-        // Best effort upsert in background
-        try {
-          await (supabaseAdmin as any).from("consultation_analysis").upsert(effectiveAnalysis, { onConflict: "consultation_id" });
-        } catch (_) {}
       }
+    }
 
-      // 5. Fetch notification logs
-      let notifLogs: any[] = [];
+    if (!consultation) {
+      return { success: false, error: "Data konsultasi tidak ditemukan." };
+    }
+
+    // 2. Fetch answers
+    const { data: answers } = await (supabaseAdmin as any)
+      .from("consultation_answers")
+      .select("*, questions(question_text)")
+      .eq("consultation_id", consultationId);
+
+    const allOptionIds = answers?.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean) || [];
+    let optionsMap: Record<string, string> = {};
+    if (allOptionIds.length > 0) {
       try {
-        const { data: nLogs } = await (supabaseAdmin as any)
-          .from("notification_logs")
-          .select("*")
-          .eq("consultation_id", consultationId)
-          .order("created_at", { ascending: false });
-        if (nLogs) notifLogs = nLogs;
+        const { data: opts } = await (supabaseAdmin as any)
+          .from("question_options")
+          .select("id, option_text")
+          .in("id", allOptionIds);
+        if (opts) optionsMap = opts.reduce((acc: any, o: any) => ({ ...acc, [o.id]: o.option_text }), {});
       } catch (_) {}
+    }
 
-      const { parseReportSections } = require("../lib/pdf-generator");
-      const parsedSections = parseReportSections(effectiveAnalysis, consultation.ai_result || "");
+    const mappedAnswers = (answers || []).map((a: any) => {
+      const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
+      const optTexts = (a.selected_option_ids || [])
+        .map((oid: string) => optionsMap[oid] || oid)
+        .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t));
+      const rawAns = a.answer_text || a.answer;
+      const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
+      const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns || "-"));
+      return { q: qText, a: aText };
+    });
 
-      return {
-        success: true,
-        consultation,
-        answers: mappedAnswers,
-        analysis: effectiveAnalysis,
-        parsedSections,
-        logs: notifLogs
+    const formattedAnsStr = mappedAnswers.map((item: any) => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
+
+    // 3. Fetch latest analysis row ORDER BY updated_at DESC
+    const { data: analysisRows } = await (supabaseAdmin as any)
+      .from("consultation_analysis")
+      .select("*")
+      .eq("consultation_id", consultationId)
+      .order("updated_at", { ascending: false, nullsFirst: false });
+
+    let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
+
+    // Also check settings table for analysis
+    if (!latestAnalysisRow) {
+      try {
+        const { data: settingRow } = await (supabaseAdmin as any)
+          .from("settings")
+          .select("value")
+          .eq("key", `analysis.${consultationId}`)
+          .maybeSingle();
+        if (settingRow?.value) {
+          latestAnalysisRow = settingRow.value;
+        }
+      } catch (_) {}
+    }
+
+    let effectiveAnalysis = latestAnalysisRow;
+
+    // 4. Generate interpreted analysis if analysis row is missing or legacy
+    if (!effectiveAnalysis || !effectiveAnalysis.summary || effectiveAnalysis.summary === "-") {
+      const { generateInterpretedAnalysis } = require("./ai-engine");
+      const generated = generateInterpretedAnalysis(
+        consultation.parent_name,
+        consultation.child_name || "-",
+        consultation.level,
+        formattedAnsStr
+      );
+      effectiveAnalysis = {
+        consultation_id: consultationId,
+        summary: generated.summary,
+        analysis: generated.analysis,
+        strengths: generated.strengths,
+        weaknesses: generated.weaknesses,
+        potential: generated.potential,
+        risk: generated.risk,
+        education_recommendation: generated.education_recommendation,
+        updated_at: new Date().toISOString()
       };
 
-    } catch (e: any) {
-      console.error("[getConsultationDetailAction Error]:", e);
-      return { success: false, error: e.message || "Gagal memuat detail konsultasi." };
+      // Best effort upsert in background
+      try {
+        await (supabaseAdmin as any).from("consultation_analysis").upsert(effectiveAnalysis, { onConflict: "consultation_id" });
+      } catch (_) {}
     }
-  });
+
+    // 5. Fetch notification logs
+    let notifLogs: any[] = [];
+    try {
+      const { data: nLogs } = await (supabaseAdmin as any)
+        .from("notification_logs")
+        .select("*")
+        .eq("consultation_id", consultationId)
+        .order("created_at", { ascending: false });
+      if (nLogs) notifLogs = nLogs;
+    } catch (_) {}
+
+    const { parseReportSections } = require("../lib/pdf-generator");
+    const parsedSections = parseReportSections(effectiveAnalysis, consultation.ai_result || "");
+
+    return {
+      success: true,
+      consultation,
+      answers: mappedAnswers,
+      analysis: effectiveAnalysis,
+      parsedSections,
+      logs: notifLogs
+    };
+
+  } catch (e: any) {
+    console.error("[getConsultationDetailAction Error]:", e);
+    return { success: false, error: e.message || "Gagal memuat detail konsultasi." };
+  }
+}
+
+export const getConsultationDetailAction = createServerFn({ method: "POST" })
+  .validator((payload: { consultationId: string }) => payload)
+  .handler(async (ctx) => getConsultationDetailHandler(ctx.data.consultationId));
 
 // --- Consultation Management Server Action (Bypasses Client RLS & Merges Settings Backup) ---
 export const getConsultationsListAction = createServerFn({ method: "POST" })
