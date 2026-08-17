@@ -79,9 +79,20 @@ export function ensureValidUuid(idStr: string, levelStr: string = "tksd", index:
   return `00000000-0000-4000-${levelPrefix}-${paddedNum.padStart(12, "0")}`;
 }
 
-export const IN_MEMORY_CONSULTATION_STORE = new Map<string, any>();
-export const IN_MEMORY_ANSWERS_STORE = new Map<string, any[]>();
-export const IN_MEMORY_ANALYSIS_STORE = new Map<string, any>();
+const globalObj = (typeof globalThis !== 'undefined' ? globalThis : global) as any;
+if (!globalObj.__EDU_KONSUL_CONSULTATION_STORE__) {
+  globalObj.__EDU_KONSUL_CONSULTATION_STORE__ = new Map<string, any>();
+}
+if (!globalObj.__EDU_KONSUL_ANSWERS_STORE__) {
+  globalObj.__EDU_KONSUL_ANSWERS_STORE__ = new Map<string, any[]>();
+}
+if (!globalObj.__EDU_KONSUL_ANALYSIS_STORE__) {
+  globalObj.__EDU_KONSUL_ANALYSIS_STORE__ = new Map<string, any>();
+}
+
+export const IN_MEMORY_CONSULTATION_STORE: Map<string, any> = globalObj.__EDU_KONSUL_CONSULTATION_STORE__;
+export const IN_MEMORY_ANSWERS_STORE: Map<string, any[]> = globalObj.__EDU_KONSUL_ANSWERS_STORE__;
+export const IN_MEMORY_ANALYSIS_STORE: Map<string, any> = globalObj.__EDU_KONSUL_ANALYSIS_STORE__;
 
 export async function submitConsultationHandler(data: ConsultationSubmitPayload) {
   const { parent_name, child_name, whatsapp_number, level, answers } = data;

@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { processConsultation } from "./process-consultation";
 import { getAdminSupabase } from "@/lib/supabase-admin";
 import { DEFAULT_UNIFIED_PROMPT } from "@/lib/ai-prompt-default";
+import { generateInterpretedAnalysis } from "./ai-engine";
+import { parseReportSections } from "@/lib/pdf-generator";
 
 
 // Internal helper for logging
@@ -780,12 +782,13 @@ export async function getConsultationDetailHandler(consultationId: string) {
       }
     }
 
-    // Fallback 3: Check in-memory store
+    // Fallback 3: Check in-memory store (globalThis singleton)
     if (!consultation) {
       try {
-        const { IN_MEMORY_CONSULTATION_STORE } = require("./process-consultation");
-        if (IN_MEMORY_CONSULTATION_STORE.has(consultationId)) {
-          consultation = IN_MEMORY_CONSULTATION_STORE.get(consultationId);
+        const globalObj = (typeof globalThis !== 'undefined' ? globalThis : global) as any;
+        const store = globalObj.__EDU_KONSUL_CONSULTATION_STORE__;
+        if (store && store.has(consultationId)) {
+          consultation = store.get(consultationId);
         }
       } catch (_) {}
     }
@@ -806,9 +809,10 @@ export async function getConsultationDetailHandler(consultationId: string) {
 
     if (answers.length === 0) {
       try {
-        const { IN_MEMORY_ANSWERS_STORE } = require("./process-consultation");
-        if (IN_MEMORY_ANSWERS_STORE.has(consultationId)) {
-          answers = IN_MEMORY_ANSWERS_STORE.get(consultationId) || [];
+        const globalObj = (typeof globalThis !== 'undefined' ? globalThis : global) as any;
+        const store = globalObj.__EDU_KONSUL_ANSWERS_STORE__;
+        if (store && store.has(consultationId)) {
+          answers = store.get(consultationId) || [];
         }
       } catch (_) {}
     }
@@ -863,12 +867,13 @@ export async function getConsultationDetailHandler(consultationId: string) {
       } catch (_) {}
     }
 
-    // Also check in-memory analysis store
+    // Also check in-memory analysis store (globalThis singleton)
     if (!latestAnalysisRow) {
       try {
-        const { IN_MEMORY_ANALYSIS_STORE } = require("./process-consultation");
-        if (IN_MEMORY_ANALYSIS_STORE.has(consultationId)) {
-          latestAnalysisRow = IN_MEMORY_ANALYSIS_STORE.get(consultationId);
+        const globalObj = (typeof globalThis !== 'undefined' ? globalThis : global) as any;
+        const store = globalObj.__EDU_KONSUL_ANALYSIS_STORE__;
+        if (store && store.has(consultationId)) {
+          latestAnalysisRow = store.get(consultationId);
         }
       } catch (_) {}
     }
@@ -877,7 +882,6 @@ export async function getConsultationDetailHandler(consultationId: string) {
 
     // 4. Generate interpreted analysis if analysis row is missing or legacy
     if (!effectiveAnalysis || !effectiveAnalysis.summary || effectiveAnalysis.summary === "-") {
-      const { generateInterpretedAnalysis } = require("./ai-engine");
       const generated = generateInterpretedAnalysis(
         consultation.parent_name,
         consultation.child_name || "-",
@@ -913,7 +917,6 @@ export async function getConsultationDetailHandler(consultationId: string) {
       if (nLogs) notifLogs = nLogs;
     } catch (_) {}
 
-    const { parseReportSections } = require("../lib/pdf-generator");
     const parsedSections = parseReportSections(effectiveAnalysis, consultation.ai_result || "");
 
     return {
