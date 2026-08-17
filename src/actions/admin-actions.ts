@@ -780,15 +780,38 @@ export async function getConsultationDetailHandler(consultationId: string) {
       }
     }
 
+    // Fallback 3: Check in-memory store
+    if (!consultation) {
+      try {
+        const { IN_MEMORY_CONSULTATION_STORE } = require("./process-consultation");
+        if (IN_MEMORY_CONSULTATION_STORE.has(consultationId)) {
+          consultation = IN_MEMORY_CONSULTATION_STORE.get(consultationId);
+        }
+      } catch (_) {}
+    }
+
     if (!consultation) {
       return { success: false, error: "Data konsultasi tidak ditemukan." };
     }
 
     // 2. Fetch answers
-    const { data: answers } = await (supabaseAdmin as any)
-      .from("consultation_answers")
-      .select("*, questions(question_text)")
-      .eq("consultation_id", consultationId);
+    let answers: any[] = [];
+    try {
+      const { data: dbAnswers } = await (supabaseAdmin as any)
+        .from("consultation_answers")
+        .select("*, questions(question_text)")
+        .eq("consultation_id", consultationId);
+      if (dbAnswers && dbAnswers.length > 0) answers = dbAnswers;
+    } catch (_) {}
+
+    if (answers.length === 0) {
+      try {
+        const { IN_MEMORY_ANSWERS_STORE } = require("./process-consultation");
+        if (IN_MEMORY_ANSWERS_STORE.has(consultationId)) {
+          answers = IN_MEMORY_ANSWERS_STORE.get(consultationId) || [];
+        }
+      } catch (_) {}
+    }
 
     const allOptionIds = answers?.flatMap((a: any) => a.selected_option_ids || []).filter(Boolean) || [];
     let optionsMap: Record<string, string> = {};
@@ -803,11 +826,11 @@ export async function getConsultationDetailHandler(consultationId: string) {
     }
 
     const mappedAnswers = (answers || []).map((a: any) => {
-      const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
+      const qText = a.questions?.question_text || a.question || a.q || "Pertanyaan Kuesioner";
       const optTexts = (a.selected_option_ids || [])
         .map((oid: string) => optionsMap[oid] || oid)
         .filter((t: string) => t && !/^[0-9a-f-]{36}$/i.test(t));
-      const rawAns = a.answer_text || a.answer;
+      const rawAns = a.answer_text || a.answer || a.a;
       const isValidText = rawAns && rawAns !== "-" && !rawAns.startsWith("opt-") && !/^[0-9a-f-]{36}$/i.test(rawAns);
       const aText = isValidText ? rawAns : (optTexts.length > 0 ? optTexts.join(", ") : (rawAns || "-"));
       return { q: qText, a: aText };
@@ -816,13 +839,15 @@ export async function getConsultationDetailHandler(consultationId: string) {
     const formattedAnsStr = mappedAnswers.map((item: any) => `P: ${item.q}\nJ: ${item.a}`).join("\n\n");
 
     // 3. Fetch latest analysis row ORDER BY updated_at DESC
-    const { data: analysisRows } = await (supabaseAdmin as any)
-      .from("consultation_analysis")
-      .select("*")
-      .eq("consultation_id", consultationId)
-      .order("updated_at", { ascending: false, nullsFirst: false });
-
-    let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
+    let latestAnalysisRow: any = null;
+    try {
+      const { data: analysisRows } = await (supabaseAdmin as any)
+        .from("consultation_analysis")
+        .select("*")
+        .eq("consultation_id", consultationId)
+        .order("updated_at", { ascending: false, nullsFirst: false });
+      if (analysisRows && analysisRows.length > 0) latestAnalysisRow = analysisRows[0];
+    } catch (_) {}
 
     // Also check settings table for analysis
     if (!latestAnalysisRow) {
@@ -834,6 +859,16 @@ export async function getConsultationDetailHandler(consultationId: string) {
           .maybeSingle();
         if (settingRow?.value) {
           latestAnalysisRow = settingRow.value;
+        }
+      } catch (_) {}
+    }
+
+    // Also check in-memory analysis store
+    if (!latestAnalysisRow) {
+      try {
+        const { IN_MEMORY_ANALYSIS_STORE } = require("./process-consultation");
+        if (IN_MEMORY_ANALYSIS_STORE.has(consultationId)) {
+          latestAnalysisRow = IN_MEMORY_ANALYSIS_STORE.get(consultationId);
         }
       } catch (_) {}
     }

@@ -79,6 +79,10 @@ export function ensureValidUuid(idStr: string, levelStr: string = "tksd", index:
   return `00000000-0000-4000-${levelPrefix}-${paddedNum.padStart(12, "0")}`;
 }
 
+export const IN_MEMORY_CONSULTATION_STORE = new Map<string, any>();
+export const IN_MEMORY_ANSWERS_STORE = new Map<string, any[]>();
+export const IN_MEMORY_ANALYSIS_STORE = new Map<string, any>();
+
 export async function submitConsultationHandler(data: ConsultationSubmitPayload) {
   const { parent_name, child_name, whatsapp_number, level, answers } = data;
 
@@ -169,6 +173,7 @@ export async function submitConsultationHandler(data: ConsultationSubmitPayload)
     }
 
     savedAnalysisRow.consultation_id = consultation.id;
+    IN_MEMORY_CONSULTATION_STORE.set(consultation.id, consultation);
 
     // Guaranteed Persistence: Save consultation record backup into settings table (key: consultation.${consultation.id})
     try {
@@ -275,6 +280,8 @@ export async function submitConsultationHandler(data: ConsultationSubmitPayload)
       }
     }
 
+    IN_MEMORY_ANSWERS_STORE.set(consultation.id, mappedQAs);
+
     // [TAHAP 2 AUDIT LOG: DEBUG ANSWERS]
     console.log("==================================================");
     console.log("[DEBUG ANSWERS]");
@@ -361,6 +368,8 @@ export async function submitConsultationHandler(data: ConsultationSubmitPayload)
         updated_at: new Date().toISOString()
       };
     }
+
+    IN_MEMORY_ANALYSIS_STORE.set(consultation.id, savedAnalysisRow);
 
     try {
       await supabaseAdmin.from("settings").upsert({
