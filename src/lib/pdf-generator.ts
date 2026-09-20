@@ -204,13 +204,14 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
 
 export async function getLatestConsultationAnalysisHelper(consultationId: string) {
   // 1. Fetch consultation row
-  const { data: consult } = await (supabase as any)
+  const { data: consult, error: consultErr } = await (supabase as any)
     .from("consultations")
     .select("*")
     .eq("id", consultationId)
     .maybeSingle();
 
-  if (!consult) throw new Error("Data konsultasi tidak ditemukan.");
+  if (consultErr) console.warn("[PDF] consultations query error:", consultErr);
+  if (!consult) throw new Error("Data konsultasi tidak ditemukan." + (consultErr ? ` (${consultErr.message || consultErr.code || "query error"})` : ""));
 
   // 2. Fetch Q&A answers using resolveOptionAndAnswerText helper
   const { data: answers } = await supabase
