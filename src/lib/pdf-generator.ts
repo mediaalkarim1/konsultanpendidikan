@@ -1,3 +1,4 @@
+import { generateInterpretedAnalysis } from "../actions/ai-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -314,7 +315,6 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
   if (!effectiveAnalysis) {
     console.info(`[getLatestConsultationAnalysisHelper] Analysis missing or legacy for ${consultationId}, generating on-the-fly interpreted analysis...`);
     try {
-      const { generateInterpretedAnalysis } = await import("../actions/ai-engine");
       const generated = generateInterpretedAnalysis(
         consult.parent_name,
         consult.child_name || "-",
@@ -753,7 +753,6 @@ export type AiAnalysisResult = {
 };
 
 export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
-  const { generateInterpretedAnalysis } = await import("../actions/ai-engine");
   return generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
 }
 
