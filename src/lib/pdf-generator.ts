@@ -278,6 +278,19 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
 
   let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
 
+  // Fallback: analysis may be stored in settings ("analysis.<id>") for
+  // backup consultation records that never got a consultation_analysis row.
+  if (!latestAnalysisRow) {
+    try {
+      const { data: settingRow } = await (supabase as any)
+        .from("settings")
+        .select("value")
+        .eq("key", `analysis.${consultationId}`)
+        .maybeSingle();
+      if (settingRow?.value) latestAnalysisRow = settingRow.value;
+    } catch (_) {}
+  }
+
   // 4. Legacy Template Detector
   const legacyKeywords = [
     "Pengaturan Screen Time & Pendampingan Aktivitas Digital",
