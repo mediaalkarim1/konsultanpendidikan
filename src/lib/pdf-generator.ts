@@ -203,6 +203,7 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
 }
 
 export async function getLatestConsultationAnalysisHelper(consultationId: string) {
+  console.log("[PDF] helper start, id:", consultationId);
   // 1. Fetch consultation row
   const { data: consult, error: consultErr } = await (supabase as any)
     .from("consultations")
@@ -210,8 +211,8 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
     .eq("id", consultationId)
     .maybeSingle();
 
-  if (consultErr) console.warn("[PDF] consultations query error:", consultErr);
-  if (!consult) throw new Error("Data konsultasi tidak ditemukan." + (consultErr ? ` (${consultErr.message || consultErr.code || "query error"})` : ""));
+  console.log("[PDF] consult result:", consult ? "found" : "null", consultErr ? JSON.stringify(consultErr) : "no-error");
+  if (!consult) throw new Error("Data konsultasi tidak ditemukan.");
 
   // 2. Fetch Q&A answers using resolveOptionAndAnswerText helper
   const { data: answers } = await supabase
