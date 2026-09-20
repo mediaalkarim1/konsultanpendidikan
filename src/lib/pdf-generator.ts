@@ -1,3 +1,4 @@
+import { generateInterpretedAnalysis } from "../actions/ai-engine";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -204,11 +205,45 @@ export function parseReportSections(analysis: any, fallbackMarkdownText?: string
 
 export async function getLatestConsultationAnalysisHelper(consultationId: string) {
   // 1. Fetch consultation row
-  const { data: consult } = await (supabase as any)
+  let { data: consult } = await (supabase as any)
     .from("consultations")
     .select("*")
     .eq("id", consultationId)
     .maybeSingle();
+
+  // Self-heal: the admin list also merges backup records stored in settings
+  // ("consultation.<id>"). When a row only exists there, restore it into the
+  // consultations table so PDF/detail flows work for it too.
+  if (!consult) {
+    try {
+      const { data: backupRow } = await (supabase as any)
+        .from("settings")
+        .select("value")
+        .eq("key", `consultation.${consultationId}`)
+        .maybeSingle();
+      const backup = backupRow?.value;
+      if (backup && backup.id) {
+        const restored: any = {
+          id: backup.id,
+          parent_name: backup.parent_name || "Orang Tua",
+          whatsapp_number: backup.whatsapp_number || "-",
+          level: ["tksd", "smp", "sma"].includes(backup.level) ? backup.level : "tksd",
+          status: backup.status || "Analisis AI Selesai",
+          created_at: backup.created_at || new Date().toISOString(),
+          child_name: backup.child_name || null,
+          ai_result: backup.ai_result || null,
+        };
+        const { data: upserted } = await (supabase as any)
+          .from("consultations")
+          .upsert(restored, { onConflict: "id" })
+          .select("*")
+          .maybeSingle();
+        consult = upserted || restored;
+      }
+    } catch (backupErr) {
+      console.warn("[PDF] settings backup restore failed:", backupErr);
+    }
+  }
 
   if (!consult) throw new Error("Data konsultasi tidak ditemukan.");
 
@@ -225,7 +260,7 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
     if (opts) optionsMapFromDb = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
   }
 
-  const { resolveOptionAndAnswerText } = require("../actions/process-consultation");
+  const { resolveOptionAndAnswerText } = await import("../actions/process-consultation");
 
   const mappedAnswers = (answers || []).map((a: any) => {
     const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
@@ -243,6 +278,19 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
     .order("updated_at", { ascending: false, nullsFirst: false });
 
   let latestAnalysisRow = (analysisRows && analysisRows.length > 0) ? analysisRows[0] : null;
+
+  // Fallback: analysis may be stored in settings ("analysis.<id>") for
+  // backup consultation records that never got a consultation_analysis row.
+  if (!latestAnalysisRow) {
+    try {
+      const { data: settingRow } = await (supabase as any)
+        .from("settings")
+        .select("value")
+        .eq("key", `analysis.${consultationId}`)
+        .maybeSingle();
+      if (settingRow?.value) latestAnalysisRow = settingRow.value;
+    } catch (_) {}
+  }
 
   // 4. Legacy Template Detector
   const legacyKeywords = [
@@ -267,7 +315,6 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
   if (!effectiveAnalysis) {
     console.info(`[getLatestConsultationAnalysisHelper] Analysis missing or legacy for ${consultationId}, generating on-the-fly interpreted analysis...`);
     try {
-      const { generateInterpretedAnalysis } = require("../actions/ai-engine");
       const generated = generateInterpretedAnalysis(
         consult.parent_name,
         consult.child_name || "-",
@@ -706,7 +753,6 @@ export type AiAnalysisResult = {
 };
 
 export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
-  const { generateInterpretedAnalysis } = require("../actions/ai-engine");
   return generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
 }
 
