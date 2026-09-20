@@ -9,29 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as SuksesRouteImport } from './routes/sukses'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as AdminAlurSistemRouteImport } from './routes/admin/alur-sistem'
-import { Route as AdminDatabaseOrangtuaRouteImport } from './routes/admin/database-orangtua'
-import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
-import { Route as AdminLogAktivitasRouteImport } from './routes/admin/log-aktivitas'
-import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
-import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
-import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
-import { Route as AdminTestingRouteImport } from './routes/admin/testing'
 import { Route as FormulirJenjangRouteImport } from './routes/formulir.$jenjang'
+import { Route as AdminTestingRouteImport } from './routes/admin/testing'
+import { Route as AdminPromptRouteImport } from './routes/admin/prompt'
+import { Route as AdminPertanyaanRouteImport } from './routes/admin/pertanyaan'
+import { Route as AdminPengaturanRouteImport } from './routes/admin/pengaturan'
+import { Route as AdminLogAktivitasRouteImport } from './routes/admin/log-aktivitas'
+import { Route as AdminKonsultasiRouteImport } from './routes/admin/konsultasi'
+import { Route as AdminDatabaseOrangtuaRouteImport } from './routes/admin/database-orangtua'
+import { Route as AdminAlurSistemRouteImport } from './routes/admin/alur-sistem'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRouteRoute = AdminRouteRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const SuksesRoute = SuksesRouteImport.update({
+  id: '/sukses',
+  path: '/sukses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -39,9 +34,14 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SuksesRoute = SuksesRouteImport.update({
-  id: '/sukses',
-  path: '/sukses',
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -49,34 +49,14 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminAlurSistemRoute = AdminAlurSistemRouteImport.update({
-  id: '/alur-sistem',
-  path: '/alur-sistem',
-  getParentRoute: () => AdminRouteRoute,
+const FormulirJenjangRoute = FormulirJenjangRouteImport.update({
+  id: '/formulir/$jenjang',
+  path: '/formulir/$jenjang',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminDatabaseOrangtuaRoute = AdminDatabaseOrangtuaRouteImport.update({
-  id: '/database-orangtua',
-  path: '/database-orangtua',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminKonsultasiRoute = AdminKonsultasiRouteImport.update({
-  id: '/konsultasi',
-  path: '/konsultasi',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminLogAktivitasRoute = AdminLogAktivitasRouteImport.update({
-  id: '/log-aktivitas',
-  path: '/log-aktivitas',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminPengaturanRoute = AdminPengaturanRouteImport.update({
-  id: '/pengaturan',
-  path: '/pengaturan',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminPertanyaanRoute = AdminPertanyaanRouteImport.update({
-  id: '/pertanyaan',
-  path: '/pertanyaan',
+const AdminTestingRoute = AdminTestingRouteImport.update({
+  id: '/testing',
+  path: '/testing',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminPromptRoute = AdminPromptRouteImport.update({
@@ -84,15 +64,35 @@ const AdminPromptRoute = AdminPromptRouteImport.update({
   path: '/prompt',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminTestingRoute = AdminTestingRouteImport.update({
-  id: '/testing',
-  path: '/testing',
+const AdminPertanyaanRoute = AdminPertanyaanRouteImport.update({
+  id: '/pertanyaan',
+  path: '/pertanyaan',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const FormulirJenjangRoute = FormulirJenjangRouteImport.update({
-  id: '/formulir/$jenjang',
-  path: '/formulir/$jenjang',
-  getParentRoute: () => rootRouteImport,
+const AdminPengaturanRoute = AdminPengaturanRouteImport.update({
+  id: '/pengaturan',
+  path: '/pengaturan',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminLogAktivitasRoute = AdminLogAktivitasRouteImport.update({
+  id: '/log-aktivitas',
+  path: '/log-aktivitas',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminKonsultasiRoute = AdminKonsultasiRouteImport.update({
+  id: '/konsultasi',
+  path: '/konsultasi',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminDatabaseOrangtuaRoute = AdminDatabaseOrangtuaRouteImport.update({
+  id: '/database-orangtua',
+  path: '/database-orangtua',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminAlurSistemRoute = AdminAlurSistemRouteImport.update({
+  id: '/alur-sistem',
+  path: '/alur-sistem',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -203,18 +203,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteRouteImport
+    '/sukses': {
+      id: '/sukses'
+      path: '/sukses'
+      fullPath: '/sukses'
+      preLoaderRoute: typeof SuksesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -224,11 +217,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sukses': {
-      id: '/sukses'
-      path: '/sukses'
-      fullPath: '/sukses'
-      preLoaderRoute: typeof SuksesRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -238,46 +238,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/alur-sistem': {
-      id: '/admin/alur-sistem'
-      path: '/alur-sistem'
-      fullPath: '/admin/alur-sistem'
-      preLoaderRoute: typeof AdminAlurSistemRouteImport
-      parentRoute: typeof AdminRouteRoute
+    '/formulir/$jenjang': {
+      id: '/formulir/$jenjang'
+      path: '/formulir/$jenjang'
+      fullPath: '/formulir/$jenjang'
+      preLoaderRoute: typeof FormulirJenjangRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/database-orangtua': {
-      id: '/admin/database-orangtua'
-      path: '/database-orangtua'
-      fullPath: '/admin/database-orangtua'
-      preLoaderRoute: typeof AdminDatabaseOrangtuaRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/konsultasi': {
-      id: '/admin/konsultasi'
-      path: '/konsultasi'
-      fullPath: '/admin/konsultasi'
-      preLoaderRoute: typeof AdminKonsultasiRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/log-aktivitas': {
-      id: '/admin/log-aktivitas'
-      path: '/log-aktivitas'
-      fullPath: '/admin/log-aktivitas'
-      preLoaderRoute: typeof AdminLogAktivitasRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/pengaturan': {
-      id: '/admin/pengaturan'
-      path: '/pengaturan'
-      fullPath: '/admin/pengaturan'
-      preLoaderRoute: typeof AdminPengaturanRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/pertanyaan': {
-      id: '/admin/pertanyaan'
-      path: '/pertanyaan'
-      fullPath: '/admin/pertanyaan'
-      preLoaderRoute: typeof AdminPertanyaanRouteImport
+    '/admin/testing': {
+      id: '/admin/testing'
+      path: '/testing'
+      fullPath: '/admin/testing'
+      preLoaderRoute: typeof AdminTestingRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/prompt': {
@@ -287,19 +259,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPromptRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/testing': {
-      id: '/admin/testing'
-      path: '/testing'
-      fullPath: '/admin/testing'
-      preLoaderRoute: typeof AdminTestingRouteImport
+    '/admin/pertanyaan': {
+      id: '/admin/pertanyaan'
+      path: '/pertanyaan'
+      fullPath: '/admin/pertanyaan'
+      preLoaderRoute: typeof AdminPertanyaanRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/formulir/$jenjang': {
-      id: '/formulir/$jenjang'
-      path: '/formulir/$jenjang'
-      fullPath: '/formulir/$jenjang'
-      preLoaderRoute: typeof FormulirJenjangRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/pengaturan': {
+      id: '/admin/pengaturan'
+      path: '/pengaturan'
+      fullPath: '/admin/pengaturan'
+      preLoaderRoute: typeof AdminPengaturanRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/log-aktivitas': {
+      id: '/admin/log-aktivitas'
+      path: '/log-aktivitas'
+      fullPath: '/admin/log-aktivitas'
+      preLoaderRoute: typeof AdminLogAktivitasRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/konsultasi': {
+      id: '/admin/konsultasi'
+      path: '/konsultasi'
+      fullPath: '/admin/konsultasi'
+      preLoaderRoute: typeof AdminKonsultasiRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/database-orangtua': {
+      id: '/admin/database-orangtua'
+      path: '/database-orangtua'
+      fullPath: '/admin/database-orangtua'
+      preLoaderRoute: typeof AdminDatabaseOrangtuaRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/alur-sistem': {
+      id: '/admin/alur-sistem'
+      path: '/alur-sistem'
+      fullPath: '/admin/alur-sistem'
+      preLoaderRoute: typeof AdminAlurSistemRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
   }
 }
