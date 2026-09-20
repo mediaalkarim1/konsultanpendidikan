@@ -259,7 +259,7 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
     if (opts) optionsMapFromDb = opts.reduce((acc, o) => ({ ...acc, [o.id]: o.option_text }), {});
   }
 
-  const { resolveOptionAndAnswerText } = require("../actions/process-consultation");
+  const { resolveOptionAndAnswerText } = await import("../actions/process-consultation");
 
   const mappedAnswers = (answers || []).map((a: any) => {
     const qText = a.questions?.question_text || a.question || "Pertanyaan Kuesioner";
@@ -314,7 +314,7 @@ export async function getLatestConsultationAnalysisHelper(consultationId: string
   if (!effectiveAnalysis) {
     console.info(`[getLatestConsultationAnalysisHelper] Analysis missing or legacy for ${consultationId}, generating on-the-fly interpreted analysis...`);
     try {
-      const { generateInterpretedAnalysis } = require("../actions/ai-engine");
+      const { generateInterpretedAnalysis } = await import("../actions/ai-engine");
       const generated = generateInterpretedAnalysis(
         consult.parent_name,
         consult.child_name || "-",
@@ -753,7 +753,7 @@ export type AiAnalysisResult = {
 };
 
 export function generateFallbackAnalysisResult(parentName: string, childName: string, level: string, formattedAnswers: string): AiAnalysisResult {
-  const { generateInterpretedAnalysis } = require("../actions/ai-engine");
+  const { generateInterpretedAnalysis } = await import("../actions/ai-engine");
   return generateInterpretedAnalysis(parentName, childName, level, formattedAnswers);
 }
 
