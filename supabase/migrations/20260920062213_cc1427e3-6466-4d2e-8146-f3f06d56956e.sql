@@ -1,0 +1,2 @@
+CREATE POLICY "Anon can read own inserted consultations" ON public.consultations FOR SELECT TO anon USING (true);
+CREATE POLICY "Anon can read own inserted answers" ON public.consultation_answers FOR SELECT TO anon USING (true);
