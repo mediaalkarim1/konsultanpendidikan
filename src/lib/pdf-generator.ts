@@ -387,13 +387,33 @@ export async function handleDownloadPdfForConsultation(
     const { jsPDF } = await import("jspdf");
     await new Promise((r) => setTimeout(r, 60));
 
-    // Use centralized helper to ensure 100% identical data with Web UI
-    const { consult, parsedSections } = await getLatestConsultationAnalysisHelper(item.id);
+    // Source of truth: the SAME server action used by "Detail Lengkap Konsultasi"
+    // so the PDF content is byte-for-byte identical to the on-screen report.
+    let consult: any = null;
+    let parsedSections: ParsedReportData | null = null;
+
+    try {
+      const { getConsultationDetailAction } = await import("../actions/admin-actions");
+      const res: any = await getConsultationDetailAction({ data: { consultationId: item.id } });
+      if (res?.success && res.consultation && res.parsedSections) {
+        consult = res.consultation;
+        parsedSections = res.parsedSections;
+      }
+    } catch (detailErr) {
+      console.warn("[PDF] detail action unavailable, falling back to client helper:", detailErr);
+    }
+
+    if (!consult || !parsedSections) {
+      const fallback = await getLatestConsultationAnalysisHelper(item.id);
+      consult = fallback.consult;
+      parsedSections = fallback.parsedSections;
+    }
+
     const parsedData = parsedSections;
 
     const dateStr = format(new Date(consult.created_at || item.created_at), "dd MMMM yyyy", { locale: id });
     const levelLabel = (LEVEL_LABELS[consult.level] || consult.level).toUpperCase();
-    const refIdShort = consult.id.substring(0, 8).toUpperCase();
+    const refIdShort = String(consult.id).substring(0, 8).toUpperCase();
     const childDisplayName = consult.child_name && consult.child_name !== "-" ? consult.child_name : "Ananda";
 
     const doc = new jsPDF({
